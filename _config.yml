@@ -1,0 +1,34 @@
+# Site settings used by both Jekyll and the minima theme.
+title: Michael Chapman
+description: >-
+  Notes and writing on health data infrastructure, Secure Data Environments,
+  and clinical research from Michael Chapman.
+author: Michael Chapman
+locale: en_GB
+
+# Theme
+theme: minima
+minima:
+  skin: classic
+  date_format: "%-d %B %Y"
+
+# Pages shown in the top navigation bar, in order.
+header_pages:
+  - about.md
+  - cv.md
+  - work.md
+  - writing.md
+
+# Build settings
+markdown: kramdown
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Files/folders Jekyll should not try to process as site content.
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor
