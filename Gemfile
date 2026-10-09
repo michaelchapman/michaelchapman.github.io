@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
-# GitHub Pages' own build ignores this Gemfile - it just needs the plugins
-# below to be on its supported list (https://pages.github.com/versions/).
+# The deploy workflow (.github/workflows/pages.yml) builds from this Gemfile,
+# so the live site uses exactly the versions in Gemfile.lock.
 # We pin jekyll/minima directly rather than the `github-pages` gem because
 # that gem drags in an ancient `eventmachine` that won't compile against
 # modern Xcode/OpenSSL.

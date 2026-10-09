@@ -5,11 +5,17 @@ description: >-
   and clinical research from Michael Chapman.
 author: Michael Chapman
 locale: en_GB
+url: "https://michaelchapman.me"
+
+# Profile links, used by jekyll-seo-tag for search-engine metadata.
+social:
+  name: Michael Chapman
+  links:
+    - https://github.com/michaelchapman
 
 # Theme
 theme: minima
 minima:
-  skin: classic
   date_format: "%-d %B %Y"
 
 # Pages shown in the top navigation bar, in order.
@@ -31,4 +37,12 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - README.md
+  - LICENSE
   - vendor
+
+# Default share image for link previews (jekyll-seo-tag) on every page.
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /assets/images/social-card.png

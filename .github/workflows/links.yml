@@ -1,0 +1,34 @@
+# Checks every link on the built site, including the externally hosted PDFs
+# on the Work page. Runs weekly as well, since external links can break
+# without any change here. Kept separate from deploys so a dead third-party
+# link never blocks publishing.
+name: Check links
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Build with Jekyll
+        run: bundle exec jekyll build
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --root-dir ${{ github.workspace }}/_site
+            --max-retries 3
+            '_site/**/*.html'
+          fail: true
