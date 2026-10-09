@@ -6,7 +6,10 @@ source "https://rubygems.org"
 # that gem drags in an ancient `eventmachine` that won't compile against
 # modern Xcode/OpenSSL.
 gem "jekyll", "~> 4.4"
-gem "minima", "~> 2.5"
+# minima 3 isn't released on RubyGems yet, so it comes from the theme's
+# GitHub repo, pinned to a commit so builds stay reproducible.
+gem "minima", git: "https://github.com/jekyll/minima",
+              ref: "4de322363fca5927e6f4012cb94f6dad69ab5e6c"
 gem "jekyll-feed", "~> 0.17"
 gem "jekyll-seo-tag", "~> 2.8"
 gem "jekyll-sitemap", "~> 1.4"

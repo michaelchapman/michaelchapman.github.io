@@ -16,14 +16,20 @@ social:
 # Theme
 theme: minima
 minima:
+  # "auto" follows the visitor's light/dark system setting.
+  skin: auto
   date_format: "%-d %B %Y"
-
-# Pages shown in the top navigation bar, in order.
-header_pages:
-  - about.md
-  - cv.md
-  - work.md
-  - writing.md
+  # Pages shown in the top navigation bar, in order.
+  nav_pages:
+    - about.md
+    - cv.md
+    - work.md
+    - writing.md
+  # Icons in the footer (Font Awesome brand icon names).
+  social_links:
+    - title: Michael Chapman on GitHub
+      icon: github
+      url: "https://github.com/michaelchapman"
 
 # Build settings
 markdown: kramdown

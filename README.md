@@ -8,7 +8,7 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 - `_config.yml` — site settings and the `minima` theme configuration
 - `index.md`, `about.md`, `cv.md`, `work.md`, `writing.md` — top-level pages
 - `_posts/` — blog posts (`YYYY-MM-DD-title.md`), listed on `/writing/`
-- `assets/main.scss` — theme overrides on top of `minima`
+- `_sass/minima/custom-styles.scss` — style overrides on top of the `minima` 3 theme
 - `assets/images/social-card.png` — default image for link previews
 - `.github/workflows/` — build/deploy (`pages.yml`) and link checking (`links.yml`)
 - `CNAME` — custom domain config; do not edit, DNS is already set up
