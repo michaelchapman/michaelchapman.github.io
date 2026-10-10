@@ -28,6 +28,7 @@
   --gules:#f0667c; --on-gules:#1d0408; color-scheme:dark }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;padding-inline:20px;padding-block:40px 80px}
 .wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
 h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;line-height:1.1}
@@ -121,9 +122,9 @@ footer i{font-style:normal;font-variant-numeric:tabular-nums}
 
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
-  .panel{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:5;max-height:56vh;border-width:4px 0 0;padding:16px 20px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px rgb(0 0 0 / .18)}
-  .panel h3{font-size:1.5rem;padding-right:44px}
-  .close{display:block;position:absolute;top:10px;right:14px;font:inherit;font-size:1.3rem;line-height:1;width:36px;height:36px;border:1px solid var(--rule);border-radius:50%;background:var(--surface);color:var(--ink);cursor:pointer}
+  .panel{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:5;max-height:56vh;max-height:56dvh;border-width:4px 0 0;padding:16px 20px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px rgb(0 0 0 / .18)}
+  .panel h3{font-size:1.5rem;padding-right:48px}
+  .close{display:block;position:absolute;top:8px;right:10px;font:inherit;font-size:1.5rem;line-height:1;width:44px;height:44px;border:1px solid var(--rule);border-radius:50%;background:var(--surface);color:var(--ink);cursor:pointer}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -432,8 +433,9 @@ function setSubject(S){
   renderNotes(earlier);
   applyFilter();
   try{history.replaceState(null,"","#"+S)}catch(e){}
-  if(narrow()){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"))}else show(S);
+  if(narrow())hidePanel();else show(S);
 }
+function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"))}
 function show(id,scrollTile){
   const m=M[idx[id]],s=V.st[id],S=V.S,sn=nameOf(S);
   $$(".sel").forEach(e=>e.classList.remove("sel"));$("#t-"+id).classList.add("sel");
@@ -453,7 +455,7 @@ function show(id,scrollTile){
   else h+=`<p>Came to the throne after ${sn}.</p>`;
   if(s!=="subj")h+=`<button class="go" id="go">Trace ${m[1]}'s ancestry</button>`;
   panel.innerHTML=h;panel.hidden=false;panel.scrollTop=0;
-  $("#close").onclick=()=>{panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"))};
+  $("#close").onclick=hidePanel;
   if($("#go"))$("#go").onclick=()=>{setSubject(id);window.scrollTo({top:0,behavior:"smooth"})};
   if($("#togen"))$("#togen").onclick=()=>{if(narrow())panel.hidden=true;$("#g-"+(V.line.indexOf(id)+1)).scrollIntoView({behavior:"smooth",block:"center"})};
   if(scrollTile)$("#t-"+id).scrollIntoView({behavior:"smooth",block:"center"});
@@ -463,6 +465,7 @@ document.addEventListener("click",e=>{
   const f=e.target.closest("[data-f]");if(f){filter=f.dataset.f;applyFilter()}
 });
 $("#subject").addEventListener("change",e=>setSubject(e.target.value));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&narrow()&&!panel.hidden)hidePanel()});
 const h0=location.hash.slice(1);
 setSubject(isM(h0)?h0:"charles3");
 </script>
