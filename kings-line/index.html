@@ -120,6 +120,20 @@ footer i{font-style:normal;font-variant-numeric:tabular-nums}
 .srcl{margin:0;padding-left:18px;font-size:.85rem}
 .panel .small{font-size:.82rem;color:var(--muted)}
 .panel .rel{font-size:1.05rem}
+.fork{display:flex;flex-direction:column;font-size:.88rem;line-height:1.35}
+.fork .top{align-self:flex-start;font-weight:700;border:1.5px solid var(--or-edge);background:var(--or-soft);border-radius:3px;padding:4px 10px}
+.fork .top small{display:block;font-weight:400;font-size:.75rem;color:var(--muted)}
+.legs{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 14px;padding-top:12px;margin-left:12px}
+.legs::before{content:"";position:absolute;top:0;left:0;width:calc(50% + 7px);height:12px;border:2px solid var(--rule);border-bottom:0}
+.leg{border-left:2px solid var(--rule);padding:6px 0 0 10px;min-width:0}
+.leg h5{margin:0 0 4px;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.leg ol{list-style:none;margin:0;padding:0}
+.leg li{padding:2px 0;overflow-wrap:anywhere}
+.leg li.m{font-weight:700}
+.leg li.u{text-decoration:underline dashed var(--or-edge)}
+.leg li:last-child{font-weight:700;color:var(--gules)}
+.fork.short li.mid{display:none}
+.fork.short li.mid+li:not(.mid)::before{content:"⋮ more generations";display:block;color:var(--muted);font-weight:400;font-size:.8rem;padding-bottom:2px}
 
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
@@ -152,7 +166,7 @@ footer i{font-style:normal;font-variant-numeric:tabular-nums}
 <section>
   <div class="sechead">
     <h2>The roll of monarchs</h2>
-    <p>Select anyone to see how <span class="sn"></span> descends from them, or how the two are related. Then switch to exploring from that monarch instead.</p>
+    <p>Select any monarch, earlier or later, to see how they are related to <span class="sn"></span>. Then switch to exploring from that monarch instead.</p>
     <div class="chips" role="group" aria-label="Filter">
       <button id="f-all" aria-pressed="true" data-f="all">All</button>
       <button id="f-yes" aria-pressed="false" data-f="yes">Ancestors</button>
@@ -258,28 +272,35 @@ marieboulogne:["Marie of Boulogne","Countess of Boulogne"],matboulogne:["Matilda
 blackprince:["Edward the Black Prince","d. 1376"],lionel:["Lionel of Antwerp","Duke of Clarence, d. 1368"],philippaclarence:["Philippa of Clarence","Countess of Ulster"],rogermortimer:["Roger Mortimer","4th Earl of March, d. 1398"],annemortimer:["Anne Mortimer","d. 1411"],langley:["Edmund of Langley","Duke of York"],conisburgh:["Richard of Conisburgh","Earl of Cambridge"],richardyork:["Richard, Duke of York","Killed at Wakefield, 1460"],gaunt:["John of Gaunt","Duke of Lancaster"],joanbeaufortw:["Joan Beaufort","Countess of Westmorland"],cecily:["Cecily Neville","Duchess of York"],johnbeaufort1:["John Beaufort","Earl of Somerset"],johnbeaufort2:["John Beaufort","Duke of Somerset"],margbeaufort:["Margaret Beaufort","Countess of Richmond"],
 elizyork:["Elizabeth of York","Queen of Henry VII"],margtudor:["Margaret Tudor","Queen of Scots, d. 1541"],james4:["James IV","King of Scots"],james5:["James V","King of Scots, d. 1542"],maryqos:["Mary, Queen of Scots","Executed 1587"],margdouglas:["Margaret Douglas","Countess of Lennox"],darnley:["Henry Stuart, Lord Darnley","d. 1567"],elizstuart:["Elizabeth Stuart","Queen of Bohemia, d. 1662"],sophia:["Sophia of Hanover","Heir to Anne; died weeks before her"],maryorange:["Mary, Princess of Orange","Daughter of Charles I"],frederickpw:["Frederick, Prince of Wales","Died before his father, 1751"],kent:["Edward, Duke of Kent","d. 1820"],
 humphrey:["Humphrey, Duke of Gloucester","d. 1447"],antigone:["Antigone of Gloucester","Illegitimate daughter"],richardgrey:["Richard Grey","Lord of Powis"],elizgrey:["Elizabeth Grey","Paternity disputed"],aliceludlow:["Alice Ludlow",""],georgevernon:["George Vernon",""],johnvernon:["Sir John Vernon",""],elizvernon:["Elizabeth Vernon","Countess of Southampton"],penelope:["Penelope Wriothesley","Lady Spencer"],sunderland:["Henry Spencer","1st Earl of Sunderland"],dorothyspencer:["Dorothy Spencer","Marchioness of Halifax"],halifax2:["William Savile","2nd Marquess of Halifax"],dorothysavile:["Dorothy Savile","Countess of Burlington"],charlotteboyle:["Charlotte Boyle","Marchioness of Hartington"],dorothycav:["Dorothy Cavendish","Duchess of Portland"],lordcharles:["Lord Charles Bentinck",""],revcharles:["Rev. Charles Cavendish-Bentinck",""],cecilia:["Cecilia Cavendish-Bentinck","Countess of Strathmore"],queenmother:["Queen Elizabeth The Queen Mother","d. 2002"],
-alicehesse:["Princess Alice","Grand Duchess of Hesse"],victoriahesse:["Victoria of Hesse","Marchioness of Milford Haven"],alicebatt:["Alice of Battenberg","Princess Andrew of Greece"],philip:["Prince Philip","Duke of Edinburgh"]
+alicehesse:["Princess Alice","Grand Duchess of Hesse"],
+cnutmother:["Świętosława","Mother of Cnut; identity disputed"],mieszko1:["Mieszko I","Duke of the Poles, d. 992"],boleslaw1:["Bolesław I the Brave","King of Poland"],mieszko2:["Mieszko II","King of Poland"],richezapl:["Richeza of Poland","Queen of Hungary"],geza1:["Géza I","King of Hungary"],almos:["Álmos","Duke in Hungary"],bela2:["Béla II","King of Hungary"],geza2:["Géza II","King of Hungary"],
+ecgwynn:["Ecgwynn","First consort of Edward the Elder"],eadgifu:["Eadgifu of Kent","Queen of Edward the Elder"],aelfgifus:["Ælfgifu of Shaftesbury","Queen of Edmund I"],aelfthrythq:["Ælfthryth","Queen of Edgar"],aelfgifuy:["Ælfgifu of York","First wife of Æthelred"],aelfgifun:["Ælfgifu of Northampton","First wife of Cnut"],
+eleanoraq:["Eleanor of Aquitaine","Queen of Henry II"],eleanorcas:["Eleanor of Castile","First queen of Edward I"],blanchelanc:["Blanche of Lancaster","First wife of John of Gaunt"],swynford:["Katherine Swynford","Third wife of John of Gaunt"],woodville:["Elizabeth Woodville","Queen of Edward IV"],
+catharagon:["Catherine of Aragon","First queen of Henry VIII"],boleyn:["Anne Boleyn","Second queen of Henry VIII"],seymour:["Jane Seymour","Third queen of Henry VIII"],henriettamaria:["Henrietta Maria","Queen of Charles I"],annehyde:["Anne Hyde","First wife of James II"],
+charlotte:["Charlotte of Mecklenburg-Strelitz","Queen of George III"],albert:["Prince Albert","Consort of Victoria"],maryteck:["Mary of Teck","Queen of George V"],victoriahesse:["Victoria of Hesse","Marchioness of Milford Haven"],alicebatt:["Alice of Battenberg","Princess Andrew of Greece"],philip:["Prince Philip","Duke of Edinburgh"]
 };
 // parents within the tree; the first listed is the one the "deepest line" follows
 const PAR={
-aethelwulf:["egbert"],alfred:["aethelwulf"],edelder:["alfred"],athelstan:["edelder"],edmund1:["edelder"],eadred:["edelder"],eadwig:["edmund1"],edgar:["edmund1"],edmartyr:["edgar"],aethelred:["edgar"],ironside:["aethelred"],confessor:["aethelred","emma"],exile:["ironside"],stmargaret:["exile"],matscot:["stmargaret"],
+aethelwulf:["egbert"],alfred:["aethelwulf"],edelder:["alfred"],athelstan:["edelder","ecgwynn"],edmund1:["edelder","eadgifu"],eadred:["edelder","eadgifu"],eadwig:["edmund1","aelfgifus"],edgar:["edmund1","aelfgifus"],edmartyr:["edgar"],aethelred:["edgar","aelfthrythq"],ironside:["aethelred","aelfgifuy"],confessor:["aethelred","emma"],exile:["ironside"],stmargaret:["exile"],matscot:["stmargaret"],
 aelfthryth:["alfred"],arnulf1:["aelfthryth"],baldwin3:["arnulf1"],arnulf2:["baldwin3"],baldwin4:["arnulf2"],baldwin5:["baldwin4"],matflanders:["baldwin5"],
 longsword:["rollo"],richard1n:["longsword"],richard2n:["richard1n"],emma:["richard1n"],robert1n:["richard2n"],william1:["robert1n"],william2:["matflanders","william1"],henry1:["matflanders","william1"],adela:["matflanders","william1"],stephen:["adela"],
-bluetooth:["gorm"],sweyn:["bluetooth"],cnut:["sweyn"],harefoot:["cnut"],harthacnut:["cnut","emma"],estrid:["sweyn"],sweyn2:["estrid"],eric1:["sweyn2"],lavard:["eric1"],valdemar1:["lavard","ingeborgkiev"],valdemar2:["valdemar1"],christopher1:["valdemar2"],eric5:["christopher1"],richeza:["eric5"],sophiewerle:["richeza"],henry2holstein:["sophiewerle"],gerhard6:["henry2holstein"],hedvig:["gerhard6"],christian1:["hedvig"],margdenmark:["christian1"],frederick1dk:["christian1"],christian3:["frederick1dk"],frederick2dk:["christian3"],annedk:["frederick2dk"],
-harold2:["godwin"],gytha:["harold2"],mstislav:["gytha"],ingeborgkiev:["mstislav"],euphrosyne:["mstislav"],bela3:["euphrosyne"],andrew2:["bela3"],violant:["andrew2"],isabellaaragon:["violant"],philip4:["isabellaaragon"],isabellafr:["philip4","joan1navarre"],bela4:["andrew2"],stephen5:["bela4"],maryhungary:["stephen5"],margaretanjou:["maryhungary"],joanvalois:["margaretanjou"],philippa:["joanvalois"],
+bluetooth:["gorm"],sweyn:["bluetooth"],cnut:["sweyn","cnutmother"],harefoot:["cnut","aelfgifun"],harthacnut:["cnut","emma"],estrid:["sweyn"],sweyn2:["estrid"],eric1:["sweyn2"],lavard:["eric1"],valdemar1:["lavard","ingeborgkiev"],valdemar2:["valdemar1"],christopher1:["valdemar2"],eric5:["christopher1"],richeza:["eric5"],sophiewerle:["richeza"],henry2holstein:["sophiewerle"],gerhard6:["henry2holstein"],hedvig:["gerhard6"],christian1:["hedvig"],margdenmark:["christian1"],frederick1dk:["christian1"],christian3:["frederick1dk"],frederick2dk:["christian3"],annedk:["frederick2dk"],
+harold2:["godwin"],gytha:["harold2"],mstislav:["gytha"],ingeborgkiev:["mstislav"],euphrosyne:["mstislav"],bela3:["euphrosyne","geza2"],andrew2:["bela3"],violant:["andrew2"],isabellaaragon:["violant"],philip4:["isabellaaragon"],isabellafr:["philip4","joan1navarre"],bela4:["andrew2"],stephen5:["bela4"],maryhungary:["stephen5"],margaretanjou:["maryhungary"],joanvalois:["margaretanjou"],philippa:["joanvalois"],
 marieboulogne:["stephen"],matboulogne:["marieboulogne"],henry2brabant:["matboulogne"],matbrabant:["henry2brabant"],blancheartois:["matbrabant"],joan1navarre:["blancheartois"],henry3brabant:["henry2brabant"],mariebrabant:["henry3brabant"],margaretfr:["mariebrabant"],woodstock:["edward1","margaretfr"],joankent:["woodstock"],
-empress:["matscot","henry1"],henry2:["empress"],richard1:["henry2"],john:["henry2"],henry3:["john"],edward1:["henry3"],edward2:["edward1"],edward3:["edward2","isabellafr"],
+empress:["matscot","henry1"],henry2:["empress"],richard1:["henry2","eleanoraq"],john:["henry2","eleanoraq"],henry3:["john"],edward1:["henry3"],edward2:["edward1","eleanorcas"],edward3:["edward2","isabellafr"],
 blackprince:["edward3","philippa"],lionel:["edward3","philippa"],gaunt:["edward3","philippa"],langley:["edward3","philippa"],richard2:["blackprince","joankent"],
-philippaclarence:["lionel"],rogermortimer:["philippaclarence"],annemortimer:["rogermortimer"],conisburgh:["langley"],richardyork:["annemortimer","conisburgh"],joanbeaufortw:["gaunt"],cecily:["joanbeaufortw"],edward4:["richardyork","cecily"],richard3:["richardyork","cecily"],edward5:["edward4"],elizyork:["edward4"],
-henry4:["gaunt"],henry5:["henry4"],henry6:["henry5"],johnbeaufort1:["gaunt"],johnbeaufort2:["johnbeaufort1"],margbeaufort:["johnbeaufort2"],henry7:["margbeaufort"],
-henry8:["elizyork","henry7"],margtudor:["elizyork","henry7"],edward6:["henry8"],mary1:["henry8"],elizabeth1:["henry8"],
+philippaclarence:["lionel"],rogermortimer:["philippaclarence"],annemortimer:["rogermortimer"],conisburgh:["langley"],richardyork:["annemortimer","conisburgh"],joanbeaufortw:["gaunt","swynford"],cecily:["joanbeaufortw"],edward4:["richardyork","cecily"],richard3:["richardyork","cecily"],edward5:["edward4","woodville"],elizyork:["edward4","woodville"],
+henry4:["gaunt","blanchelanc"],henry5:["henry4"],henry6:["henry5"],johnbeaufort1:["gaunt","swynford"],johnbeaufort2:["johnbeaufort1"],margbeaufort:["johnbeaufort2"],henry7:["margbeaufort"],
+henry8:["elizyork","henry7"],margtudor:["elizyork","henry7"],edward6:["henry8","seymour"],mary1:["henry8","catharagon"],elizabeth1:["henry8","boleyn"],
 james4:["margdenmark"],james5:["margtudor","james4"],maryqos:["james5"],margdouglas:["margtudor"],darnley:["margdouglas"],james1:["maryqos","darnley"],
-charles1:["james1","annedk"],elizstuart:["james1","annedk"],charles2:["charles1"],james2:["charles1"],maryorange:["charles1"],william3:["maryorange"],mary2:["james2"],anne:["james2"],
-sophia:["elizstuart"],george1:["sophia"],george2:["george1"],frederickpw:["george2"],george3:["frederickpw"],george4:["george3"],william4:["george3"],kent:["george3"],victoria:["kent"],edward7:["victoria"],george5:["edward7"],edward8:["george5"],george6:["george5"],
+charles1:["james1","annedk"],elizstuart:["james1","annedk"],charles2:["charles1","henriettamaria"],james2:["charles1","henriettamaria"],maryorange:["charles1","henriettamaria"],william3:["maryorange"],mary2:["james2","annehyde"],anne:["james2","annehyde"],
+sophia:["elizstuart"],george1:["sophia"],george2:["george1"],frederickpw:["george2"],george3:["frederickpw"],george4:["george3","charlotte"],william4:["george3","charlotte"],kent:["george3","charlotte"],victoria:["kent"],edward7:["victoria","albert"],george5:["edward7"],edward8:["george5","maryteck"],george6:["george5","maryteck"],
 humphrey:["henry4"],antigone:["humphrey"],richardgrey:["antigone"],elizgrey:["richardgrey"],aliceludlow:["elizgrey"],georgevernon:["aliceludlow"],johnvernon:["georgevernon"],elizvernon:["johnvernon"],penelope:["elizvernon"],sunderland:["penelope"],dorothyspencer:["sunderland"],halifax2:["dorothyspencer"],dorothysavile:["halifax2"],charlotteboyle:["dorothysavile"],dorothycav:["charlotteboyle"],lordcharles:["dorothycav"],revcharles:["lordcharles"],cecilia:["revcharles"],queenmother:["cecilia"],
-elizabeth2:["george6","queenmother"],alicehesse:["victoria"],victoriahesse:["alicehesse"],alicebatt:["victoriahesse"],philip:["alicebatt"],charles3:["elizabeth2","philip"]
+elizabeth2:["george6","queenmother"],alicehesse:["victoria","albert"],victoriahesse:["alicehesse"],alicebatt:["victoriahesse"],philip:["alicebatt"],charles3:["elizabeth2","philip"]
+,
+cnutmother:["mieszko1"],boleslaw1:["mieszko1"],mieszko2:["boleslaw1"],richezapl:["mieszko2"],geza1:["richezapl"],almos:["geza1"],bela2:["almos"],geza2:["bela2"]
 };
-const UNSURE=new Set(["elizgrey"]);
+const UNSURE=new Set(["elizgrey","cnutmother"]);
 // sources: key: [title, url, kind]
 const W="https://en.wikipedia.org/wiki/";
 const SRC={
@@ -298,6 +319,12 @@ wpHenryH:["Henry II, Count of Holstein-Rendsburg",W+"Henry_II,_Count_of_Holstein
 wpAntigone:["Antigone of Gloucester, Countess of Tankerville",W+"Antigone_of_Gloucester,_Countess_of_Tankerville","Wikipedia"],
 sgm:["Elizabeth II to Henry IV","https://groups.google.com/g/soc.genealogy.medieval/c/Nk8tNNAd8GE","soc.genealogy.medieval thread, citing The Complete Peerage"],
 wpCh1:["Descendants of Charles I of England",W+"Descendants_of_Charles_I_of_England","Wikipedia"],
+wpGunhild:["Gunhild of Wenden",W+"Gunhild_of_Wenden","Wikipedia"],
+wpMieszko2:["Mieszko II Lambert",W+"Mieszko_II_Lambert","Wikipedia"],
+wpGeza1:["Géza I of Hungary",W+"G%C3%A9za_I_of_Hungary","Wikipedia"],
+wpBela2:["Béla II of Hungary",W+"B%C3%A9la_II_of_Hungary","Wikipedia"],
+wpBela3:["Béla III of Hungary",W+"B%C3%A9la_III_of_Hungary","Wikipedia"],
+wpHarefoot:["Harold Harefoot",W+"Harold_Harefoot","Wikipedia"],
 ur:["The Spencers' royal Stuart ancestors","https://unofficialroyalty.com/columnists/the-laird-othistle/the-spencers-royal-stuart-ancestors","Unofficial Royalty"]
 };
 // which links (child>parent) each source was checked for
@@ -315,6 +342,12 @@ wpChristian:["christian1>hedvig","hedvig>gerhard6","margdenmark>christian1","fre
 wpGerhard:["hedvig>gerhard6","gerhard6>henry2holstein"],
 wpHenryH:["henry2holstein>sophiewerle","gerhard6>henry2holstein"],
 wpAntigone:["antigone>humphrey","humphrey>henry4"],
+wpGunhild:["cnut>cnutmother","cnutmother>mieszko1"],
+wpMieszko2:["boleslaw1>mieszko1","mieszko2>boleslaw1","richezapl>mieszko2"],
+wpGeza1:["geza1>richezapl","almos>geza1"],
+wpBela2:["bela2>almos"],
+wpBela3:["bela3>geza2","bela3>euphrosyne","geza2>bela2"],
+wpHarefoot:["harefoot>cnut","harefoot>aelfgifun"],
 sgm:["humphrey>henry4","antigone>humphrey","richardgrey>antigone","elizgrey>richardgrey","aliceludlow>elizgrey","georgevernon>aliceludlow","johnvernon>georgevernon","elizvernon>johnvernon","penelope>elizvernon","sunderland>penelope","dorothyspencer>sunderland","halifax2>dorothyspencer","dorothysavile>halifax2","charlotteboyle>dorothysavile","dorothycav>charlotteboyle","lordcharles>dorothycav","revcharles>lordcharles","cecilia>revcharles","queenmother>cecilia","elizabeth2>queenmother"]
 };
 // sources behind statements in a monarch's note
@@ -331,23 +364,38 @@ function up(start,skipUnsure){
     if(dist[p]==null){dist[p]=dist[x]+1;via[p]=x;q.push(p)}}}
   return {dist,via};
 }
+// how monarch X connects to subject S: nearest shared ancestor c, a generations above S and b above X,
+// the routes down from c to each, whether the relation is full or half, and whether it rests on a disputed link
+function relate(S,X,all){
+  const mine=up(X,false);
+  const down=(w,to,c)=>{const p=[c];for(let x=c;x!==to;){x=w.via[x];p.push(x)}return p};
+  let best=null;
+  for(const c in mine.dist)if(all.dist[c]!=null){
+    const r={c,a:all.dist[c],b:mine.dist[c]};
+    r.pathS=down(all,S,c);r.pathX=down(mine,X,c);
+    r.unsure=r.pathS.slice(1).concat(r.pathX.slice(1)).some(x=>UNSURE.has(x));
+    r.sc=(c===S?-1e3:0)+r.a+r.b+(r.unsure?.5:0);
+    if(!best||r.sc<best.sc)best=r;
+  }
+  if(best&&best.a&&best.b){
+    const twin=Object.keys(mine.dist).some(c=>c!==best.c&&all.dist[c]===best.a&&mine.dist[c]===best.b);
+    const ps=PAR[best.pathS[1]]||[],px=PAR[best.pathX[1]]||[],c=best.c;
+    // half only when both sides name their other parent and the two differ
+    const os=ps.filter(p=>p!==c),ox=px.filter(p=>p!==c);
+    best.half=twin?false:os.length&&ox.length&&!os.some(p=>ox.includes(p))?true:null;
+  }
+  return best;
+}
 function view(S){
   const sure=up(S,true),all=up(S,false),line=[];
   for(let x=S;x;x=(PAR[x]||[])[0])line.unshift(x);
   const st={},kin={};
   M.forEach(([id])=>{
     if(id===S)st[id]="subj";
-    else if(idx[id]>idx[S])st[id]="later";
+    else if(idx[id]>idx[S]){st[id]="later";kin[id]=relate(S,id,all)}
     else if(sure.dist[id]!=null)st[id]=line.includes(id)?"line":"anc";
     else if(all.dist[id]!=null)st[id]="prob";
-    else{
-      const mine=up(id,false);let best=null;
-      for(const c in mine.dist)if(all.dist[c]!=null){
-        const sc=mine.dist[c]+all.dist[c];
-        if(!best||sc<best.sc)best={id:c,sc,a:all.dist[c],b:mine.dist[c]};
-      }
-      st[id]=best?"other":"none";kin[id]=best;
-    }
+    else{kin[id]=relate(S,id,all);st[id]=kin[id]?"other":"none"}
   });
   const path=id=>{const w=sure.dist[id]!=null?sure:all,p=[id];for(let x=id;x!==S;){x=w.via[x];p.push(x)}return p};
   return {S,st,kin,line,path};
@@ -368,19 +416,21 @@ const greats=k=>k<1?"":k===1?"great-":k===2?"great-great-":k+"× great-";
 const ORD=["","first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth"];
 const ord=n=>ORD[n]||n+(n%100>10&&n%100<14?"th":["th","st","nd","rd"][n%10]||"th");
 const NUM=["","once","twice","three times","four times","five times","six times","seven times","eight times","nine times","ten times"];
-function relWord(id,a,b){
-  const f=QUEENS.has(id),g=(m,w)=>f?w:m;
+function relWord(id,a,b,half){
+  const f=QUEENS.has(id),g=(m,w)=>f?w:m,h=half?" by half-blood":"";
   if(b===0)return a===1?g("father","mother"):greats(a-2)+"grand"+g("father","mother");
-  if(a===1&&b===1)return g("brother","sister");
-  if(b===1)return greats(a-2)+g("uncle","aunt");
-  if(a===1)return greats(b-2)+g("nephew","niece");
+  if(a===0)return b===1?g("son","daughter"):greats(b-2)+"grand"+g("son","daughter");
+  if(a===1&&b===1)return (half?"half-":"")+g("brother","sister");
+  if(b===1)return greats(a-2)+g("uncle","aunt")+h;
+  if(a===1)return greats(b-2)+g("nephew","niece")+h;
   const d=Math.min(a,b)-1,r=Math.abs(a-b);
-  return ord(d)+" cousin"+(r?" "+(NUM[r]||r+" times")+" removed":"");
+  return ord(d)+" cousin"+(r?" "+(NUM[r]||r+" times")+" removed":"")+h;
 }
+// [words, probable?] for how monarch `id` is related to the subject, or null
 function relation(id){
-  const s=V.st[id];
-  if(isAnc(s))return relWord(id,V.path(id).length-1,0);
-  if(s==="other")return relWord(id,V.kin[id].a,V.kin[id].b);
+  const s=V.st[id],k=V.kin[id];
+  if(isAnc(s))return [relWord(id,V.path(id).length-1,0),s==="prob"];
+  if(k)return [relWord(id,k.a,k.b,k.half),k.unsure];
   return null;
 }
 let V,filter="all";
@@ -398,12 +448,13 @@ function renderNotes(earlier){
   let unc=[];
   if(earlier.some(m=>st(m[0])==="prob"))unc.push("The descent from Henry IV runs through an illegitimate granddaughter's family to the Queen Mother, and one link (the paternity of Elizabeth Grey) was contested as early as 1585. It is shown as probable.");
   if(isAnc(st("harold2")))unc.push("The descent from Harold II rests on medieval accounts of his daughter Gytha's marriage in Kyivan Rus, which historians generally accept.");
+  if(earlier.some(m=>{const k=V.kin[m[0]];return k&&k.pathS.concat(k.pathX).includes("cnutmother")}))unc.push("Ties through Cnut's mother assume she was the daughter of Mieszko I of Poland described by the chronicler Thietmar of Merseburg. Her identity is disputed, so these ties are shown as probable.");
   if(!unc.length)unc.push(`None of the links in ${sn}'s ancestry as traced here is flagged as disputed.`);
   const missing=["sweyn","harold2","stephen"].filter(id=>idx[id]<idx[S]&&!isAnc(st(id))).map(nameOf);
   const b=[["Before "+nameOf(root),ROOTNOTE[root]]];
   if(earlier.length)b.push(["Why the gaps",`The crown often passed sideways to a sibling or cousin, or was taken by conquest, so earlier monarchs are more often relatives than ancestors. For ${sn}, ${kin} earlier monarch${kin===1?" is a relative":"s are relatives"} but not ${kin===1?"an ancestor":"ancestors"}${none?`, and ${none} ${none===1?"has":"have"} no blood tie found at all`:""}.`]);
   b.push(["What is uncertain",unc.join(" ")]);
-  b.push(["Limits of this tree",`Every answer is computed from a family tree of about 175 people built for this page. It holds each monarch's parents and the main routes between dynasties, so a remote descent through someone outside it will not be found.`+(missing.length?` For ${sn} that is most likely to matter for ${missing.join(", ").replace(/, ([^,]*)$/," and $1")}, shown here as not ${missing.length>1?"ancestors":"an ancestor"}.`:"")]);
+  b.push(["Limits of this tree",`Every answer is computed from a family tree of ${M.length+Object.keys(N).length} people built for this page. It holds each monarch's parents and the main routes between dynasties, so a remote descent through someone outside it will not be found. No blood tie is known between William I and the House of Wessex, or between Harold II and any king before him, so those gaps are probably real rather than missing links.`+(missing.length?` For ${sn} that is most likely to matter for ${missing.join(", ").replace(/, ([^,]*)$/," and $1")}, shown here as not ${missing.length>1?"ancestors":"an ancestor"}.`:"")]);
   $("#notes").innerHTML=b.map(([h,t])=>`<div><h3>${h}</h3><p>${t}</p></div>`).join("");
 }
 
@@ -458,26 +509,41 @@ function setSubject(S){
   try{history.replaceState(null,"","#"+S)}catch(e){}
   if(narrow())hidePanel();else show(S);
 }
+// the two lines of descent from a shared ancestor, side by side, long ones folded in the middle
+function fork(k,id,S){
+  const leg=(p,end)=>`<div class="leg"><h5>To ${nameOf(end)}</h5><ol>`+p.slice(1).map((x,i,a)=>`<li class="${isM(x)?"m":""}${UNSURE.has(x)?" u":""}${x===S?" s":""}${i>=2&&i<a.length-2?" mid":""}">${nameOf(x)}</li>`).join("")+`</ol></div>`;
+  const long=Math.max(k.a,k.b)>5;
+  return `<h4>How they connect</h4><div class="fork${long?" short":""}"><div class="top">${nameOf(k.c)}<small>Shared ancestor</small></div><div class="legs">${leg(k.pathX,id)}${leg(k.pathS,S)}</div></div>`+(long?`<button class="link" id="forkmore">Show every generation</button>`:"");
+}
+// sources behind every parent-to-child link on some top-down routes
+function routeSources(paths){
+  const edges=paths.flatMap(p=>p.slice(1).map((x,i)=>x+">"+p[i])),ks=[...new Set(edges.flatMap(e=>EC[e]||[]))],n=edges.filter(e=>EC[e]).length;
+  return edges.length?`<h4>Sources for this route</h4>${srcList(ks)}<p class="small">${n} of ${edges.length} links checked against a cited source${n<edges.length?"; the rest follow the standard regnal genealogy":""}.</p>`:"";
+}
 function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"))}
 function show(id,scrollTile){
-  const m=M[idx[id]],s=V.st[id],S=V.S,sn=nameOf(S);
+  const m=M[idx[id]],s=V.st[id],S=V.S,sn=nameOf(S),R=s==="subj"?null:relation(id),k=V.kin[id];
   $$(".sel").forEach(e=>e.classList.remove("sel"));$("#t-"+id).classList.add("sel");
-  let h=`<button class="close" id="close" aria-label="Close">×</button><h3>${m[1]}</h3><div class="meta">Reigned ${m[2]} · ${HOUSES[m[3]]}</div><span class="badge s-${s}">${LABEL[s]}</span>`+(relation(id)?`<p class="rel">${m[1]} is ${s==="prob"?"probably ":""}<b>${sn}'s ${relation(id)}</b>.</p>`:"")+`<p>${m[4]}</p>`+(NOTESRC[id]?`<p class="small">Source: ${NOTESRC[id].map(slink).join("; ")}</p>`:"");
-  if(s==="subj")h+=`<p>Select any earlier monarch to see the route down to ${sn}, or pick someone else from the menu at the top.</p>`;
+  let h=`<button class="close" id="close" aria-label="Close">×</button><h3>${m[1]}</h3><div class="meta">Reigned ${m[2]} · ${HOUSES[m[3]]}</div><span class="badge s-${s}">${LABEL[s]}</span>`+(R?`<p class="rel">${m[1]} is ${R[1]?"probably ":""}<b>${sn}'s ${R[0]}</b>.</p>`:"")+`<p>${m[4]}</p>`+(NOTESRC[id]?`<p class="small">Source: ${NOTESRC[id].map(slink).join("; ")}</p>`:"");
+  if(s==="subj")h+=`<p>Select any other monarch, earlier or later, to see how they are related to ${sn}, or pick someone else from the menu at the top.</p>`;
   else if(isAnc(s)){
     const p=V.path(id);
     h+=`<h4>${p.length-1} generation${p.length>2?"s":""} down to ${sn}</h4><ol class="path">`+p.map(x=>`<li class="${isM(x)?"m":""}${UNSURE.has(x)?" u":""}">${nameOf(x)}</li>`).join("")+`</ol>`;
     if(s==="prob")h+=`<p>The link at ${p.filter(x=>UNSURE.has(x)).map(nameOf).join(", ")} is disputed, so this descent is probable, not proven.</p>`;
     else if(s==="anc")h+=`<p>This is the shortest route in the tree. There may be others.</p>`;
-    const edges=p.slice(0,-1).map((x,i)=>p[i+1]+">"+x),ks=[...new Set(edges.flatMap(e=>EC[e]||[]))],n=edges.filter(e=>EC[e]).length;
-    h+=`<h4>Sources for this route</h4>${srcList(ks)}<p class="small">${n} of ${edges.length} links checked against a cited source${n<edges.length?"; the rest follow the standard regnal genealogy":""}.</p>`;
+    h+=routeSources([p.slice().reverse()]);
     const g=V.line.indexOf(id)+1;if(g)h+=`<button class="link" id="togen">Generation ${g} of ${V.line.length} on the deepest line</button>`;
-  }else if(s==="other"){const k=V.kin[id];
-    h+=`<p>Not a direct ancestor of ${sn}, but a blood relative. Their nearest shared ancestor in this tree is <b>${nameOf(k.id)}</b>: ${k.b} generation${k.b>1?"s":""} above ${m[1]} and ${k.a} above ${sn}.</p><p class="small">The tree does not separate full from half relations, so a brother or cousin here may be a half-brother or half-cousin.</p>`;
-  }else if(s==="none")h+=`<p>No shared ancestry with ${sn} was found in this tree.</p>`;
-  else h+=`<p>Came to the throne after ${sn}.</p>`;
+  }else if(k&&k.a===0){
+    h+=`<h4>${k.b} generation${k.b>1?"s":""} down from ${sn}</h4><ol class="path">`+k.pathX.map(x=>`<li class="${isM(x)?"m":""}${UNSURE.has(x)?" u":""}">${nameOf(x)}</li>`).join("")+`</ol>`+routeSources([k.pathX]);
+  }else if(k){
+    h+=`<p>${s==="later"?`Came to the throne after ${sn}. `:`Not a direct ancestor of ${sn}, but a blood relative. `}Their nearest shared ancestor in this tree is <b>${nameOf(k.c)}</b>: ${k.b} generation${k.b>1?"s":""} above ${m[1]} and ${k.a} above ${sn}.</p>`+fork(k,id,S);
+    if(k.unsure)h+=`<p>The link at ${k.pathS.concat(k.pathX).filter(x=>x!==k.c&&UNSURE.has(x)).map(nameOf).join(", ")} is disputed, so this relationship is probable, not proven.</p>`;
+    if(k.half==null)h+=`<p class="small">The tree does not record whether this is a full or a half relation.</p>`;
+    h+=routeSources([k.pathS,k.pathX]);
+  }else h+=`<p>${s==="later"?`Came to the throne after ${sn}. `:""}No shared ancestry with ${sn} was found in this tree.</p>`;
   if(s!=="subj")h+=`<button class="go" id="go">Trace ${m[1]}'s ancestry</button>`;
   panel.innerHTML=h;panel.hidden=false;panel.scrollTop=0;
+  if($("#forkmore"))$("#forkmore").onclick=()=>{$(".fork").classList.remove("short");$("#forkmore").remove()};
   $("#close").onclick=hidePanel;
   if($("#go"))$("#go").onclick=()=>{setSubject(id);window.scrollTo({top:0,behavior:"smooth"})};
   if($("#togen"))$("#togen").onclick=()=>{if(narrow())panel.hidden=true;$("#g-"+(V.line.indexOf(id)+1)).scrollIntoView({behavior:"smooth",block:"center"})};
