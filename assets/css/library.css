@@ -80,8 +80,8 @@ h2 { font-size: 30px; margin: 0 0 6px; }
 .gallery-main { padding: 0 0 48px; }
 .gallery { position: relative; background: #2a2421; }
 .scroller { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #6d5a44 #2a2421; }
-.track { height: clamp(300px, 57.8vw, 78vh); }
-@media (max-width: 600px) { .track { height: 62vh; min-height: 360px; } }
+.track { height: clamp(380px, calc(100vh - 190px), 860px); }
+@media (max-width: 600px) { .track { height: 68vh; min-height: 400px; } }
 .stage { position: sticky; left: 0; top: 0; height: 100%; width: 100%; overflow: hidden; }
 .scene, .scene svg, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .stage canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
