@@ -1,9 +1,8 @@
-# Checks every link on the built site, including the externally hosted PDFs
-# on the Work page. Runs weekly as well, since external links can break
-# without any change here. Kept separate from deploys so a dead third-party
-# link never blocks publishing.
+# Checks every link on the built site. Runs weekly as well, since external
+# links can break without any change here. Kept separate from deploys so a
+# dead third-party link never blocks publishing.
 #
-# Absolute links to michaelchapman.me itself (canonical URLs, the feed link)
+# Absolute links to michaelchapman.me itself (e.g. canonical URLs)
 # are excluded: they point at the live site, which won't have a new page
 # until after it's deployed. Root-relative links are still checked against
 # the freshly built _site.

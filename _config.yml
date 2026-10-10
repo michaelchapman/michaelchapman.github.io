@@ -1,63 +1,16 @@
-# Site settings used by both Jekyll and the minima theme.
+# Site settings. For now the site is two standalone HTML pages (index.html and
+# kings-line/index.html) with no theme or layout; Jekyll copies them as-is.
 title: Michael Chapman
-description: >-
-  Notes and writing on health data infrastructure, Secure Data Environments,
-  and clinical research from Michael Chapman.
-author: Michael Chapman
 locale: en_GB
 url: "https://michaelchapman.me"
 
-# Profile links, used by jekyll-seo-tag for search-engine metadata.
-social:
-  name: Michael Chapman
-  links:
-    - https://github.com/michaelchapman
-
-# Theme
-theme: minima
-minima:
-  # "auto" follows the visitor's light/dark system setting.
-  skin: auto
-  date_format: "%-d %B %Y"
-  # Pages shown in the top navigation bar, in order.
-  nav_pages:
-    - about.md
-    - cv.md
-    - work.md
-    - writing.md
-  # Icons in the footer (Font Awesome brand icon names).
-  social_links:
-    - title: Michael Chapman on GitHub
-      icon: github
-      url: "https://github.com/michaelchapman"
-
-# Build settings
-markdown: kramdown
 plugins:
-  - jekyll-feed
-  - jekyll-seo-tag
   - jekyll-sitemap
 
-# Files/folders Jekyll should not try to process as site content.
+# Files/folders Jekyll should not copy into the site.
 exclude:
   - Gemfile
   - Gemfile.lock
   - README.md
   - LICENSE
   - vendor
-  # For now the site is just the Top Banana game (index.html). The old pages
-  # stay in the repo but are left out of the build; delete these lines to
-  # bring them back (and delete index.html so index.md is the home page).
-  - index.md
-  - about.md
-  - cv.md
-  - work.md
-  - writing.md
-  - _posts
-
-# Default share image for link previews (jekyll-seo-tag) on every page.
-defaults:
-  - scope:
-      path: ""
-    values:
-      image: /assets/images/social-card.png
