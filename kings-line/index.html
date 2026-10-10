@@ -120,6 +120,7 @@ footer i{font-style:normal;font-variant-numeric:tabular-nums}
 .srcl{margin:0;padding-left:18px;font-size:.85rem}
 .panel .small{font-size:.82rem;color:var(--muted)}
 .panel .rel{font-size:1.05rem}
+.acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .fork{display:flex;flex-direction:column;font-size:.88rem;line-height:1.35}
 .fork .top{align-self:flex-start;font-weight:700;border:1.5px solid var(--or-edge);background:var(--or-soft);border-radius:3px;padding:4px 10px}
 .fork .top small{display:block;font-weight:400;font-size:.75rem;color:var(--muted)}
@@ -398,7 +399,10 @@ function view(S){
     else{kin[id]=relate(S,id,all);st[id]=kin[id]?"other":"none"}
   });
   const path=id=>{const w=sure.dist[id]!=null?sure:all,p=[id];for(let x=id;x!==S;){x=w.via[x];p.push(x)}return p};
-  return {S,st,kin,line,path};
+  // how many distinct parent-to-child routes lead from each ancestor down to S
+  const CH={};for(const c in PAR)for(const q of PAR[c])(CH[q]=CH[q]||[]).push(c);
+  const routes={},count=x=>routes[x]??=(x===S?1:(CH[x]||[]).filter(c=>all.dist[c]!=null).reduce((t,c)=>t+count(c),0));
+  return {S,st,kin,line,path,routes:id=>count(id)};
 }
 //DATA-END
 
@@ -485,12 +489,13 @@ function setSubject(S){
   const earlier=M.filter(m=>idx[m[0]]<idx[S]),anc=earlier.filter(m=>isAnc(V.st[m[0]])),prob=anc.filter(m=>V.st[m[0]]==="prob").length;
   const rel=earlier.filter(m=>V.st[m[0]]==="other").length,unrel=earlier.length-anc.length-rel;
   const e66=earlier.filter(m=>idx[m[0]]>=idx.william1),a66=e66.filter(m=>isAnc(V.st[m[0]]));
-  const root=V.line[0],gens=V.line.length;
+  const root=V.line[0],gens=V.line.length,most=anc.reduce((b,m)=>!b||V.routes(m[0])>V.routes(b[0])?m:b,null);
   $("#lede").innerHTML=earlier.length
     ?`<b>${sm[1]}</b> descends from <b>${anc.length} of the ${earlier.length}</b> monarchs who reigned earlier${prob?` (${prob} of them only probably)`:""}${rel?`, and is a blood relative of ${unrel?rel+" of":anc.length?"all "+rel+" of":"all"} the others${unrel?"":", from uncles to distant cousins"}`:""}. The deepest line here runs back <b>${gens} generations</b> to ${nameOf(root)}.`
     :`<b>${sm[1]}</b> is where this roll begins. The line behind him runs back to ${nameOf(root)}.`;
   $("#figs").innerHTML=(earlier.length?`<div class="fig"><b>${anc.length} of ${earlier.length}</b><span>earlier monarchs are ancestors</span></div><div class="fig"><b>${anc.length+rel} of ${earlier.length}</b><span>are blood relatives of any kind</span></div>`:"")
     +(e66.length?`<div class="fig"><b>${a66.length} of ${e66.length}</b><span>counting only from 1066</span></div>`:"")
+    +(most&&V.routes(most[0])>1?`<div class="fig"><b>${V.routes(most[0]).toLocaleString("en-GB")} routes</b><span>of descent from ${most[1]} in this tree, the most from any monarch</span></div>`:"")
     +`<div class="fig"><b>${gens}</b><span>generations from ${nameOf(root)} to ${sm[1]}</span></div>`;
   $("#legend").innerHTML="";
   ["line","anc","prob","other","none"].forEach(s=>{const n=M.filter(m=>V.st[m[0]]===s).length;
@@ -506,7 +511,7 @@ function setSubject(S){
     $("#line").append(li)});
   renderNotes(earlier);
   applyFilter();
-  try{history.replaceState(null,"","#"+S)}catch(e){}
+  setHash(S);
   if(narrow())hidePanel();else show(S);
 }
 // the two lines of descent from a shared ancestor, side by side, long ones folded in the middle
@@ -520,7 +525,8 @@ function routeSources(paths){
   const edges=paths.flatMap(p=>p.slice(1).map((x,i)=>x+">"+p[i])),ks=[...new Set(edges.flatMap(e=>EC[e]||[]))],n=edges.filter(e=>EC[e]).length;
   return edges.length?`<h4>Sources for this route</h4>${srcList(ks)}<p class="small">${n} of ${edges.length} links checked against a cited source${n<edges.length?"; the rest follow the standard regnal genealogy":""}.</p>`:"";
 }
-function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"))}
+function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"));setHash(V.S)}
+function setHash(h){try{history.replaceState(null,"","#"+h)}catch(e){}}
 function show(id,scrollTile){
   const m=M[idx[id]],s=V.st[id],S=V.S,sn=nameOf(S),R=s==="subj"?null:relation(id),k=V.kin[id];
   $$(".sel").forEach(e=>e.classList.remove("sel"));$("#t-"+id).classList.add("sel");
@@ -530,7 +536,8 @@ function show(id,scrollTile){
     const p=V.path(id);
     h+=`<h4>${p.length-1} generation${p.length>2?"s":""} down to ${sn}</h4><ol class="path">`+p.map(x=>`<li class="${isM(x)?"m":""}${UNSURE.has(x)?" u":""}">${nameOf(x)}</li>`).join("")+`</ol>`;
     if(s==="prob")h+=`<p>The link at ${p.filter(x=>UNSURE.has(x)).map(nameOf).join(", ")} is disputed, so this descent is probable, not proven.</p>`;
-    else if(s==="anc")h+=`<p>This is the shortest route in the tree. There may be others.</p>`;
+    const n=V.routes(id);
+    h+=n>1?`<p>This is the shortest of <b>${n.toLocaleString("en-GB")} different routes</b> by which ${sn} descends from ${m[1]} in this tree.</p>`:`<p>This is the only route in this tree.</p>`;
     h+=routeSources([p.slice().reverse()]);
     const g=V.line.indexOf(id)+1;if(g)h+=`<button class="link" id="togen">Generation ${g} of ${V.line.length} on the deepest line</button>`;
   }else if(k&&k.a===0){
@@ -541,8 +548,11 @@ function show(id,scrollTile){
     if(k.half==null)h+=`<p class="small">The tree does not record whether this is a full or a half relation.</p>`;
     h+=routeSources([k.pathS,k.pathX]);
   }else h+=`<p>${s==="later"?`Came to the throne after ${sn}. `:""}No shared ancestry with ${sn} was found in this tree.</p>`;
-  if(s!=="subj")h+=`<button class="go" id="go">Trace ${m[1]}'s ancestry</button>`;
+  if(s!=="subj")h+=`<div class="acts"><button class="go" id="go">Trace ${m[1]}'s ancestry</button><button class="link" id="share">Copy link to this</button></div>`;
   panel.innerHTML=h;panel.hidden=false;panel.scrollTop=0;
+  setHash(id===S?S:S+"/"+id);
+  if($("#share"))$("#share").onclick=async()=>{const b=$("#share");
+    try{await navigator.clipboard.writeText(location.href);b.textContent="Link copied"}catch(e){b.textContent="Copy the address bar to share"}};
   if($("#forkmore"))$("#forkmore").onclick=()=>{$(".fork").classList.remove("short");$("#forkmore").remove()};
   $("#close").onclick=hidePanel;
   if($("#go"))$("#go").onclick=()=>{setSubject(id);window.scrollTo({top:0,behavior:"smooth"})};
@@ -555,8 +565,14 @@ document.addEventListener("click",e=>{
 });
 $("#subject").addEventListener("change",e=>setSubject(e.target.value));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&narrow()&&!panel.hidden)hidePanel()});
-const h0=location.hash.slice(1);
-setSubject(isM(h0)?h0:"charles3");
+// #subject or #subject/monarch opens the page on that subject, with that monarch selected
+function fromHash(){
+  const [a,b]=decodeURIComponent(location.hash.slice(1)).split("/");
+  setSubject(isM(a)?a:"charles3");
+  if(isM(a)&&isM(b)&&b!==a)show(b,true);
+}
+window.addEventListener("hashchange",fromHash);
+fromHash();
 </script>
 </body>
 </html>
