@@ -1,7 +1,6 @@
 # Checks every link on the built site. Runs weekly as well, since external
 # links can break without any change here. Kept separate from deploys so a
 # dead third-party link never blocks publishing.
-# link never blocks publishing.
 #
 # Absolute links to michaelchapman.me itself (e.g. canonical URLs)
 # are excluded: they point at the live site, which won't have a new page
