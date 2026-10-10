@@ -119,6 +119,7 @@ footer ul{margin:0;padding-left:18px}
 footer i{font-style:normal;font-variant-numeric:tabular-nums}
 .srcl{margin:0;padding-left:18px;font-size:.85rem}
 .panel .small{font-size:.82rem;color:var(--muted)}
+.panel .rel{font-size:1.05rem}
 
 @media (max-width:860px){
   .cols{grid-template-columns:minmax(0,1fr)}
@@ -361,6 +362,27 @@ const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=nu
 const isAnc=s=>s==="line"||s==="anc"||s==="prob";
 const narrow=()=>matchMedia("(max-width:860px)").matches;
 const panel=$("#panel");
+// how monarch `id` is related to the subject, in plain words
+const QUEENS=new Set(["mary1","elizabeth1","mary2","anne","victoria","elizabeth2"]);
+const greats=k=>k<1?"":k===1?"great-":k===2?"great-great-":k+"× great-";
+const ORD=["","first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth"];
+const ord=n=>ORD[n]||n+(n%100>10&&n%100<14?"th":["th","st","nd","rd"][n%10]||"th");
+const NUM=["","once","twice","three times","four times","five times","six times","seven times","eight times","nine times","ten times"];
+function relWord(id,a,b){
+  const f=QUEENS.has(id),g=(m,w)=>f?w:m;
+  if(b===0)return a===1?g("father","mother"):greats(a-2)+"grand"+g("father","mother");
+  if(a===1&&b===1)return g("brother","sister");
+  if(b===1)return greats(a-2)+g("uncle","aunt");
+  if(a===1)return greats(b-2)+g("nephew","niece");
+  const d=Math.min(a,b)-1,r=Math.abs(a-b);
+  return ord(d)+" cousin"+(r?" "+(NUM[r]||r+" times")+" removed":"");
+}
+function relation(id){
+  const s=V.st[id];
+  if(isAnc(s))return relWord(id,V.path(id).length-1,0);
+  if(s==="other")return relWord(id,V.kin[id].a,V.kin[id].b);
+  return null;
+}
 let V,filter="all";
 const slink=k=>`<a href="${SRC[k][1]}">${SRC[k][0]}</a>`;
 const srcList=ks=>ks.length?`<ul class="srcl">${ks.map(k=>`<li>${slink(k)}</li>`).join("")}</ul>`:"";
@@ -410,12 +432,13 @@ function setSubject(S){
   $$("[data-strip]").forEach(b=>{const m=M[idx[b.dataset.id]];b.className="s-"+V.st[m[0]];b.title=m[1]+", "+m[2];b.setAttribute("aria-label",m[1]+": "+LABEL[V.st[m[0]]])});
   $$(".tile").forEach(t=>{t.className="tile s-"+V.st[t.dataset.id]});
   const earlier=M.filter(m=>idx[m[0]]<idx[S]),anc=earlier.filter(m=>isAnc(V.st[m[0]])),prob=anc.filter(m=>V.st[m[0]]==="prob").length;
+  const rel=earlier.filter(m=>V.st[m[0]]==="other").length,unrel=earlier.length-anc.length-rel;
   const e66=earlier.filter(m=>idx[m[0]]>=idx.william1),a66=e66.filter(m=>isAnc(V.st[m[0]]));
   const root=V.line[0],gens=V.line.length;
   $("#lede").innerHTML=earlier.length
-    ?`<b>${sm[1]}</b> descends from <b>${anc.length} of the ${earlier.length}</b> monarchs who reigned earlier${prob?` (${prob} of them only probably)`:""}. The deepest line here runs back <b>${gens} generations</b> to ${nameOf(root)}.`
+    ?`<b>${sm[1]}</b> descends from <b>${anc.length} of the ${earlier.length}</b> monarchs who reigned earlier${prob?` (${prob} of them only probably)`:""}${rel?`, and is a blood relative of ${unrel?rel+" of":anc.length?"all "+rel+" of":"all"} the others${unrel?"":", from uncles to distant cousins"}`:""}. The deepest line here runs back <b>${gens} generations</b> to ${nameOf(root)}.`
     :`<b>${sm[1]}</b> is where this roll begins. The line behind him runs back to ${nameOf(root)}.`;
-  $("#figs").innerHTML=(earlier.length?`<div class="fig"><b>${anc.length} of ${earlier.length}</b><span>earlier monarchs are ancestors</span></div>`:"")
+  $("#figs").innerHTML=(earlier.length?`<div class="fig"><b>${anc.length} of ${earlier.length}</b><span>earlier monarchs are ancestors</span></div><div class="fig"><b>${anc.length+rel} of ${earlier.length}</b><span>are blood relatives of any kind</span></div>`:"")
     +(e66.length?`<div class="fig"><b>${a66.length} of ${e66.length}</b><span>counting only from 1066</span></div>`:"")
     +`<div class="fig"><b>${gens}</b><span>generations from ${nameOf(root)} to ${sm[1]}</span></div>`;
   $("#legend").innerHTML="";
@@ -439,7 +462,7 @@ function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove(
 function show(id,scrollTile){
   const m=M[idx[id]],s=V.st[id],S=V.S,sn=nameOf(S);
   $$(".sel").forEach(e=>e.classList.remove("sel"));$("#t-"+id).classList.add("sel");
-  let h=`<button class="close" id="close" aria-label="Close">×</button><h3>${m[1]}</h3><div class="meta">Reigned ${m[2]} · ${HOUSES[m[3]]}</div><span class="badge s-${s}">${LABEL[s]}</span><p>${m[4]}</p>`+(NOTESRC[id]?`<p class="small">Source: ${NOTESRC[id].map(slink).join("; ")}</p>`:"");
+  let h=`<button class="close" id="close" aria-label="Close">×</button><h3>${m[1]}</h3><div class="meta">Reigned ${m[2]} · ${HOUSES[m[3]]}</div><span class="badge s-${s}">${LABEL[s]}</span>`+(relation(id)?`<p class="rel">${m[1]} is ${s==="prob"?"probably ":""}<b>${sn}'s ${relation(id)}</b>.</p>`:"")+`<p>${m[4]}</p>`+(NOTESRC[id]?`<p class="small">Source: ${NOTESRC[id].map(slink).join("; ")}</p>`:"");
   if(s==="subj")h+=`<p>Select any earlier monarch to see the route down to ${sn}, or pick someone else from the menu at the top.</p>`;
   else if(isAnc(s)){
     const p=V.path(id);
@@ -450,7 +473,7 @@ function show(id,scrollTile){
     h+=`<h4>Sources for this route</h4>${srcList(ks)}<p class="small">${n} of ${edges.length} links checked against a cited source${n<edges.length?"; the rest follow the standard regnal genealogy":""}.</p>`;
     const g=V.line.indexOf(id)+1;if(g)h+=`<button class="link" id="togen">Generation ${g} of ${V.line.length} on the deepest line</button>`;
   }else if(s==="other"){const k=V.kin[id];
-    h+=`<p>Not an ancestor of ${sn}. Their nearest shared ancestor in this tree is <b>${nameOf(k.id)}</b>: ${k.b} generation${k.b>1?"s":""} above ${m[1]} and ${k.a} above ${sn}.</p>`;
+    h+=`<p>Not a direct ancestor of ${sn}, but a blood relative. Their nearest shared ancestor in this tree is <b>${nameOf(k.id)}</b>: ${k.b} generation${k.b>1?"s":""} above ${m[1]} and ${k.a} above ${sn}.</p><p class="small">The tree does not separate full from half relations, so a brother or cousin here may be a half-brother or half-cousin.</p>`;
   }else if(s==="none")h+=`<p>No shared ancestry with ${sn} was found in this tree.</p>`;
   else h+=`<p>Came to the throne after ${sn}.</p>`;
   if(s!=="subj")h+=`<button class="go" id="go">Trace ${m[1]}'s ancestry</button>`;
