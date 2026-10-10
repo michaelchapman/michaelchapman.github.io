@@ -17,8 +17,11 @@ by bay. Every object also has an ordinary page, and the card catalogue
   copy one of the existing files.
 - `_data/cv.yml`: the career history. It drives both `/cv/` and the
   certificates on the gallery wall.
-- `assets/js/gallery.js`: draws the gallery as SVG. One camera, a small kit
-  of bay templates and a colour palette by role keep additions consistent.
+- `assets/js/gallery.js`: lays out the gallery (an iron-and-glass reading
+  room) as SVG, with a bay template for each kind of object.
+- `assets/js/library-kit.js`: the camera and the furniture it is built from
+  (bookcases, chairs, gears, pipes, the castle outside). Shapes of one colour
+  are joined and rows of books are drawn once, which keeps scrolling smooth.
   The hour and season follow the visitor's clock (try `?hour=night&season=winter`).
   "Pixel art" redraws the same scene at 320px with a limited palette.
 - `_layouts/`: `library` (every page), `gallery` (the home page, with the
