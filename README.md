@@ -5,6 +5,16 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 
 ## Structure
 
+For now the site is two standalone pages, served as-is with no theme layout:
+
+- `index.html` — the Top Banana game, at `/`
+- `kings-line/index.html` — The King's Line (monarch ancestry), at `/kings-line/`
+
+The older pages below are still in the repo but excluded from the build in
+`_config.yml`; remove them from `exclude` (and delete `index.html`) to bring
+them back.
+
+
 - `_config.yml` — site settings and the `minima` theme configuration
 - `index.md`, `about.md`, `cv.md`, `work.md`, `writing.md` — top-level pages
 - `_posts/` — blog posts (`YYYY-MM-DD-title.md`), listed on `/writing/`

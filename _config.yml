@@ -45,6 +45,15 @@ exclude:
   - README.md
   - LICENSE
   - vendor
+  # For now the site is just the Top Banana game (index.html). The old pages
+  # stay in the repo but are left out of the build; delete these lines to
+  # bring them back (and delete index.html so index.md is the home page).
+  - index.md
+  - about.md
+  - cv.md
+  - work.md
+  - writing.md
+  - _posts
 
 # Default share image for link previews (jekyll-seo-tag) on every page.
 defaults:
