@@ -10,18 +10,16 @@ For now the site is two standalone pages, served as-is with no theme layout:
 - `index.html` — the Top Banana game, at `/`
 - `kings-line/index.html` — The King's Line (monarch ancestry), at `/kings-line/`
 
-The older pages below are still in the repo but excluded from the build in
-`_config.yml`; remove them from `exclude` (and delete `index.html`) to bring
-them back.
+Other files:
 
-
-- `_config.yml` — site settings and the `minima` theme configuration
-- `index.md`, `about.md`, `cv.md`, `work.md`, `writing.md` — top-level pages
-- `_posts/` — blog posts (`YYYY-MM-DD-title.md`), listed on `/writing/`
-- `_sass/minima/custom-styles.scss` — style overrides on top of the `minima` 3 theme
-- `assets/images/social-card.png` — default image for link previews
+- `_config.yml` — site settings (Jekyll copies both pages unchanged and adds a `sitemap.xml`)
+- `favicon.ico` — the tab icon browsers request automatically
 - `.github/workflows/` — build/deploy (`pages.yml`) and link checking (`links.yml`)
 - `CNAME` — custom domain config; do not edit, DNS is already set up
+
+The earlier Markdown pages (About, CV, Work, Writing and the first post) and
+the `minima` theme were removed while unused; they are in git history before
+this change if needed again.
 
 ## Local preview
 
@@ -48,5 +46,4 @@ This needs the repository's Pages source set to **GitHub Actions**
 (Settings → Pages → Build and deployment → Source).
 
 The `Check links` workflow checks every link on the built site on each push
-and weekly, so a dead external link (e.g. a PDF on the Work page) shows up
-as a failed run.
+and weekly, so a dead external link shows up as a failed run.
