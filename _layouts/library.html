@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% seo %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono&display=swap">
+  <link rel="stylesheet" href="{{ '/assets/css/library.css' | relative_url }}">
+</head>
+<body class="{{ page.body_class }}">
+  <header class="top">
+    <a class="name" href="{{ '/' | relative_url }}">Michael Chapman</a>
+    <nav aria-label="Site">
+      <a href="{{ '/catalogue/' | relative_url }}"{% if page.url == '/catalogue/' %} aria-current="page"{% endif %}>Card catalogue</a>
+      <a href="{{ '/cv/' | relative_url }}"{% if page.url == '/cv/' %} aria-current="page"{% endif %}>CV</a>
+    </nav>
+  </header>
+  <main class="{{ page.main_class | default: 'page' }}">
+    {{ content }}
+  </main>
+</body>
+</html>

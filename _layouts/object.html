@@ -1,0 +1,15 @@
+---
+layout: library
+---
+{%- assign bay = site.data.gallery.bays | where: "id", page.bay | first -%}
+<article class="object">
+  <p class="eyebrow">{% if bay %}{{ bay.title }}{% endif %}{% if page.year %} · {{ page.year }}{% endif %}</p>
+  <h1>{{ page.title }}</h1>
+  {%- if page.publisher %}<p class="meta">{{ page.publisher }}</p>{% endif %}
+  <div class="object-body">{{ content }}</div>
+  <p class="actions">
+    {%- if page.file %}<a class="button" href="{{ page.file }}">Open the paper (PDF)</a>{% endif %}
+    {%- if page.link %}<a class="button" href="{{ page.link }}">Visit the site</a>{% endif %}
+    <a href="{{ '/' | relative_url }}#{{ page.bay }}">Back to the gallery</a>
+  </p>
+</article>

@@ -1,0 +1,75 @@
+# Career history. Drives both the CV page (/cv/) and the certificates on the
+# gallery wall, one frame per role. Newest first.
+roles:
+  - id: nhse
+    years: 2021–present
+    title: Director of Data Access & Partnerships
+    org: NHS England (formerly NHS Digital)
+    summary: >-
+      Run NHS England's external data access and clinical trials services:
+      roughly £25m a year, 100+ people. That covers the Secure Data
+      Environment (safe access to billions of rows of de-identified patient
+      data for academic and commercial researchers), NHS DigiTrials (recruited
+      1.5m+ people into trials, including NHS Galleri, the UK's
+      fastest-recruiting randomised trial), and around 1,000 live
+      data-sharing agreements.
+
+  - id: hdruk
+    years: 2019–2021
+    title: Director of Health Informatics
+    org: Health Data Research UK, Cambridge
+    summary: >-
+      Set the health informatics strategy for HDR UK's Cambridge site, a
+      partnership between the Wellcome Sanger Institute, EBI, Cambridge and its
+      hospitals. Built the team, delivered data linkages for a cohort of
+      325,000 blood donors, helped establish the Polygenic Score Catalog, and
+      led health informatics for COVID-19 Genomics UK (COG-UK), including
+      moving fast during the pandemic to link viral genetic sequences to
+      patient data and secure philanthropic funding for it.
+
+  - id: cruk
+    years: 2013–2019
+    title: Progressively senior roles
+    org: Cancer Research UK
+    summary: >-
+      Project Director for the Cancer Patient Portal, then Head of Cancer
+      Intelligence, then Director of Information & Patient Involvement, ending
+      up running a 150+ person department covering health, patient and
+      statistical evidence. Advised the CEO and board, set CRUK's patient
+      involvement strategy, and co-led the review of cancer registry opt-outs
+      that shaped the National Data Opt-out.
+
+  - id: ncin
+    years: 2008–2013
+    title: Senior Research Programme Manager
+    org: National Cancer Intelligence Network / NCRI
+    summary: >-
+      Opened up researcher access to linked cancer registry data for the first
+      time, wrote a widely-used template for data and tissue access policies,
+      and represented NCRI on national data access and human tissue issues.
+      Several of the papers on the reading table come from this period.
+
+  - id: ey
+    years: 2006–2008
+    title: Senior Consultant
+    org: Ernst & Young
+    summary: >-
+      Pricing, commercial strategy and cost-reduction work for corporate
+      clients, before moving into health data.
+
+  - id: education
+    years: Earlier
+    title: PhD in Biochemistry
+    org: University of Cambridge
+    summary: >-
+      PhD in Biochemistry, University of Cambridge (BBSRC/GSK-funded); BA/MSci,
+      also Cambridge, First Class Honours.
+
+boards:
+  - UK Statistics Authority Research Accreditation Panel
+  - UK Biobank Strategic Oversight Committee
+  - Health Data Research Alliance Executive Committee
+  - NIHR BioResearch Oversight Board
+  - CPRD Scientific Advisory Committee
+  - Cancer Research UK Data Advisory Board
+  - Population Research UK International Scientific Advisory Board
