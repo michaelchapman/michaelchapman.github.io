@@ -1,8 +1,9 @@
-# Site settings used by both Jekyll and the minima theme.
+# Site settings. The site is the Long Gallery: one room of a castle library
+# (see README.md). Layouts are the site's own, in _layouts/.
 title: Michael Chapman
 description: >-
-  Notes and writing on health data infrastructure, Secure Data Environments,
-  and clinical research from Michael Chapman.
+  A long gallery in a castle library, holding things Michael Chapman has made
+  or kept: old reports, a CV, and a few oddities.
 author: Michael Chapman
 locale: en_GB
 url: "https://michaelchapman.me"
@@ -13,28 +14,15 @@ social:
   links:
     - https://github.com/michaelchapman
 
-# Theme
-theme: minima
-minima:
-  # "auto" follows the visitor's light/dark system setting.
-  skin: auto
-  date_format: "%-d %B %Y"
-  # Pages shown in the top navigation bar, in order.
-  nav_pages:
-    - about.md
-    - cv.md
-    - work.md
-    - writing.md
-  # Icons in the footer (Font Awesome brand icon names).
-  social_links:
-    - title: Michael Chapman on GitHub
-      icon: github
-      url: "https://github.com/michaelchapman"
+# Everything in the gallery that has its own page (papers, the portrait, ...).
+# Each is one Markdown file in _objects/; `bay` says where it hangs.
+collections:
+  objects:
+    output: true
+    permalink: /library/:name/
 
-# Build settings
 markdown: kramdown
 plugins:
-  - jekyll-feed
   - jekyll-seo-tag
   - jekyll-sitemap
 
@@ -46,9 +34,14 @@ exclude:
   - LICENSE
   - vendor
 
-# Default share image for link previews (jekyll-seo-tag) on every page.
 defaults:
+  # Default share image for link previews (jekyll-seo-tag) on every page.
   - scope:
       path: ""
     values:
       image: /assets/images/social-card.png
+      layout: library
+  - scope:
+      type: objects
+    values:
+      layout: object

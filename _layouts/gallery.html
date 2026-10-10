@@ -1,0 +1,72 @@
+---
+layout: library
+---
+{%- assign bays = site.data.gallery.bays -%}
+<h1 class="sr-only">{{ site.title }}: the Long Gallery</h1>
+
+<div class="gallery">
+  <div class="scroller" id="scroller">
+    <div class="track" id="track">
+      <div class="stage" id="stage">
+        <canvas id="pixels" hidden aria-hidden="true"></canvas>
+        <div class="scene" id="scene"></div>
+      </div>
+    </div>
+  </div>
+  <noscript>
+    <p class="noscript">The gallery is drawn with JavaScript. Everything in it is also listed in the <a href="{{ '/catalogue/' | relative_url }}">card catalogue</a>.</p>
+  </noscript>
+</div>
+
+<div class="under">
+  <nav class="bays" aria-label="Walk to">
+    {%- for b in bays %}
+    <button type="button" data-go="{{ b.id }}">{{ b.title }}</button>
+    {%- endfor %}
+  </nav>
+  <div class="options">
+    <label><input type="checkbox" id="opt-labels"> Light the lamps</label>
+    <label><input type="checkbox" id="opt-pixel"> Pixel art</label>
+  </div>
+  <p class="hint">Scroll sideways to walk along the gallery and click anything that catches your eye, or use the <a href="{{ '/catalogue/' | relative_url }}">card catalogue</a>. <span id="clock"></span></p>
+</div>
+
+{%- for b in bays %}
+{%- assign objs = site.objects | where: "bay", b.id | sort: "year" | reverse %}
+{%- if b.template != 'alcove' %}
+<dialog id="bay-{{ b.id }}" class="inspect inspect--{{ b.template }}" aria-labelledby="bay-{{ b.id }}-title">
+  <div class="inspect-head">
+    <h2 id="bay-{{ b.id }}-title">{{ b.title }}</h2>
+    <form method="dialog"><button type="submit" class="close" aria-label="Close">Close</button></form>
+  </div>
+  {%- if b.blurb %}<p class="inspect-blurb">{{ b.blurb }}</p>{% endif %}
+  {%- if b.template == 'shelf-and-table' %}
+  <ul class="spread">
+    {%- for o in objs %}
+    <li><a href="{{ o.url | relative_url }}"><span class="year">{{ o.year }}</span><span class="t">{{ o.title }}</span><span class="pub">{{ o.publisher }}</span></a></li>
+    {%- endfor %}
+  </ul>
+  {%- elsif b.template == 'frame-wall' %}
+  <ul class="frames">
+    {%- for r in site.data.cv.roles %}
+    <li><a href="{{ '/cv/' | relative_url }}#{{ r.id }}"><span class="year">{{ r.years }}</span><span class="t">{{ r.title }}</span><span class="pub">{{ r.org }}</span></a></li>
+    {%- endfor %}
+  </ul>
+  <p><a class="more" href="{{ '/cv/' | relative_url }}">Read the whole CV</a></p>
+  {%- endif %}
+</dialog>
+{%- endif %}
+{%- endfor %}
+
+<script type="application/json" id="gallery-data">
+{"bays":[
+{%- for b in bays -%}
+{%- assign objs = site.objects | where: "bay", b.id -%}
+{%- assign first = objs | first -%}
+{%- if b.template == 'frame-wall' %}{% assign count = site.data.cv.roles.size %}{% else %}{% assign count = objs.size %}{% endif -%}
+{%- if b.template == 'alcove' and first %}{% assign href = first.url | relative_url %}{% else %}{% assign href = nil %}{% endif -%}
+{"id":{{ b.id | jsonify }},"template":{{ b.template | jsonify }},"title":{{ b.title | jsonify }},"label":{{ b.label | jsonify }},"count":{{ count }},"href":{{ href | jsonify }}}{% unless forloop.last %},{% endunless %}
+{%- endfor -%}
+]}
+</script>
+<script src="{{ '/assets/js/gallery.js' | relative_url }}" defer></script>

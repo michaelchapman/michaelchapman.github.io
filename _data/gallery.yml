@@ -1,0 +1,42 @@
+# The Long Gallery, bay by bay from left to right. The home page draws these
+# in order. Each bay uses a template (how it's drawn); its contents come from
+# the objects in _objects/ whose `bay` matches the bay's id, or from data.
+#
+# Templates: shelf-and-table, frame-wall, alcove, door, curio.
+# To add a bay, add an entry here. To open a locked door, set locked: false
+# and give it a link.
+
+bays:
+  - id: reading-room
+    template: shelf-and-table
+    title: The Reading Room
+    label: Archive shelf
+    blurb: >-
+      Reports and briefings from earlier in my career. Most were published by
+      organisations that no longer exist in that form (NCIN and NIGB were both
+      folded into other bodies), so copies are kept here.
+
+  - id: cv
+    template: frame-wall
+    title: The Certificates
+    label: Certificates · CV
+    link: /cv/
+    blurb: One frame for each job, newest top left.
+
+  - id: ancestry
+    template: alcove
+    title: The Portrait
+    label: Portrait · Ancestry
+
+  - id: east-stair
+    template: door
+    title: The East Stair
+    label: East Stair · Locked
+    locked: true
+    blurb: Locked for now. Something will be up there one day.
+
+  - id: dust-sheet
+    template: curio
+    title: Under a Dust Sheet
+    label: Under a dust sheet
+    blurb: Something is waiting under here. It isn't ready yet.

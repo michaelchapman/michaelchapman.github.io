@@ -5,13 +5,27 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 
 ## Structure
 
-- `_config.yml` — site settings and the `minima` theme configuration
-- `index.md`, `about.md`, `cv.md`, `work.md`, `writing.md` — top-level pages
-- `_posts/` — blog posts (`YYYY-MM-DD-title.md`), listed on `/writing/`
-- `_sass/minima/custom-styles.scss` — style overrides on top of the `minima` 3 theme
-- `assets/images/social-card.png` — default image for link previews
-- `.github/workflows/` — build/deploy (`pages.yml`) and link checking (`links.yml`)
-- `CNAME` — custom domain config; do not edit, DNS is already set up
+The site is the Long Gallery: one room of a castle library, drawn in code.
+Things kept on the site are objects in the room, and you walk along it bay
+by bay. Every object also has an ordinary page, and the card catalogue
+(`/catalogue/`) lists everything for anyone who'd rather not walk.
+
+- `_data/gallery.yml`: the bays, left to right. Each has a `template`
+  (how it's drawn) and an `id` that objects use to say where they live.
+- `_objects/`: one Markdown file per object (`kind`, `bay`, `year`, plus a
+  `file` or `link`). Each gets a page at `/library/<name>/`. To add a paper,
+  copy one of the existing files.
+- `_data/cv.yml`: the career history. It drives both `/cv/` and the
+  certificates on the gallery wall.
+- `assets/js/gallery.js`: draws the gallery as SVG. One camera, a small kit
+  of bay templates and a colour palette by role keep additions consistent.
+  The hour and season follow the visitor's clock (try `?hour=night&season=winter`).
+  "Pixel art" redraws the same scene at 320px with a limited palette.
+- `_layouts/`: `library` (every page), `gallery` (the home page, with the
+  inspect views), `object`, and `redirect` (keeps `/work/` working).
+- `assets/css/library.css`: all styles.
+- `.github/workflows/`: build/deploy (`pages.yml`) and link checking (`links.yml`)
+- `CNAME`: custom domain config; do not edit, DNS is already set up
 
 ## Local preview
 
@@ -38,5 +52,5 @@ This needs the repository's Pages source set to **GitHub Actions**
 (Settings → Pages → Build and deployment → Source).
 
 The `Check links` workflow checks every link on the built site on each push
-and weekly, so a dead external link (e.g. a PDF on the Work page) shows up
+and weekly, so a dead external link (e.g. one of the PDFs on the reading table) shows up
 as a failed run.
