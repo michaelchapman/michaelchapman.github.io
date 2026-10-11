@@ -1,3 +1,4 @@
+import heapq,os
 # merge the hand-checked tree with Wikidata ancestors, keep only what the page needs, write tree.js
 import json,sys,re
 from collections import deque,defaultdict
@@ -160,20 +161,54 @@ for i,S in enumerate(MON):
             p=down(vS,S,X);keep.update(p)
             dS2,vS2=UPS[S]
             if X in dS2:keep.update(down(vS2,S,X))
-ROUTES={}
+# the best few routes from each ancestor monarch down to each subject, fewest disputed links first, then fewest
+# generations, so the page can step through them
+TOPK=int(os.environ.get('TOPK','10'))
+def best_routes(S,X,dS,h,k):
+    cost=lambda c,p:1000 if f'{c}>{p}' in UNS else 1
+    heap=[(h[X],0,[X])];out=[];pops=0
+    while heap and len(out)<k and pops<20000:
+        f,g,path=heapq.heappop(heap);pops+=1;n=path[-1]
+        if n==S:out.append(path);continue
+        for c in CH[n]:
+            if c in dS and c in h:
+                g2=g+cost(c,n);heapq.heappush(heap,(g2+h[c],g2,path+[c]))
+    return out
 for S in MON:
-    dS=UP[S][0];memo={S:1}
+    dS=UP[S][0];h={S:0}
+    def hcost(x):
+        st=[x]
+        while st:
+            n=st[-1]
+            if n in h:st.pop();continue
+            kids=[c for c in CH[n] if c in dS]
+            todo=[c for c in kids if c not in h]
+            if todo:st.extend(todo);continue
+            h[n]=min([h[c]+(1000 if f'{c}>{n}' in UNS else 1) for c in kids] or [10**9]);st.pop()
+        return h[x]
+    for X in MON:
+        if X!=S and X in dS:
+            hcost(X)
+            for r in best_routes(S,X,dS,h,TOPK):keep.update(r)
+# routes are counted over undisputed links only, unless every route from that ancestor runs through a disputed one:
+# Wikidata's rival candidates for a parent would otherwise multiply the count many times over
+ROUTES={}
+def counter(S,dS,sure):
+    memo={S:1}
     def cnt(x):
         st=[x]
         while st:
             n=st[-1]
             if n in memo:st.pop();continue
-            kids=[c for c in CH[n] if c in dS]
+            kids=[c for c in CH[n] if c in dS and not (sure and f'{c}>{n}' in UNS)]
             todo=[c for c in kids if c not in memo]
             if todo:st.extend(todo);continue
             memo[n]=sum(memo[c] for c in kids);st.pop()
         return memo[x]
-    ROUTES[S]={A_:cnt(A_) for A_ in MON if A_!=S and A_ in dS}
+    return cnt
+for S in MON:
+    dA,dU=UP[S][0],UPS[S][0];ca,cs=counter(S,dA,False),counter(S,dU,True)
+    ROUTES[S]={A_:(cs(A_) if A_ in dU else ca(A_)) for A_ in MON if A_!=S and A_ in dA}
 print('max routes',max((v,s_,a) for s_,d in ROUTES.items() for a,v in d.items()),file=sys.stderr)
 print('nodes total',len(nodes),'kept',len(keep),file=sys.stderr)
 out_par={c:[p for p in PAR.get(c,[]) if p in keep] for c in sorted(keep) if PAR.get(c)}

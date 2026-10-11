@@ -10,21 +10,21 @@
 /* Layout: a regnal roll. Subject picker and timeline strip as thesis, tile roll by house with a sticky detail panel, then the subject's deepest line. */
 :root{
   --bg:#f2f4f8; --surface:#ffffff; --ink:#141b33; --muted:#59617a; --rule:#d3d8e4;
-  --or:#e2b33f; --or-soft:#f4e6b8; --or-edge:#a67c12; --on-or:#1d1704;
-  --azure:#dce7f8; --azure-edge:#2f5fb3;
+  --or:#e2b33f; --or-soft:#f4e6b8; --or-edge:#a67c12; --on-or:#1d1704; --or-pale:#f4e6b8; --or-bar:#7a5a0a;
+  --azure:#cddbf5; --azure-edge:#2f5fb3; --grey:#e3e6ed; --grey-edge:#aab1c2;
   --gules:#a3182f; --on-gules:#ffffff;
   --display:"IM Fell English",Georgia,"Times New Roman",serif;
   --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0e1322; --surface:#182038; --ink:#e9ecf6; --muted:#9aa3bd; --rule:#2c3654;
-  --or:#d9a933; --or-soft:#3b3317; --or-edge:#d9a933; --on-or:#1d1704;
-  --azure:#1a2a4e; --azure-edge:#7ba4ee;
+  --or:#d9a933; --or-soft:#3b3317; --or-edge:#d9a933; --on-or:#1d1704; --or-pale:#ecd28c; --or-bar:#7a5a0a;
+  --azure:#253d6e; --azure-edge:#7ba4ee; --grey:#1b2236; --grey-edge:#46506d;
   --gules:#f0667c; --on-gules:#1d0408; color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#0e1322; --surface:#182038; --ink:#e9ecf6; --muted:#9aa3bd; --rule:#2c3654;
-  --or:#d9a933; --or-soft:#3b3317; --or-edge:#d9a933; --on-or:#1d1704;
-  --azure:#1a2a4e; --azure-edge:#7ba4ee;
+  --or:#d9a933; --or-soft:#3b3317; --or-edge:#d9a933; --on-or:#1d1704; --or-pale:#ecd28c; --or-bar:#7a5a0a;
+  --azure:#253d6e; --azure-edge:#7ba4ee; --grey:#1b2236; --grey-edge:#46506d;
   --gules:#f0667c; --on-gules:#1d0408; color-scheme:dark }
 
 *{box-sizing:border-box}
@@ -48,18 +48,20 @@ header{display:flex;flex-direction:column;gap:16px}
 .fig span{font-size:.85rem;color:var(--muted)}
 
 /* status styling, shared by strip, tiles, legend */
-.s-line{background:var(--or);color:var(--on-or);border-color:var(--or-edge)}
-.s-anc{background:var(--or-soft);color:var(--ink);border-color:var(--or-edge)}
-.s-prob{background:var(--or-soft);color:var(--ink);border-color:var(--or-edge);border-style:dashed}
+/* gold: ancestor (a dark bar marks the deepest line), striped gold: probable ancestor, blue: relative, grey: no tie */
+.s-line{background:var(--or);color:var(--on-or);border-color:var(--or-edge);box-shadow:inset 0 -5px 0 var(--or-bar)}
+.s-anc{background:var(--or);color:var(--on-or);border-color:var(--or-edge)}
+.s-prob{background:repeating-linear-gradient(135deg,var(--or-pale) 0 6px,var(--or) 6px 9px);color:var(--on-or);border-color:var(--or-edge);border-style:dashed}
 .s-other{background:var(--azure);color:var(--ink);border-color:var(--azure-edge)}
-.s-none{background:var(--surface);color:var(--muted);border-color:var(--rule)}
+.s-none{background:var(--grey);color:var(--muted);border-color:var(--grey-edge);border-style:dashed}
 .s-later{background:transparent;color:var(--muted);border-color:var(--rule);opacity:.55}
 .s-subj{background:var(--gules);color:var(--on-gules);border-color:var(--gules)}
 
 .strip{display:flex;height:44px;border-radius:3px;overflow:hidden;gap:1px;background:var(--rule)}
 .strip button{border:0;padding:0;min-width:2px;cursor:pointer;border-radius:0;flex-basis:0}
 .strip .gap{background:var(--bg);flex-basis:0}
-.strip button.s-prob{background:repeating-linear-gradient(135deg,var(--or-soft) 0 4px,var(--or) 4px 6px)}
+.strip button.s-prob{background:repeating-linear-gradient(135deg,var(--or-pale) 0 4px,var(--or) 4px 6px)}
+.strip button.s-line{box-shadow:inset 0 -8px 0 var(--or-bar)}
 .strip button.s-later{background:var(--bg);opacity:1}
 .axis{position:relative;height:22px;font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
 .axis span{position:absolute;transform:translateX(-50%)}
@@ -68,6 +70,7 @@ header{display:flex;flex-direction:column;gap:16px}
 .legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.85rem;margin:10px 0 0;padding:0;list-style:none}
 .legend li{display:flex;align-items:center;gap:7px}
 .legend i{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
+.key{font-size:.85rem;color:var(--muted);margin-top:8px}
 .sw{width:16px;height:16px;border:1.5px solid;border-radius:2px;flex:none}
 
 .cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start}
@@ -82,6 +85,7 @@ header{display:flex;flex-direction:column;gap:16px}
 .tile{font:inherit;text-align:left;border:1.5px solid;border-radius:3px;padding:9px 10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0;transition:opacity .15s}
 .tile b{font-weight:600;font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
 .tile span{font-size:.75rem;font-variant-numeric:tabular-nums;opacity:.8}
+.tile small{font-size:.72rem;line-height:1.25;margin-top:3px;font-weight:600;opacity:.85}
 .tile.dim{opacity:.2}
 button:focus-visible,select:focus-visible{outline:3px solid var(--gules);outline-offset:2px}
 .sel{outline:3px solid var(--ink);outline-offset:2px}
@@ -97,6 +101,10 @@ button:focus-visible,select:focus-visible{outline:3px solid var(--gules);outline
 .path li+li::before{content:" › ";color:var(--muted)}
 .path .m{font-weight:700}
 .path .u{border-bottom:2px dashed var(--or-edge)}
+.path .alt{background:var(--azure);box-shadow:0 0 0 2px var(--azure);border-radius:2px}
+.steps{display:flex;align-items:center;gap:12px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.steps button{font:inherit;font-size:1.2rem;line-height:1;width:44px;height:36px;border:1.5px solid var(--ink);border-radius:3px;background:var(--surface);color:var(--ink);cursor:pointer}
+.steps button:disabled{opacity:.3;cursor:default}
 .link{font:inherit;font-size:.9rem;font-weight:600;align-self:flex-start;background:none;border:0;border-bottom:2px solid var(--or-edge);padding:0 0 1px;color:var(--ink);cursor:pointer;text-align:left}
 .go{font:inherit;font-size:.9rem;font-weight:600;align-self:flex-start;background:var(--gules);color:var(--on-gules);border:0;border-radius:3px;padding:8px 14px;cursor:pointer;text-align:left}
 .close{display:none}
@@ -162,6 +170,7 @@ footer i{font-style:normal;font-variant-numeric:tabular-nums}
     <span style="left:0">871</span><span style="left:16.9%">1066</span><span style="left:53.3%">1485</span><span style="left:73.2%">1714</span><span style="left:100%">2022</span>
   </div>
   <ul class="legend" id="legend"></ul>
+  <p class="key">Gold is an ancestor and blue a relative who is not an ancestor. Stripes mean the tie rests on a disputed link, and a dark bar marks the ancestors on the deepest line, listed below.</p>
 </section>
 
 <section>
@@ -239,7 +248,7 @@ const M=[
 ["edward5","Edward V","1483",3,"One of the Princes in the Tower. Disappeared at 12."],
 ["richard3","Richard III","1483–1485",3,"His only legitimate son died in 1484."],
 ["henry7","Henry VII","1485–1509",4,"Claimed the throne through his mother, Margaret Beaufort, and married Elizabeth of York."],
-["henry8","Henry VIII","1509–1547",4,"All three of his children reigned and all died childless."],
+["henry8","Henry VIII","1509–1547",4,"All three of his legitimate children reigned and died childless. His one acknowledged illegitimate son, Henry FitzRoy, died at 17 without children. Catherine Carey, daughter of his mistress Mary Boleyn, was rumoured at the time to be his, and if she was, he has many living descendants."],
 ["edward6","Edward VI","1547–1553",4,"Died unmarried at 15."],
 ["mary1","Mary I","1553–1558",4,"Married Philip II of Spain. No children."],
 ["elizabeth1","Elizabeth I","1558–1603",4,"Never married."],
@@ -341,19 +350,37 @@ function relate(S,X,all){
   }
   let best=null;
   for(const c of cands){
-    const r={c,a:all.dist[c],b:mine.dist[c]};
-    r.pathS=down(all,S,c);r.pathX=down(mine,X,c);
+    // follow each side's best route from c: undisputed links first, then fewest generations
+    const r={c};r.pathS=c===S?[S]:bestRoutes(S,c,all,1)[0]||down(all,S,c);r.pathX=c===X?[X]:bestRoutes(X,c,mine,1)[0]||down(mine,X,c);
+    r.a=r.pathS.length-1;r.b=r.pathX.length-1;
     r.unsure=shaky(r.pathS).length+shaky(r.pathX).length>0;
     if(!best||best.unsure&&!r.unsure)best=r;
   }
   if(best&&best.a&&best.b){
-    const twin=cands.some(c=>c!==best.c&&all.dist[c]===best.a);
+    const twin=cands.some(c=>c!==best.c&&all.dist[c]===all.dist[best.c]);
     const ps=PAR[best.pathS[1]]||[],px=PAR[best.pathX[1]]||[],c=best.c;
     // half only when both sides name their other parent and the two differ
     const os=ps.filter(p=>p!==c),ox=px.filter(p=>p!==c);
     best.half=twin?false:os.length&&ox.length&&!os.some(p=>ox.includes(p))?true:null;
   }
   return best;
+}
+const CH={};for(const c in PAR)for(const p of PAR[c])(CH[p]=CH[p]||[]).push(c);
+// the k best top-down routes from ancestor X to S: fewest disputed links first, then fewest generations
+function bestRoutes(S,X,all,k){
+  const cost=(c,p)=>UNSURE.has(c+">"+p)?1000:1,h={[S]:0};
+  const hc=x=>{const st=[x];while(st.length){const n=st[st.length-1];if(h[n]!=null){st.pop();continue}
+    const kids=(CH[n]||[]).filter(c=>all.dist[c]!=null),todo=kids.filter(c=>h[c]==null);
+    if(todo.length){st.push(...todo);continue}
+    h[n]=Math.min(Infinity,...kids.map(c=>h[c]+cost(c,n)));st.pop()}return h[x]};
+  hc(X);const heap=[[h[X],0,[X]]],out=[];let pops=0;
+  while(heap.length&&out.length<k&&pops++<20000){
+    let bi=0;for(let i=1;i<heap.length;i++){const a=heap[i],b=heap[bi];if(a[0]<b[0]||a[0]===b[0]&&a[2].length>b[2].length)bi=i}
+    const [,g,p]=heap.splice(bi,1)[0],n=p[p.length-1];
+    if(n===S){out.push(p);continue}
+    for(const c of CH[n]||[])if(all.dist[c]!=null&&hc(c)<Infinity){const g2=g+cost(c,n);heap.push([g2+h[c],g2,[...p,c]])}
+  }
+  return out;
 }
 // people on a top-down route whose link to the parent above them is disputed
 const shaky=p=>p.slice(1).filter((x,i)=>UNSURE.has(x+">"+p[i]));
@@ -368,9 +395,10 @@ function view(S){
     else if(all.dist[id]!=null)st[id]="prob";
     else{kin[id]=relate(S,id,all);st[id]=kin[id]?"other":"none"}
   });
-  const path=id=>{const w=sure.dist[id]!=null?sure:all,p=[id];for(let x=id;x!==S;){x=w.via[x];p.push(x)}return p};
+  const memo={},routesFrom=id=>memo[id]||(memo[id]=bestRoutes(S,id,all,10));
+  const path=id=>routesFrom(id)[0];
   // distinct parent-to-child routes from each ancestor down to S, counted over the full tree when it was built
-  return {S,st,kin,line,path,routes:id=>(ROUTES[S]||{})[id]||1};
+  return {S,st,kin,line,path,routesFrom,routes:id=>(ROUTES[S]||{})[id]||1};
 }
 //DATA-END
 
@@ -406,6 +434,9 @@ function relation(id){
   return null;
 }
 let V,filter="all";
+// compact relation words for the tiles
+const sfx=n=>n+(n%100>10&&n%100<14?"th":["th","st","nd","rd"][n%10]||"th");
+const short=w=>w.replace(/\b([a-z]+) cousin/,(m,o)=>ORD.includes(o)?sfx(ORD.indexOf(o))+" cousin":m).replace(/\b(once|twice|\S+ times) removed/,(m,n)=>(NUM.includes(n)?NUM.indexOf(n):parseInt(n))+"× removed");
 const slink=k=>`<a href="${SRC[k][1]}">${SRC[k][0]}</a>`;
 const srcList=ks=>ks.length?`<ul class="srcl">${ks.map(k=>`<li>${slink(k)}</li>`).join("")}</ul>`:"";
 Object.keys(SRC).forEach(k=>{const n=(CITE[k]||[]).length;$("#srcs").append(el("li","",`${slink(k)}, ${SRC[k][2]}. <i>${n?n+" link"+(n>1?"s":""):"Supports a note, not a link"}</i>`))});
@@ -431,7 +462,7 @@ function renderNotes(earlier){
   const b=[["Before "+nameOf(root),ROOTNOTE[root]||`${nameOf(root)} is where this line stops in the tree. Earlier generations are either unrecorded or, before about 700, too legendary to use.`]];
   if(earlier.length)b.push(["Why the gaps",`The crown often passed sideways to a sibling or cousin, or was taken by conquest, so earlier monarchs are more often relatives than ancestors. For ${sn}, ${kin} earlier monarch${kin===1?" is a relative":"s are relatives"} but not ${kin===1?"an ancestor":"ancestors"}${none?`, and ${none} ${none===1?"has":"have"} no blood tie found at all`:""}.`]);
   b.push(["What is uncertain",unc.join(" ")]);
-  b.push(["Limits of this tree",`Every answer is computed from a family tree built for this page. It starts from about 200 hand-checked people and links, then adds every parent Wikidata records for the monarchs' ancestors back to about the year 700: some 48,000 people. The page keeps the ${M.length+Object.keys(N).length} of them who sit on a route it needs, and its route counts were made over the full tree. Where Wikidata disagrees with a hand-checked link, the hand-checked link wins. Wikidata is edited by volunteers and is not checked link by link here, so treat its links as good leads rather than proof. No blood tie turned up between William I and the House of Wessex, or between Harold II and any king before him.`]);
+  b.push(["Limits of this tree",`Every answer is computed from a family tree built for this page. It starts from about 200 hand-checked people and links, then adds every parent Wikidata records for the monarchs' ancestors back to about the year 700: some 48,000 people. The page keeps the ${M.length+Object.keys(N).length} of them who sit on a route it needs, and its route counts were made over the full tree, counting only undisputed links unless every route needs a disputed one. For each ancestor it also keeps the ten most direct routes, which you can step through. Where Wikidata disagrees with a hand-checked link, the hand-checked link wins. Wikidata is edited by volunteers and is not checked link by link here, so treat its links as good leads rather than proof. No blood tie turned up between William I and the House of Wessex, or between Harold II and any king before him.`]);
   $("#notes").innerHTML=b.map(([h,t])=>`<div><h3>${h}</h3><p>${t}</p></div>`).join("");
 }
 
@@ -458,7 +489,9 @@ function setSubject(S){
   V=view(S);const sm=M[idx[S]];$("#subject").value=S;
   $$(".sn").forEach(e=>e.textContent=sm[1]);
   $$("[data-strip]").forEach(b=>{const m=M[idx[b.dataset.id]];b.className="s-"+V.st[m[0]];b.title=m[1]+", "+m[2];b.setAttribute("aria-label",m[1]+": "+LABEL[V.st[m[0]]])});
-  $$(".tile").forEach(t=>{t.className="tile s-"+V.st[t.dataset.id]});
+  $$(".tile").forEach(t=>{const id=t.dataset.id;t.className="tile s-"+V.st[id];
+    const R=id===S?null:relation(id),w=t.querySelector("small")||t.appendChild(el("small"));
+    w.textContent=id===S?"Tracing from here":R?(R[1]?"probably ":"")+short(R[0]):V.st[id]==="later"?"":"no tie found"});
   const earlier=M.filter(m=>idx[m[0]]<idx[S]),anc=earlier.filter(m=>isAnc(V.st[m[0]])),prob=anc.filter(m=>V.st[m[0]]==="prob").length;
   const rel=earlier.filter(m=>V.st[m[0]]==="other").length,unrel=earlier.length-anc.length-rel;
   const e66=earlier.filter(m=>idx[m[0]]>=idx.william1),a66=e66.filter(m=>isAnc(V.st[m[0]]));
@@ -494,7 +527,7 @@ function fork(k,id,S){
   return `<h4>How they connect</h4><div class="fork${long?" short":""}"><div class="top">${nameOf(k.c)}<small>Shared ancestor</small></div><div class="legs">${leg(k.pathX,id)}${leg(k.pathS,S)}</div></div>`+(long?`<button class="link" id="forkmore">Show every generation</button>`:"");
 }
 // a top-down route as a list, with disputed links underlined
-const pathList=p=>`<ol class="path">`+p.map((x,i)=>`<li class="${isM(x)?"m":""}${i&&UNSURE.has(x+">"+p[i-1])?" u":""}">${nameOf(x)}</li>`).join("")+`</ol>`;
+const pathList=(p,base)=>`<ol class="path">`+p.map((x,i)=>`<li class="${isM(x)?"m":""}${i&&UNSURE.has(x+">"+p[i-1])?" u":""}${base&&!base.has(x)?" alt":""}">${nameOf(x)}</li>`).join("")+`</ol>`;
 const disputed=(...ps)=>{const xs=[...new Set(ps.flatMap(shaky))].map(nameOf);return `The parentage of ${xs.join(", ").replace(/, ([^,]*)$/," and $1")} ${xs.length>1?"is":"is"} disputed`};
 const wdLink=x=>`<a href="https://www.wikidata.org/wiki/${wdOf(x)}">${nameOf(x)}</a>`;
 // sources behind every parent-to-child link on some top-down routes
@@ -509,6 +542,20 @@ function routeSources(paths){
   return `<h4>Sources for this route</h4>${srcList(ks)}<p class="small">Of ${edges.length} parent-to-child link${edges.length>1?"s":""}, ${parts.join(", ").replace(/, ([^,]*)$/," and $1")}.</p>`
     +(wd.length?`<p class="small">Wikidata entries: ${[...new Set(wd.map(e=>e.split(">")[0]))].filter(wdOf).map(wdLink).join(", ")}</p>`:"");
 }
+// one route of descent from ancestor `id`, with a stepper through the best few
+function showRoute(id,i){
+  const S=V.S,sn=nameOf(S),rs=V.routesFrom(id),p=rs[i],n=Math.max(V.routes(id),rs.length),first=new Set(rs[0]);
+  const gen=p.length-1,many=rs.length>1;
+  let h=`<h4>${many?`Route ${i+1} · `:""}${gen} generation${gen>1?"s":""} down to ${sn}</h4>`+pathList(p,i?first:null);
+  if(i)h+=`<p class="small">Highlighted names are not on the first route.</p>`;
+  if(shaky(p).length)h+=`<p>${disputed(p)}, so this descent is probable, not proven.</p>`;
+  h+=n>1?`<p>${many?`Routes are listed with undisputed ones first, then by fewest generations. `:""}This tree holds <b>${n.toLocaleString("en-GB")} different routes</b> by which ${sn} descends from ${nameOf(id)}${rs.length<n?`. The first ${rs.length} can be stepped through here`:""}.</p>`:`<p>This is the only route in this tree.</p>`;
+  if(many)h+=`<div class="steps"><button id="rprev" ${i?"":"disabled"} aria-label="Previous route">‹</button><span>Route ${i+1} of ${rs.length}${rs.length<n?" shown":""}</span><button id="rnext" ${i<rs.length-1?"":"disabled"} aria-label="Next route">›</button></div>`;
+  h+=routeSources([p.slice().reverse()]);
+  $("#route").innerHTML=h;
+  if($("#rprev"))$("#rprev").onclick=()=>showRoute(id,i-1);
+  if($("#rnext"))$("#rnext").onclick=()=>showRoute(id,i+1);
+}
 function hidePanel(){panel.hidden=true;$$(".sel").forEach(e=>e.classList.remove("sel"));setHash(V.S)}
 function setHash(h){try{history.replaceState(null,"","#"+h)}catch(e){}}
 function show(id,scrollTile){
@@ -517,12 +564,7 @@ function show(id,scrollTile){
   let h=`<button class="close" id="close" aria-label="Close">×</button><h3>${m[1]}</h3><div class="meta">Reigned ${m[2]} · ${HOUSES[m[3]]}</div><span class="badge s-${s}">${LABEL[s]}</span>`+(R?`<p class="rel">${m[1]} is ${R[1]?"probably ":""}<b>${sn}'s ${R[0]}</b>.</p>`:"")+`<p>${m[4]}</p>`+(NOTESRC[id]?`<p class="small">Source: ${NOTESRC[id].map(slink).join("; ")}</p>`:"");
   if(s==="subj")h+=`<p>Select any other monarch, earlier or later, to see how they are related to ${sn}, or pick someone else from the menu at the top.</p>`;
   else if(isAnc(s)){
-    const p=V.path(id);
-    h+=`<h4>${p.length-1} generation${p.length>2?"s":""} down to ${sn}</h4>`+pathList(p);
-    if(s==="prob")h+=`<p>${disputed(p)}, so this descent is probable, not proven.</p>`;
-    const n=V.routes(id);
-    h+=n>1?`<p>This is the shortest of <b>${n.toLocaleString("en-GB")} different routes</b> by which ${sn} descends from ${m[1]} in this tree.</p>`:`<p>This is the only route in this tree.</p>`;
-    h+=routeSources([p.slice().reverse()]);
+    h+=`<div id="route"></div>`;
     const g=V.line.indexOf(id)+1;if(g)h+=`<button class="link" id="togen">Generation ${g} of ${V.line.length} on the deepest line</button>`;
   }else if(k&&k.a===0){
     h+=`<h4>${k.b} generation${k.b>1?"s":""} down from ${sn}</h4>`+pathList(k.pathX)+(k.unsure?`<p>${disputed(k.pathX)}, so this descent is probable, not proven.</p>`:"")+routeSources([k.pathX]);
@@ -534,6 +576,7 @@ function show(id,scrollTile){
   }else h+=`<p>${s==="later"?`Came to the throne after ${sn}. `:""}No shared ancestry with ${sn} was found in this tree.</p>`;
   if(s!=="subj")h+=`<div class="acts"><button class="go" id="go">Trace ${m[1]}'s ancestry</button><button class="link" id="share">Copy link to this</button></div>`;
   panel.innerHTML=h;panel.hidden=false;panel.scrollTop=0;
+  if($("#route"))showRoute(id,0);
   setHash(id===S?S:S+"/"+id);
   if($("#share"))$("#share").onclick=async()=>{const b=$("#share");
     try{await navigator.clipboard.writeText(location.href);b.textContent="Link copied"}catch(e){b.textContent="Copy the address bar to share"}};
