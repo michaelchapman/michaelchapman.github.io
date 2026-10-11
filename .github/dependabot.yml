@@ -1,0 +1,20 @@
+# Opens pull requests when the GitHub Actions used by the workflows, or the
+# Ruby gems in Gemfile.lock, have new versions. Each ecosystem's updates are
+# grouped into one PR a month to keep the noise down.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: bundler
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      gems:
+        patterns: ["*"]
