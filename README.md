@@ -15,6 +15,7 @@ Other files:
 - `_config.yml` — site settings (Jekyll copies both pages unchanged and adds a `sitemap.xml`)
 - `favicon.ico` — the tab icon browsers request automatically
 - `.github/workflows/` — build/deploy (`pages.yml`) and link checking (`links.yml`)
+- `.github/dependabot.yml` — monthly update PRs for the Actions and gems
 - `CNAME` — custom domain config; do not edit, DNS is already set up
 
 The earlier Markdown pages (About, CV, Work, Writing and the first post) and
