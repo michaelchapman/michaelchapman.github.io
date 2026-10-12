@@ -45,6 +45,7 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
 /* title */
 #scr-title .row { flex-direction: column; align-items: center; width: min(260px, 100%); }
 #scr-title .row button { width: 100%; }
+@media (max-height: 480px) { #scr-title .row { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 100%); } }   /* short landscape screens: two columns leave room for the title art */
 
 /* story */
 .story { box-sizing: border-box; width: 100%; max-width: 560px; background: var(--panel); border: 2px solid var(--main); box-shadow: 0 5px 0 var(--edge); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -2219,18 +2220,30 @@ function drawPanel(t) {
 function drawTitle(t) {
   const { W, H } = view, tt = save.settings.reducedMotion ? 0 : t, E = ERAS[1];
   R(G, E.bg, 0, 0, W, H);
-  const u = W >= 520 && H >= 520 ? 3 : 2, lw = Math.ceil(W / u), lh = Math.ceil(H / u);
+  // Shrink the art (pixel size, then logo and clock) until the tagline ends above the menu buttons.
+  const menuTop = $('scr-title').querySelector('.row').offsetTop - 8;
+  let u, lw, lh, ls, cr, cy, ly, oneLine;
+  for (u of W >= 520 && H >= 520 ? [3, 2] : [2]) {
+    lw = Math.ceil(W / u); lh = Math.ceil(H / u); oneLine = textW('NINE LIVES. ONE TIMELINE.', 1) <= lw - 8;
+    const ls0 = Math.max(2, Math.min(6, Math.floor((lw * 0.86) / 41))), cr0 = Math.max(14, Math.min(34, Math.floor(lh * 0.13)));
+    for (ls = ls0; ls >= 2; ls--) {
+      cr = Math.max(10, cr0 - (ls0 - ls) * 6); cy = Math.floor(lh * 0.2) + 4; if (ls < ls0) cy = Math.min(cy, cr + 8);
+      ly = cy + cr + 22;
+      if ((ly + ls * 7 + (oneLine ? 15 : 24)) * u <= menuTop) break;
+    }
+    if (ls >= 2) break;
+  }
+  ls = Math.max(2, ls);
   if (lowTitle.width !== lw || lowTitle.height !== lh) { lowTitle.width = lw; lowTitle.height = lh; }
   const g = lowTitle.getContext('2d'); g.clearRect(0, 0, lw, lh);
   for (let k = 0; k < 30; k++) { const yy = (hash2(k, 4) * lh + tt / (60 + k * 3)) % lh; R(g, 'rgba(242,217,160,0.25)', Math.floor(hash2(k, 2) * lw), Math.floor(yy), 1, 1); }
-  const ls = Math.max(2, Math.min(6, Math.floor((lw * 0.86) / 41))), logoW = textW('TIMECAT', ls), lx = Math.floor((lw - logoW) / 2);
-  const cr = Math.max(14, Math.min(34, Math.floor(lh * 0.13))), cy = Math.floor(lh * 0.2) + 4, ly = cy + cr + 22;
+  const logoW = textW('TIMECAT', ls), lx = Math.floor((lw - logoW) / 2);
   dial(g, Math.floor(lw / 2), cy, cr, -tt / 4000, -tt / 700);   // the hands run backwards
   pixText(g, 'TIMECAT', lx + ls, ly + ls, ls, '#120d0a'); pixText(g, 'TIMECAT', lx, ly, ls, E.accent);
   pixText(g, 'TIME', lx, ly, ls, E.main);
   g.drawImage(SPR.cat.D[(Math.floor(tt / 2600) % 5 === 0) ? 1 : 0], lx + logoW - 22, ly - 15);
   g.globalAlpha = 0.5; g.drawImage(SPR.echo.nap, lx + 2, ly - 14); g.globalAlpha = 1;
-  if (textW('NINE LIVES. ONE TIMELINE.', 1) <= lw - 8) pixText(g, 'NINE LIVES. ONE TIMELINE.', Math.floor(lw / 2), ly + ls * 7 + 8, 1, '#c98f4a', 'center');
+  if (oneLine) pixText(g, 'NINE LIVES. ONE TIMELINE.', Math.floor(lw / 2), ly + ls * 7 + 8, 1, '#c98f4a', 'center');
   else { pixText(g, 'NINE LIVES.', Math.floor(lw / 2), ly + ls * 7 + 7, 1, '#c98f4a', 'center'); pixText(g, 'ONE TIMELINE.', Math.floor(lw / 2), ly + ls * 7 + 17, 1, '#c98f4a', 'center'); }
   G.drawImage(lowTitle, 0, 0, lw * u, lh * u);
 }
