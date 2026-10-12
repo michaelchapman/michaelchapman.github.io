@@ -1,5 +1,6 @@
-# Site settings. For now the site is two standalone HTML pages (index.html and
-# kings-line/index.html) with no theme or layout; Jekyll copies them as-is.
+# Site settings. For now the site is three standalone HTML pages (index.html,
+# top-banana/index.html and kings-line/index.html) with no theme or layout;
+# Jekyll copies them as-is.
 title: Michael Chapman
 locale: en_GB
 url: "https://michaelchapman.me"
