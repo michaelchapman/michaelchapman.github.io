@@ -5,14 +5,15 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 
 ## Structure
 
-For now the site is two standalone pages, served as-is with no theme layout:
+For now the site is three standalone pages, served as-is with no theme layout:
 
-- `index.html` — the Top Banana game, at `/`
+- `index.html` — the TimeCat game, the home page at `/`
+- `top-banana/index.html` — the Top Banana game, at `/top-banana/`
 - `kings-line/index.html` — The King's Line (monarch ancestry), at `/kings-line/`
 
 Other files:
 
-- `_config.yml` — site settings (Jekyll copies both pages unchanged and adds a `sitemap.xml`)
+- `_config.yml` — site settings (Jekyll copies the pages unchanged and adds a `sitemap.xml`)
 - `favicon.ico` — the tab icon browsers request automatically
 - `.github/workflows/` — build/deploy (`pages.yml`) and link checking (`links.yml`)
 - `.github/dependabot.yml` — monthly update PRs for the Actions and gems
