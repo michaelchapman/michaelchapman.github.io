@@ -70,9 +70,20 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
 #complete-body li .paw { width: 27px; height: 24px; }
 #complete-body li.off { color: var(--ink-dim); }
 #complete-body li span { font-size: 14px; }
-.keys { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 14px; color: var(--ink-dim); }
-.keys dt { color: var(--ink); font-weight: 700; }
-.keys dd { margin: 0; }
+
+/* how to play: shown before room 1, and from the title and pause screens */
+#scr-help { justify-content: flex-start; padding: 8px 0 16px; box-sizing: border-box; }
+#scr-help .card { max-width: 600px; margin: auto 0; gap: 10px; padding: 14px 16px; }   /* centred when it fits, scrolls from the top when it does not */
+.help .lead { font-size: 14px; text-wrap: pretty; }
+.ctl { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.ctl li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.ctl .ico { width: 34px; height: 34px; box-sizing: border-box; border: 2px solid var(--main); box-shadow: 0 2px 0 var(--edge); display: grid; place-items: center; color: var(--ink); }
+.ctl .ico svg { width: 18px; height: 18px; fill: currentColor; }
+.ctl .ico .glyph { font-weight: 700; font-size: 18px; line-height: 1; }
+.ctl b { text-transform: uppercase; letter-spacing: 0.04em; font-size: 14px; }
+.ctl .how { color: var(--accent); font-size: 13px; }
+.ctl .what { display: block; color: var(--ink-dim); font-size: 13px; line-height: 1.35; text-wrap: pretty; }
+.help .note { font-size: 13px; text-align: left; text-wrap: pretty; }
 
 /* under the board */
 #coach { text-align: center; color: var(--ink); font-size: 14px; margin: 0; min-height: 1.45em; text-wrap: balance; }
@@ -81,7 +92,8 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
 #bar svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
 #bar .glyph { font-size: 20px; line-height: 1; width: 20px; text-align: center; }
 #btn-restart { background-image: linear-gradient(to right, var(--main) calc(var(--hold, 0) * 100%), transparent 0); }
-@media (max-width: 520px) { #bar .lbl { display: none; } #bar button { padding: 8px; justify-content: center; } }
+/* on a phone the labels sit small under the icons, so every button still says what it does */
+@media (max-width: 520px) { #bar { gap: 4px; } #bar button { flex-direction: column; justify-content: center; gap: 3px; padding: 5px 2px 4px; min-width: 50px; } #bar .lbl { font-size: 9px; letter-spacing: 0; line-height: 1; } }
 @media (pointer: coarse) { #btn-wait { display: none; } }
 #test-out { box-sizing: border-box; width: 100%; max-width: 640px; max-height: 70%; overflow: auto; background: var(--panel); border: 2px solid var(--main); padding: 12px; margin: 0; font-size: 13px; white-space: pre; -webkit-user-select: text; user-select: text; }
 @media (prefers-reduced-motion: reduce) { button:active:not(:disabled) { transform: none; } }
@@ -97,6 +109,7 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
       <div class="row">
         <button id="btn-play" class="primary" data-first>Play</button>
         <button id="btn-rooms">Rooms</button>
+        <button id="btn-title-help">How to play</button>
         <button id="btn-settings">Settings</button>
       </div>
       <p id="title-paws" class="note"></p>
@@ -139,20 +152,13 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
           <button id="btn-resume" class="primary" data-first>Resume</button>
           <button id="btn-pause-restart">Restart room</button>
           <button id="btn-pause-rooms">Rooms</button>
+          <button id="btn-pause-help">How to play</button>
         </div>
         <div class="row">
           <button data-toggle="sound" aria-pressed="true">Sound: on</button>
           <button data-toggle="music" aria-pressed="true">Music: on</button>
           <button data-toggle="reducedMotion" aria-pressed="false">Reduced motion: off</button>
         </div>
-        <dl class="keys">
-          <dt>Move</dt><dd>Arrow keys or WASD, or swipe</dd>
-          <dt>Wait</dt><dd>Space, or tap the board</dd>
-          <dt>Loop</dt><dd>L or Enter: end this life and start the next</dd>
-          <dt>Rewind</dt><dd>Z or Backspace: hold to scrub back</dd>
-          <dt>Restart</dt><dd>Hold R for half a second</dd>
-          <dt>Pause</dt><dd>Esc or P. M mutes.</dd>
-        </dl>
       </div>
     </section>
 
@@ -164,6 +170,24 @@ button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
           <button id="btn-out-rewind" class="primary" data-first>Rewind</button>
           <button id="btn-out-restart">Restart room</button>
         </div>
+      </div>
+    </section>
+
+    <section id="scr-help" class="scr dim" hidden>
+      <div class="card help">
+        <div class="head" id="help-head"></div>
+        <p class="lead">Every step is one tick. When you Loop, or the clock runs out, time jumps back to the start and your last life replays as an echo beside you.</p>
+        <ul class="ctl">
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1l3.5 4H11v4h4V6.5l4 3.5-4 3.5V11h-4v4h2.5L10 19l-3.5-4H9v-4H5v2.5L1 10l4-3.5V9h4V5H6.5z"/></svg></span><div><b>Move</b> <span class="how">Arrow keys or WASD, or swipe the board</span><span class="what">One step, one tick. Echoes, hounds and scarabs move with you.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h10v3l-4 4 4 4v3H5v-3l4-4-4-4z"/></svg></span><div><b>Wait</b> <span class="how">Space, or tap the board</span><span class="what">Stay put for a tick while everything else moves.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4a6 6 0 1 0 6 6h-3a3 3 0 1 1-3-3v3l5-4.5L10 1z"/></svg></span><div><b>Loop</b> <span class="how">L or Enter</span><span class="what">End this life. Time jumps back to the start and this life replays as an echo beside the next. Nine lives per room.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12L2 10zM18 4v12l-8-6z"/></svg></span><div><b>Rewind</b> <span class="how">Z or Backspace, hold to keep going</span><span class="what">Take back a step, or keep going back into earlier lives. Nothing is lost.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3v12H4zM16 4v12L7 10z"/></svg></span><div><b>Restart</b> <span class="how">Hold R, or hold the button</span><span class="what">Clear every life and start the room again. Rewind undoes it.</span></div></li>
+        <li><span class="ico"><span class="glyph" aria-hidden="true">?</span></span><div><b>Hint</b> <span class="how">H</span><span class="what">Appears after ten minutes or five restarts. Each press traces one more life of a solution.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h4v12H5zM11 4h4v12h-4z"/></svg></span><div><b>Pause</b> <span class="how">Esc or P</span><span class="what">Settings, the room list and this guide.</span></div></li>
+        </ul>
+        <p class="note">Above the board: ticks left, your nine lives (with a mark at par) and the fish. Below it: every life's moves on one timeline. Gamepad: A wait, Y loop, X rewind, hold Back to restart, Start to pause.</p>
+        <div class="row"><button id="btn-help-done" class="primary" data-first>Got it</button></div>
       </div>
     </section>
 
@@ -469,175 +493,576 @@ if (typeof module !== 'undefined') module.exports = api; else globalThis.Timecat
 })();
 
 (function () {
-// Timecat: all 20 rooms.
+// Timecat: all 20 rooms (second edition: harder, with pars proved by exhaustive search).
 // map glyphs: # wall, . floor, S start, E cat flap, f fish, a-d plate, A-D door, o crate, ^ v < > belt.
 // things: objects that need parameters (see parseLevel in timecat-core.js).
 //   scarab: starts on (x, y) and patrols `len` tiles from there in direction `dir`.
 //   vent:   on while (tick + phase) % period < on. Steam fills the vent tile and its four neighbours.
 //   laser / receiver: sit in a wall tile. `offCh` switches a laser off while that channel is active.
 //   plate:  a plate that shares its tile with a belt.
+//   hound:  steps on even ticks toward the nearest cat. lever: toggles its channel each time a cat steps on.
+//   pad:    anything arriving on the pad jumps to its twin at `to`.
+// par: the fewest lives that can finish. `proof` records the exhaustive searches (run offline with the fast
+//   solver) showing that each smaller number of lives cannot finish. `bestKnown` marks a par that is the fewest
+//   lives found but has not been proved; the proof then covers only the smaller counts listed.
+//   hound:  steps on even ticks toward the nearest cat. lever: toggles its channel each time a cat steps on.
+//   pad:    anything arriving on the pad jumps to its twin at `to`.
+// par: the fewest lives that can finish. `proof` records the exhaustive searches (run offline with the fast
+//   solver) showing that each smaller number of lives cannot finish. `bestKnown` marks a par that is the fewest
+//   lives found but has not been proved; the proof then covers only the smaller counts listed.
 // solution: one input string per life, oldest first (U D L R, W = wait). Each earns all three paws.
 'use strict';
 const TIMECAT_LEVELS = [
-  { id: 1, era: 1, name: 'First Steps', loop: 20, par: 1,
-    map: ['#######', '#S..#f#', '#.#.#.#', '#.#...#', '#.###.#', '#....E#', '#######'],
-    solution: ['RRDDRRUUDDDD'] },
-  { id: 2, era: 1, name: 'Hold the Door', loop: 20, par: 2,
-    map: ['#########', '#S..a..f#', '######A##', '#E......#', '#########'],
+  { id: 1, era: 1, name: 'Hold the Door', loop: 16, par: 2,
+    map: [
+      '#########',
+      '#S..a..f#',
+      '######A##',
+      '#E......#',
+      '#########',
+    ],
+    // fewer lives checked offline: 1 (13 states)
+    proof: [{ k: 1, states: 13 }],
     solution: ['RRR', 'RRRRRRLDDLLLLL'] },
-  { id: 3, era: 1, name: 'After You', loop: 20, par: 3,
-    map: ['#######', '#S.a..#', '#B###A#', '#.#b.f#', '#A#####', '#....E#', '#######'],
-    solution: ['RR', 'RRRRDDLL', 'WWWWWWWWDDDDRRRR'] },
-  { id: 4, era: 1, name: 'Clockwork', loop: 12, par: 2,
-    map: ['#########', '#a..S...#', '#######A#', '#E.....f#', '#########'],
-    solution: ['LLL', 'RRRDDLLLLLL'] },
-  { id: 5, era: 2, name: 'Heavy Lifting', loop: 16, par: 1,
-    map: ['########', '#S..o.a#', '####A###', '#E....f#', '########'],
-    solution: ['RRRRLDDRRLLLLL'] },
-  { id: 6, era: 2, name: 'Scarab Run', loop: 28, par: 1,
-    map: ['#########', '#S......#', '##.######', '#......f#', '######.##', '#E......#', '#########'],
-    things: [{ t: 'scarab', x: 7, y: 3, dir: 'L', len: 7 }],
-    solution: ['WWWWWRDDRRRRDURLDDLLLLL'] },
-  { id: 7, era: 2, name: 'Urn Wall', loop: 30, par: 2,
-    map: ['#########', '#S.....##', '#A###.#.#', '#.###.#.#', '#.###.o.#', '#.##f...#', '#.#####.#', '#.#####.#', '#A#####a#', '#E#######', '#########'],
-    things: [{ t: 'scarab', x: 7, y: 8, dir: 'U', len: 7 }],
-    solution: ['RRRRDDDRDLLRRRDDD', 'WWWWWWWWWWWWWWWWWDDDDDDDD'] },
-  { id: 8, era: 2, name: 'The Weighing Room', loop: 28, par: 2,
-    map: ['#########', '#S.o..af#', '#.###.#.#', '#.#.....#', '#A###.###', '#B###b###', '#...E####', '#########'],
-    things: [{ t: 'scarab', x: 3, y: 3, dir: 'R', len: 5 }],
-    solution: ['WRRRRDDRRUUDDLLDD', 'WWWWWWWWWWWWWWDDDDDRRR'] },
-  { id: 9, era: 3, name: 'Pull', loop: 22, par: 1,
-    map: ['#########', '#S.....f#', '#C#######', '#..E#####', '#########'],
-    things: [{ t: 'lever', x: 4, y: 1, ch: 'c' }],
-    solution: ['RRRLRRRRLLLLLLDDRR'] },
-  { id: 10, era: 3, name: 'Here, Boy', loop: 32, par: 1,
-    map: ['#########', '#S......#', '#.#####.#', '#.#####.#', '#.#####.#', '#..f...E#', '#########'],
-    things: [{ t: 'hound', x: 5, y: 5 }],
-    solution: ['RRRRWRWRWWLLLLLLDDDDRRRRRR'] },
-  { id: 11, era: 3, name: 'Decoy', loop: 20, par: 2,
-    map: ['#########', '####.####', '####.####', '####.####', '#S.....E#', '####.####', '####f####', '#########'],
-    things: [{ t: 'hound', x: 6, y: 4 }],
-    solution: ['RRRUUU', 'WWWWWWRRRDDUURRR'] },
-  { id: 12, era: 3, name: 'The Kennels', loop: 22, par: 3,
-    map: ['#########', '###.#####', '###.#####', '#S.....f#', '###a#A###', '#####C###', '#####E###', '#########'],
-    things: [{ t: 'lever', x: 3, y: 1, ch: 'c' }, { t: 'hound', x: 5, y: 3 }],
-    solution: ['RRUU', 'WWWWWWRRD', 'WWWWWWRRRRRRLLDDD'] },
-  { id: 13, era: 4, name: 'Belt Up', loop: 20, par: 1,
-    map: ['#########', '#S.o>>>a#', '#.#######', '#.>>>>f.#', '#.#####.#', '#A<<<<<.#', '#E#######', '#########'],
-    solution: ['RRLLDDRWRRDDLLLD'] },
-  { id: 14, era: 4, name: 'Letting Off Steam', loop: 26, par: 1,
-    map: ['#########', '###.#.###', '#S......#', '####.##.#', '#E......#', '###.#.###', '#####f###', '#########'],
-    things: [{ t: 'vent', x: 3, y: 1, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 5, y: 1, period: 4, on: 2, phase: 2 },
-      { t: 'vent', x: 4, y: 3, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 3, y: 5, period: 3, on: 1, phase: 0 },
-      { t: 'vent', x: 5, y: 5, period: 6, on: 1, phase: 0 }],
+  { id: 2, era: 1, name: 'After You', loop: 20, par: 2,
+    map: [
+      '#######',
+      '#S.a..#',
+      '#B###A#',
+      '#.#b.f#',
+      '#.#####',
+      '#....E#',
+      '#######',
+    ],
+    // fewer lives checked offline: 1 (5 states)
+    proof: [{ k: 1, states: 5 }],
+    solution: ['RRRRDDLL', 'WWRRWWLLDDDDRRRR'] },
+  { id: 3, era: 1, name: 'Doorstop', loop: 20, par: 2,
+    map: [
+      '#########',
+      '#S..a...#',
+      '#######A#',
+      '#E..B..b#',
+      '#####f###',
+      '#########',
+    ],
+    // fewer lives checked offline: 1 (7 states)
+    proof: [{ k: 1, states: 7 }],
+    solution: ['WWWRRRRRRDWDWLLD', 'RRRRRRDWWDLLLLLL'] },
+  { id: 4, era: 1, name: 'Clockwork', loop: 34, par: 2,
+    map: [
+      '#############',
+      '#S...A...B..#',
+      '##a###b####.#',
+      '###########.#',
+      '#E...C......#',
+      '###f#####c###',
+      '#############',
+    ],
+    // fewer lives checked offline: 1 (5 states)
+    proof: [{ k: 1, states: 5 }],
+    solution: ['WRDURRRRDURRRWRRDDDLLD', 'RRRRWWRRRRWWRRDDDLLLLLLLLDULL'] },
+  { id: 5, era: 2, name: 'Heavy Lifting', loop: 33, par: 1,
+    map: [
+      '#########',
+      '#S......#',
+      '#.#o#.#.#',
+      '#.....#.#',
+      '#f###a#A#',
+      '#######E#',
+      '#########',
+    ],
+    // fewer lives checked offline: n/a
+    solution: ['RRDULLDDDURRRLUURRDDUURRDDDD'] },
+  { id: 6, era: 2, name: 'Scarab Run', loop: 33, par: 1,
+    map: [
+      '###########',
+      '#S........#',
+      '#####o###.#',
+      '#....a....#',
+      '#######f#A#',
+      '#########.#',
+      '#########E#',
+      '###########',
+    ],
+    things: [{ t: 'scarab', x: 1, y: 3, dir: 'R', len: 9 }],
+    // fewer lives checked offline: n/a
+    solution: ['WWWRRRRDURRRRDDLLDWWWWURRDDD'] },
+  { id: 7, era: 2, name: 'Beetle Gate', loop: 34, par: 3,
+    map: [
+      '#############',
+      '#S..........#',
+      '##a########.#',
+      '###########.#',
+      '##########.A#',
+      '###########.#',
+      '####c###b##.#',
+      '#EC...B.....#',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 10, y: 4, dir: 'R', len: 2 }],
+    // fewer lives checked offline: 1 (28 states), 2 (875 states)
+    proof: [{ k: 1, states: 28 }, { k: 2, states: 875 }],
+    solution: ['RD', 'RRRRRRRRRRDDDDDDLLLLLWWLLUDRD', 'RRRRRRRRRRDDDDDDLLLUDLLLLLLWL'] },
+  { id: 8, era: 2, name: 'The Weighing Room', loop: 48, par: 4,
+    map: [
+      '#############',
+      '#S.D........#',
+      '#d####a####.#',
+      '##########.A#',
+      '###########.#',
+      '#...........#',
+      '#.######b####',
+      '#B.##########',
+      '#.##c#f##.###',
+      '#........C.E#',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 10, y: 3, dir: 'R', len: 2 }, { t: 'scarab', x: 2, y: 7, dir: 'L', len: 2 }, { t: 'scarab', x: 9, y: 8, dir: 'D', len: 2 }],
+    // fewer lives checked offline: 1 (6 states), 2 (3532 states), 3 (378506 states)
+    proof: [{ k: 1, states: 6 }, { k: 2, states: 3532 }, { k: 3, states: 378506 }],
+    solution: ['DWWURRRRRD', 'RRRRRRRRRRDWDDDLLLD', 'WWRRWRRRRRRRRDDDWDLLLLLLLLLLDDDWDRRRUDRRU', 'WRRRRRRRRRRDDDWDLLLLLLLLLLDDDDRRRRRRRRRWR'] },
+  { id: 9, era: 3, name: 'Pull', loop: 32, par: 1,
+    map: [
+      '############',
+      '#S.a....A.E#',
+      '##.#########',
+      '##.....#####',
+      '##.###.#####',
+      '##.....#####',
+      '####f#######',
+      '############',
+    ],
+    things: [{ t: 'lever', x: 6, y: 4, ch: 'a' }],
+    // fewer lives checked offline: n/a
+    solution: ['RDDDDRRDURRUULLLLUURRRRRRRR'] },
+  { id: 10, era: 3, name: 'Here, Boy', loop: 21, par: 2,
+    map: [
+      '#############',
+      '#####.#######',
+      '#a###.#######',
+      '#.###.#######',
+      '#S.A.......E#',
+      '#####.#######',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }],
+    // fewer lives checked offline: 1 (59 states)
+    proof: [{ k: 1, states: 59 }],
+    solution: ['UUDDRRWWWR', 'WRRWWRRDDUURRRRRR'] },
+  { id: 11, era: 3, name: 'Decoy', loop: 25, par: 2,
+    map: [
+      '#############',
+      '#####.#######',
+      '#a###.#######',
+      '#.###.#######',
+      '#S.A.......E#',
+      '#####.#######',
+      '#####.#######',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }, { t: 'hound', x: 10, y: 4 }, { t: 'lever', x: 5, y: 6, ch: 'a' }],
+    // fewer lives checked offline: 1 (82 states)
+    proof: [{ k: 1, states: 82 }],
+    solution: ['WWUUWWWDDR', 'WWWRRRRDDDWWUUURRRRRR'] },
+  { id: 12, era: 3, name: 'The Kennels', loop: 29, par: 4,
+    map: [
+      '#############',
+      '#####a#######',
+      '#####.#######',
+      '#####.#f#####',
+      '#S....A.B.CE#',
+      '###b#####.###',
+      '#########.###',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }, { t: 'hound', x: 9, y: 5 }, { t: 'lever', x: 2, y: 4, ch: 'c' }],
+    // fewer lives checked offline: 1 (174 states), 2 (12614 states), 3 (196666 states)
+    proof: [{ k: 1, states: 174 }, { k: 2, states: 12614 }, { k: 3, states: 196666 }],
+    solution: ['WRRRRUUUWWWWWWWD', 'WRRDWWURRUWUWU', 'WWWWWWWWWWWWWWWWWWRRDUL', 'WWWWWWWWWWWWWRRRRRRUDRRRR'] },
+  { id: 13, era: 4, name: 'Belt Up', loop: 23, par: 1,
+    map: [
+      '##########',
+      '#S..>>>v.#',
+      '#.#.o##v.#',
+      '#.#...#a.#',
+      '#.#####..#',
+      '#...f....#',
+      '####A#####',
+      '####E#####',
+      '##########',
+    ],
+    // fewer lives checked offline: n/a
+    solution: ['RRDDRUURWRDDDLLLLDD'] },
+  { id: 14, era: 4, name: 'Letting Off Steam', loop: 25, par: 1,
+    map: [
+      '#########',
+      '###.#.###',
+      '#S......#',
+      '####.##.#',
+      '#E......#',
+      '###.#.###',
+      '#####f###',
+      '#########',
+    ],
+    things: [{ t: 'vent', x: 3, y: 1, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 5, y: 1, period: 4, on: 2, phase: 2 }, { t: 'vent', x: 4, y: 3, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 3, y: 5, period: 3, on: 1, phase: 0 }, { t: 'vent', x: 5, y: 5, period: 6, on: 1, phase: 0 }],
+    // fewer lives checked offline: n/a
     solution: ['RRRRWRWWRDDLLDDUULLLL'] },
-  { id: 15, era: 4, name: 'Assembly Line', loop: 14, par: 2,
-    map: ['#########', '#S..ov###', '#.#.#v###', '#.#f#v###', '#.###v###', '#A###v###', '#.###v###', '#.###v###', '#B###.###', '#E#######', '#########'],
-    things: [{ t: 'plate', x: 5, y: 3, ch: 'a' }, { t: 'plate', x: 5, y: 4, ch: 'a' }, { t: 'plate', x: 5, y: 6, ch: 'b' }, { t: 'plate', x: 5, y: 7, ch: 'b' }],
-    solution: ['RRRLDD', 'WDDDDDDDD'] },
-  { id: 16, era: 4, name: 'The Boiler', loop: 16, par: 3,
-    map: ['#########', '#S.....##', '#..ov#.##', '#.##v#.##', '#a..v..##', '####v#.##', '###f.#A##', '######E##', '#########'],
-    things: [{ t: 'vent', x: 5, y: 4, period: 1, on: 1, phase: 0 }],
-    solution: ['RDWRLLDD', 'DDDRRRWL', 'RRRRRDDDDDD'] },
-  { id: 17, era: 5, name: 'Mind the Gap', loop: 20, par: 1,
-    map: ['#########', '#S.o.#..#', '#....#..#', '#f.###a.#', '#######A#', '#######E#', '#########'],
-    things: [{ t: 'pad', x: 4, y: 1, to: [6, 2] }, { t: 'pad', x: 4, y: 2, to: [7, 1] }],
+  { id: 15, era: 4, name: 'Assembly Line', loop: 23, par: 3,
+    map: [
+      '#############',
+      '#.o>>>>>>>>v#',
+      '#.#########v#',
+      '#.#########c#',
+      '#.##.##.##.##',
+      '#S..A..B..CE#',
+      '##.###.##f###',
+      '##a###b######',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 4, y: 4, dir: 'D', len: 2 }, { t: 'scarab', x: 7, y: 4, dir: 'D', len: 2 }, { t: 'scarab', x: 10, y: 4, dir: 'D', len: 2 }],
+    // fewer lives checked offline: 1 (518 states), 2 (18514 states)
+    proof: [{ k: 1, states: 518 }, { k: 2, states: 18514 }],
+    solution: ['RDDUULUUUURRWRRR', 'WRRRRWWWWRDD', 'WRRRRWWWWWWRRRRDURR'] },
+  { id: 16, era: 4, name: 'The Boiler', loop: 33, par: 4,
+    map: [
+      '#############',
+      '#.o>>>>>>>>v#',
+      '#.#########v#',
+      '#.#########d#',
+      '#.##.#.#.#.##',
+      '#S..A.B.C.DE#',
+      '##.##.#.#####',
+      '##af#.#.#####',
+      '#####b#c#####',
+      '#############',
+    ],
+    things: [{ t: 'vent', x: 4, y: 4, period: 3, on: 1, phase: 0 }, { t: 'vent', x: 6, y: 4, period: 4, on: 2, phase: 1 }, { t: 'vent', x: 8, y: 4, period: 3, on: 1, phase: 1 }, { t: 'vent', x: 10, y: 4, period: 4, on: 2, phase: 3 }],
+    // fewer lives checked offline: 1 (2688 states), 2 (75228 states), 3 (2623832 states)
+    proof: [{ k: 1, states: 2688 }, { k: 2, states: 75228 }, { k: 3, states: 2623832 }],
+    solution: ['RDDRLWWUULUUUUR', 'WWWWWRRRRWWWWWDDD', 'WWWWWRRRRWWWWWWWWRRWWDDD', 'WWWWWRRRRWWWWWWWWWWWWRRWRRRR'] },
+  { id: 17, era: 5, name: 'Mind the Gap', loop: 19, par: 1,
+    map: [
+      '#########',
+      '#S.o.#..#',
+      '#....#..#',
+      '#f.###a.#',
+      '#######A#',
+      '#######E#',
+      '#########',
+    ],
+    things: [{ t: 'pad', x: 4, y: 1, to: [6,2] }, { t: 'pad', x: 4, y: 2, to: [7,1] }],
+    // fewer lives checked offline: n/a
     solution: ['DDUURRDRLDDDDDD'] },
-  { id: 18, era: 5, name: 'Red Line', loop: 18, par: 2,
-    map: ['#########', '#S.a##f##', '#.####.##', '#.o..A..#', '######.##', '######E##', '#########'],
+  { id: 18, era: 5, name: 'Red Line', loop: 17, par: 2,
+    map: [
+      '#########',
+      '#S.a##f##',
+      '#.####.##',
+      '#.o..A..#',
+      '######.##',
+      '######E##',
+      '#########',
+    ],
     things: [{ t: 'laser', x: 8, y: 3, dir: 'L' }],
-    solution: ['RR', 'DDRRRRRUUDDDD'] },
-  { id: 19, era: 5, name: 'Relay', loop: 20, par: 3,
-    map: ['#########', '#S.a....#', '#.#######', '#...A...#', '#.#######', '#..CC.b.#', '#.###.###', '#f###E###', '#########'],
-    things: [{ t: 'laser', x: 8, y: 3, dir: 'L' }, { t: 'receiver', x: 0, y: 3, ch: 'c' }, { t: 'laser', x: 6, y: 6, dir: 'L', offCh: 'b' }],
-    solution: ['WRR', 'DDDDRRRRR', 'DDDDDDUURRRRDD'] },
-  { id: 20, era: 5, name: 'Midnight', loop: 40, par: 4,
-    map: ['#########', '#S.a#...#', '#A####.E#', '#A#.#b###', '#A....BB#', '###.##..#', '#######.#', '#...CCo.#', '##.v###c#', '#.D..f###', '#########'],
-    things: [{ t: 'scarab', x: 3, y: 3, dir: 'D', len: 3 }, { t: 'vent', x: 6, y: 5, period: 3, on: 1, phase: 0 },
-      { t: 'laser', x: 0, y: 7, dir: 'R' }, { t: 'lever', x: 4, y: 9, ch: 'd' }, { t: 'pad', x: 1, y: 9, to: [7, 1] },
-      { t: 'hound', x: 6, y: 2 }],
-    solution: ['RR', 'WWWDDDRRRRU', 'WWWWWDDDRRRWRRRDDDD', 'WWWWWDDDRRRWRRRWDDDLLLLDRLRRLLLLD'] },
+    // fewer lives checked offline: 1 (18 states)
+    proof: [{ k: 1, states: 18 }],
+    solution: ['WWRR', 'DDRRRRRUUDDDD'] },
+  { id: 19, era: 5, name: 'Relay', loop: 34, par: 2,
+    map: [
+      '#############',
+      '#S.a....o..f#',
+      '#.###########',
+      '#.....A.....#',
+      '#.###########',
+      '#..CC..b#####',
+      '#.###.#######',
+      '#d###..DE####',
+      '#############',
+    ],
+    things: [{ t: 'laser', x: 12, y: 3, dir: 'L' }, { t: 'receiver', x: 0, y: 3, ch: 'c' }, { t: 'laser', x: 6, y: 6, dir: 'L', offCh: 'b' }, { t: 'pad', x: 10, y: 1, to: [7,5] }],
+    // fewer lives checked offline: 1 (92 states)
+    proof: [{ k: 1, states: 92 }],
+    solution: ['RRRRRRRRRRLLLLLLLLWLLDDDDDD', 'WWWWWWWWWWWWWWDDDDRRRWWRDDRRR'] },
+  { id: 20, era: 5, name: 'Midnight', loop: 24, par: 5, bestKnown: true,
+    map: [
+      '#############',
+      '######S######',
+      '##f###..>>>v#',
+      '#......####v#',
+      '####a#.####d#',
+      '######.######',
+      '######...#..#',
+      '#b.....####c#',
+      '##A#.#.######',
+      '##.#.#.#.#.##',
+      '######.ABCDE#',
+      '#######.#.###',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 7, y: 11, dir: 'U', len: 2 }, { t: 'vent', x: 8, y: 9, period: 3, on: 1, phase: 0 }, { t: 'scarab', x: 9, y: 11, dir: 'U', len: 2 }, { t: 'vent', x: 10, y: 9, period: 3, on: 1, phase: 1 }, { t: 'scarab', x: 1, y: 3, dir: 'R', len: 3 }, { t: 'hound', x: 2, y: 9 }, { t: 'laser', x: 12, y: 6, dir: 'L', offCh: 'a' }, { t: 'pad', x: 8, y: 6, to: [10,6] }],
+    // fewer lives checked offline: 1 (3248 states), 2 (221537 states), 3 (11338440 states)
+    proof: [{ k: 1, states: 3248 }, { k: 2, states: 221537 }, { k: 3, states: 11338440 }],
+    solution: ['WWDDLLLLUWWDRRD', 'DDDDDDLLLLL', 'DRRRD', 'WWWWWWWWDDDDDRRRD', 'WWWWWWDDDDDDDDDRRRRR'] },
 ];
 if (typeof module !== 'undefined') module.exports = TIMECAT_LEVELS; else globalThis.TIMECAT_LEVELS = TIMECAT_LEVELS;
 
 })();
 
 (function () {
-// Exhaustive search over every combination of inputs for k cats at once.
-// Because an echo is only a replay of inputs, any k-life playthrough is one such combination,
-// so finding no win here proves the room cannot be finished in k lives.
+// Fast exhaustive solver for Timecat. Same rules as timecat-core.js step(), rewritten over typed arrays
+// with a compact hash table so that searches of tens of millions of states fit in memory.
+// Checked against the core step by fastcheck.js on random play.
 'use strict';
 const C = typeof require !== 'undefined' ? require('./timecat-core.js') : globalThis.TimecatCore;
 
-function key(s) {
-  return s.cats.join(',') + '|' + s.crates.join(',') + '|' + s.lev + '|' +
-    s.sc.map(o => o.k * 2 + (o.d > 0 ? 1 : 0)).join(',') + '|' + s.hd.join(',') + '|' + s.open + '|' + s.lit + '|' + (s.fish ? 1 : 0);
+function engine(L, k, usesTick) {
+  const W = L.w, N = L.n, m = L.crates.length, ns = L.scarabs.length, nh = L.hounds.length, nd = L.doors.length;
+  if (nd > 31) throw new Error('too many doors');
+  const D = { U: -W, D: W, L: -1, R: 1, W: 0 };
+  const ACT = 'WUDLR', AD = [0, -W, W, -1, 1];
+  const solid = L.solid, doorAt = L.doorAt, plate = L.plate, pad = L.pad, leverAt = L.leverAt, recvAt = L.recvAt;
+  const beltD = new Int32Array(N); for (let i = 0; i < N; i++) beltD[i] = L.belt[i] ? D[L.belt[i]] : 0;
+  const doorI = L.doors.map(d => d.i), doorCh = L.doors.map(d => d.ch);
+  const tracks = L.scarabs.map(s => s.track);
+  const vents = L.vents, lasers = L.lasers.map(z => ({ i: z.i, d: D[z.dir], off: z.off })), receivers = L.receivers;
+  const nbr4 = [-W, W, -1, 1];
+  // state layout in an Int32Array
+  const oCat = 0, oCr = k, oLev = k + m, oSk = oLev + 1, oSd = oSk + ns, oHd = oSd + ns, oOpen = oHd + nh, oLit = oOpen + 1, oFish = oLit + 1, LEN = oFish + 1;
+  const KL = k + m + 1 + ns + nh + 4 + 1 + 1 + 1; // key bytes, last byte is the phase
+  const P = L.phasePeriod;
+  const cats0 = new Int32Array(k), crate0 = new Int32Array(m), scOld = new Int32Array(ns), scNew = new Int32Array(ns), hdOld = new Int32Array(nh), arrived = new Uint8Array(k);
+  const steamG = new Int32Array(N), beamG = new Int32Array(N); let gen = 0;
+  let open = 0;
+  const S = new Int32Array(LEN);
+  const doorShut = i => { const d = doorAt[i]; return d >= 0 && !((open >>> d) & 1); };
+  const crateAt = i => { for (let n = 0; n < m; n++) if (S[oCr + n] === i) return true; return false; };
+  const catAt = i => { for (let c = 0; c < k; c++) if (S[oCat + c] === i) return true; return false; };
+  const houndAt = i => { for (let n = 0; n < nh; n++) if (S[oHd + n] === i) return true; return false; };
+  const scarabAt = i => { for (let n = 0; n < ns; n++) if (tracks[n][S[oSk + n]] === i) return true; return false; };
+  const crateFree = i => !solid[i] && !doorShut(i) && !crateAt(i) && !catAt(i) && !houndAt(i) && !scarabAt(i);
+  let ch = 0;
+  function settle() {
+    let c2 = S[oLev] | S[oLit];
+    for (let c = 0; c < k; c++) { const p = S[oCat + c]; if (p >= 0) c2 |= plate[p]; }
+    for (let n = 0; n < m; n++) c2 |= plate[S[oCr + n]];
+    ch = c2;
+    let o = 0;
+    for (let n = 0; n < nd; n++) { const i = doorI[n]; if ((c2 & doorCh[n]) || catAt(i) || crateAt(i) || houndAt(i) || scarabAt(i)) o |= 1 << n; }
+    open = o; S[oOpen] = o;
+  }
+  function statics(t) {
+    gen++;
+    for (const v of vents) {
+      if ((t + v.phase) % v.period >= v.on || crateAt(v.i)) continue;
+      steamG[v.i] = gen;
+      for (const d of nbr4) { const j = v.i + d; if (!solid[j] && !doorShut(j)) steamG[j] = gen; }
+    }
+    let lit = 0;
+    for (const z of lasers) {
+      if (z.off && (ch & z.off)) continue;
+      for (let j = z.i + z.d; ; j += z.d) {
+        if (recvAt[j] >= 0) { lit |= receivers[recvAt[j]].ch; break; }
+        if (solid[j] || crateAt(j) || doorShut(j)) break;
+        beamG[j] = gen;
+      }
+    }
+    S[oLit] = lit;
+  }
+  // one tick, in place on S; acts holds action indices into ACT
+  function step(t, acts) {
+    open = S[oOpen];
+    for (let c = 0; c < k; c++) cats0[c] = S[oCat + c];
+    for (let n = 0; n < m; n++) crate0[n] = S[oCr + n];
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c], a = acts[c];
+      if (p < 0 || a === 0) continue;
+      const q = p + AD[a];
+      if (solid[q] || doorShut(q)) continue;
+      let ci = -1; for (let n = 0; n < m; n++) if (S[oCr + n] === q) { ci = n; break; }
+      if (ci >= 0) { const r = q + AD[a]; if (!crateFree(r)) continue; S[oCr + ci] = r; }
+      S[oCat + c] = q;
+    }
+    if (m) {
+      let done = 0;
+      for (let again = true; again;) {
+        again = false;
+        for (let n = 0; n < m; n++) {
+          const b = beltD[S[oCr + n]];
+          if ((done >> n) & 1 || !b) continue;
+          const q = S[oCr + n] + b;
+          if (crateFree(q)) { S[oCr + n] = q; done |= 1 << n; again = true; }
+        }
+      }
+    }
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c];
+      if (p < 0 || !beltD[p]) continue;
+      const q = p + beltD[p];
+      if (!solid[q] && !doorShut(q) && !crateAt(q)) S[oCat + c] = q;
+    }
+    for (let n = 0; n < m; n++) { const p = S[oCr + n]; if (p !== crate0[n] && pad[p] >= 0 && crateFree(pad[p])) S[oCr + n] = pad[p]; }
+    for (let c = 0; c < k; c++) {
+      arrived[c] = 0; const p = S[oCat + c];
+      if (p < 0 || p === cats0[c]) continue;
+      arrived[c] = 1;
+      if (pad[p] >= 0 && !crateAt(pad[p])) S[oCat + c] = pad[p];
+    }
+    for (let c = 0; c < k; c++) if (arrived[c] && S[oCat + c] >= 0) S[oLev] ^= leverAt[S[oCat + c]];
+    settle();
+    for (let n = 0; n < ns; n++) {
+      const tr = tracks[n], ok = kk => kk >= 0 && kk < tr.length && !crateAt(tr[kk]) && !doorShut(tr[kk]);
+      scOld[n] = tr[S[oSk + n]];
+      if (!ok(S[oSk + n] + S[oSd + n])) S[oSd + n] = -S[oSd + n];
+      if (ok(S[oSk + n] + S[oSd + n])) S[oSk + n] += S[oSd + n];
+      scNew[n] = tr[S[oSk + n]];
+    }
+    for (let n = 0; n < nh; n++) hdOld[n] = S[oHd + n];
+    if (t % 2 === 0) {
+      for (let n = 0; n < nh; n++) {
+        const hp = S[oHd + n], hx = hp % W, hy = (hp / W) | 0;
+        let best = -1, bd = 1e9;
+        for (let c = 0; c < k; c++) { const p = S[oCat + c]; if (p < 0) continue; const d = Math.abs((p % W) - hx) + Math.abs(((p / W) | 0) - hy); if (d < bd) { bd = d; best = p; } }
+        if (best < 0 || bd === 0) continue;
+        const dx = (best % W) - hx, dy = ((best / W) | 0) - hy;
+        const mx = dx ? (dx > 0 ? 1 : -1) : 0, my = dy ? (dy > 0 ? W : -W) : 0;
+        const first = Math.abs(dx) >= Math.abs(dy) ? mx : my, second = Math.abs(dx) >= Math.abs(dy) ? my : mx;
+        for (const mv of [first, second]) {
+          if (!mv) continue;
+          const q = hp + mv;
+          if (solid[q] || doorShut(q) || crateAt(q) || houndAt(q)) continue;
+          S[oHd + n] = q; break;
+        }
+      }
+    }
+    settle();
+    statics(t);
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c], p0 = cats0[c];
+      if (p < 0) continue;
+      let hit = steamG[p] === gen || beamG[p] === gen;
+      for (let n = 0; !hit && n < ns; n++) hit = scNew[n] === p || (scNew[n] === p0 && scOld[n] === p && p !== p0);
+      for (let n = 0; !hit && n < nh; n++) hit = S[oHd + n] === p || (S[oHd + n] === p0 && hdOld[n] === p && p !== p0);
+      if (hit) S[oCat + c] = -1;
+    }
+    if (L.fish >= 0 && !S[oFish]) for (let c = 0; c < k; c++) if (S[oCat + c] === L.fish) { S[oFish] = 1; break; }
+  }
+  function encode(out, o, t) {
+    let j = o;
+    for (let c = 0; c < k; c++) out[j++] = S[oCat + c] < 0 ? 255 : S[oCat + c];
+    for (let n = 0; n < m; n++) out[j++] = S[oCr + n];
+    out[j++] = S[oLev];
+    for (let n = 0; n < ns; n++) out[j++] = S[oSk + n] * 2 + (S[oSd + n] > 0 ? 1 : 0);
+    for (let n = 0; n < nh; n++) out[j++] = S[oHd + n];
+    const op = S[oOpen]; out[j++] = op & 255; out[j++] = (op >>> 8) & 255; out[j++] = (op >>> 16) & 255; out[j++] = (op >>> 24) & 255;
+    out[j++] = S[oLit]; out[j++] = S[oFish]; out[j++] = usesTick ? t : t % P;
+  }
+  function decode(src, o) {
+    let j = o;
+    for (let c = 0; c < k; c++) { const v = src[j++]; S[oCat + c] = v === 255 ? -1 : v; }
+    for (let n = 0; n < m; n++) S[oCr + n] = src[j++];
+    S[oLev] = src[j++];
+    for (let n = 0; n < ns; n++) { const v = src[j++]; S[oSk + n] = v >> 1; S[oSd + n] = v & 1 ? 1 : -1; }
+    for (let n = 0; n < nh; n++) S[oHd + n] = src[j++];
+    S[oOpen] = src[j] | (src[j + 1] << 8) | (src[j + 2] << 16) | (src[j + 3] << 24); j += 4;
+    S[oLit] = src[j++]; S[oFish] = src[j++];
+  }
+  function fromCore(s) {
+    for (let c = 0; c < k; c++) S[oCat + c] = s.cats[c];
+    for (let n = 0; n < m; n++) S[oCr + n] = s.crates[n];
+    S[oLev] = s.lev;
+    for (let n = 0; n < ns; n++) { S[oSk + n] = s.sc[n].k; S[oSd + n] = s.sc[n].d; }
+    for (let n = 0; n < nh; n++) S[oHd + n] = s.hd[n];
+    S[oOpen] = s.open; S[oLit] = s.lit; S[oFish] = s.fish ? 1 : 0;
+  }
+  return { S, step, encode, decode, fromCore, KL, LEN, ACT, AD, live: () => S[oCat + k - 1], fish: () => S[oFish], oCat, P };
 }
 
-// Returns {found, lives, ticks, explored}. needFish: goal also requires the fish.
-function search(L, k, needFish, opts = {}) {
-  const maxStates = opts.maxStates || 60e6;
+// Exhaustive breadth-first search over every combination of inputs for k cats.
+// Returns { found, ticks, lives (when found and keepPath), states, complete }.
+function solve(L, k, opts = {}) {
+  const needFish = !!opts.needFish, maxStates = opts.maxStates || 40e6, keep = opts.keepPath !== false, log = opts.log;
+  const fixed = opts.fixed || null;
+  const E = engine(L, k, !!fixed), KL = E.KL;
+  let cap = 1 << 20, keys = new Uint8Array(cap * KL), par = keep ? new Int32Array(cap) : null, actc = keep ? new Int32Array(cap) : null;
+  let tbits = 21, tsize = 1 << tbits, table = new Int32Array(tsize), count = 0;
+  const tmp = new Uint8Array(KL);
+  const hash = (b, o) => { let h = 2166136261; for (let i = 0; i < KL; i++) { h ^= b[o + i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+  function grow() {
+    const nc = cap * 2, nk = new Uint8Array(nc * KL); nk.set(keys); keys = nk;
+    if (keep) { const np = new Int32Array(nc); np.set(par); par = np; const na = new Int32Array(nc); na.set(actc); actc = na; }
+    cap = nc;
+  }
+  function rehash() {
+    tbits++; tsize = 1 << tbits; table = new Int32Array(tsize);
+    for (let s = 0; s < count; s++) { let h = hash(keys, s * KL) & (tsize - 1); while (table[h]) h = (h + 1) & (tsize - 1); table[h] = s + 1; }
+  }
+  function insert(b, from, ac) { // returns new index, or -1 if already seen
+    let h = hash(b, 0) & (tsize - 1);
+    for (;;) {
+      const e = table[h];
+      if (!e) break;
+      const o = (e - 1) * KL; let same = true;
+      for (let i = 0; i < KL; i++) if (keys[o + i] !== b[i]) { same = false; break; }
+      if (same) return -1;
+      h = (h + 1) & (tsize - 1);
+    }
+    if (count >= cap) grow();
+    keys.set(b, count * KL); if (keep) { par[count] = from; actc[count] = ac; }
+    table[h] = count + 1; count++;
+    if (count * 2 > tsize) rehash();
+    return count - 1;
+  }
   const s0 = C.initialState(L, k);
-  const P = L.phasePeriod;
-  const seen = new Set([key(s0) + '#0']);
-  const parent = opts.noPath ? null : new Map();
-  let frontier = [s0], explored = 1;
-  const acts = 'WUDLR';
-  for (let t = 0; t < L.loop && frontier.length; t++) {
-    const next = [];
-    for (const s of frontier) {
-      // options per cat: skip moves into static walls (identical to waiting)
-      const opt = s.cats.map(p => p < 0 ? ['W'] : [...acts].filter(a => a === 'W' || !L.solid[p + L.delta[a]]));
-      const idx = new Array(k).fill(0), cur = new Array(k);
-      const sk = parent ? key(s) + '#' + (s.t % P) : null;
+  E.fromCore(s0); E.encode(tmp, 0, 0); insert(tmp, -1, 0);
+  let lo = 0, hi = 1;
+  const acts = new Int32Array(k), opts5 = [], nopt = new Int32Array(k), idx = new Int32Array(k);
+  for (let c = 0; c < k; c++) opts5.push(new Int32Array(5));
+  const extract = (s, t) => {
+    const lives = new Array(k).fill('');
+    for (let q = s; q > 0; q = par[q]) { let a = actc[q]; const col = []; for (let c = 0; c < k; c++) { col.push(E.ACT[a % 5]); a = Math.floor(a / 5); } for (let c = 0; c < k; c++) lives[c] = col[c] + lives[c]; }
+    return lives.map((v, i) => (i < k - 1 ? v.replace(/W+$/, '') : v));
+  };
+  for (let t = 0; t < L.loop && lo < hi; t++) {
+    for (let s = lo; s < hi; s++) {
+      E.decode(keys, s * KL);
+      if (E.live() === L.exit) continue; // the room is over once the live cat reaches the flap
+      const base = E.S.slice();
+      for (let c = 0; c < k; c++) {
+        const p = base[E.oCat + c]; let n = 0;
+        if (fixed && fixed[c] != null) { opts5[c][n++] = Math.max(0, E.ACT.indexOf(fixed[c][t] || 'W')); nopt[c] = n; idx[c] = 0; continue; }
+        opts5[c][n++] = 0;
+        if (p >= 0) for (let a = 1; a < 5; a++) if (!L.solid[p + E.AD[a]]) opts5[c][n++] = a;
+        nopt[c] = n; idx[c] = 0;
+      }
       for (;;) {
-        for (let c = 0; c < k; c++) cur[c] = opt[c][idx[c]];
-        const n = C.step(L, s, cur);
-        if (n.cats[k - 1] >= 0) {
-          n.crates.sort((a, b) => a - b);
-          const nk = key(n) + '#' + (n.t % P);
-          if (!seen.has(nk)) {
-            seen.add(nk); explored++;
-            if (parent) parent.set(nk, [sk, cur.join('')]);
-            if (n.won && (!needFish || n.fish)) {
-              if (!parent) return { found: true, ticks: n.t, explored };
-              const lives = new Array(k).fill('');
-              for (let q = nk; parent.has(q);) { const [pk, a] = parent.get(q); for (let c = 0; c < k; c++) lives[c] = a[c] + lives[c]; q = pk; }
-              return { found: true, ticks: n.t, explored, lives };
-            }
-            if (!n.won) next.push(n);
-            if (explored > maxStates) return { found: false, gaveUp: true, explored };
+        let code = 0, mul = 1;
+        for (let c = 0; c < k; c++) { acts[c] = opts5[c][idx[c]]; code += acts[c] * mul; mul *= 5; }
+        E.S.set(base);
+        E.step(t + 1, acts);
+        const lp = E.live();
+        if (lp >= 0) {
+          E.encode(tmp, 0, t + 1);
+          const ni = insert(tmp, s, code);
+          if (ni >= 0) {
+            if (lp === L.exit && (!needFish || E.fish())) return { found: true, ticks: t + 1, lives: keep ? extract(ni, t + 1) : null, states: count, complete: true };
+            if (count >= maxStates) return { found: false, states: count, complete: false };
           }
         }
         let c = 0;
-        while (c < k && ++idx[c] === opt[c].length) idx[c++] = 0;
+        while (c < k && ++idx[c] === nopt[c]) idx[c++] = 0;
         if (c === k) break;
       }
     }
-    frontier = next;
+    lo = hi; hi = count;
+    if (log) log(t + 1, count);
   }
-  return { found: false, explored };
+  return { found: false, states: count, complete: true };
 }
-
-// Strip pointless echo moves, keeping a valid three-paw playthrough of the same length or shorter.
-function tidy(L, lives, needFish) {
-  const good = v => { const r = C.playthrough(L, v); return r.ok && (!needFish || r.fish); };
-  if (!good(lives)) return null;
-  let v = lives.slice();
-  for (let c = 0; c < v.length - 1; c++) {
-    for (let i = v[c].length - 1; i >= 0; i--) {
-      if (v[c][i] === 'W') continue;
-      const w = v.slice(); w[c] = v[c].slice(0, i) + 'W' + v[c].slice(i + 1);
-      if (good(w)) v = w;
-    }
-    const w = v.slice(); w[c] = v[c].replace(/W+$/, '');
-    if (good(w)) v = w;
-  }
-  return v;
-}
-
-const api = { search, tidy, key };
-if (typeof module !== 'undefined') module.exports = api; else globalThis.TimecatSolver = api;
+if (typeof module !== 'undefined') module.exports = { engine, solve }; else globalThis.TimecatFast = { engine, solve };
 
 })();
 
@@ -1016,22 +1441,23 @@ function music(era) {
 }
 
 // ===== Game: state, input, rendering, screens =====
-const C = globalThis.TimecatCore, LEVELS = globalThis.TIMECAT_LEVELS, SOLVER = globalThis.TimecatSolver;
+const C = globalThis.TimecatCore, LEVELS = globalThis.TIMECAT_LEVELS, FAST = globalThis.TimecatFast;
 const $ = id => document.getElementById(id);
 const now = () => performance.now();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ----- save data -----
-const SAVE_KEY = 'timecat.v1';
+// v2: the rooms were redesigned, so room progress starts fresh; settings and seen story panels carry over from v1.
+const SAVE_KEY = 'timecat.v2', OLD_KEY = 'timecat.v1';
 const save = { rooms: {}, seenPanels: [], settings: { sound: true, music: true, reducedMotion: false } };
 let storageOK = true;
 function loadSave() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
+    const raw = localStorage.getItem(SAVE_KEY), old = raw ? null : localStorage.getItem(OLD_KEY);
+    if (raw || old) {
+      const s = JSON.parse(raw || old);
       if (s && typeof s === 'object') {
-        if (s.rooms && typeof s.rooms === 'object') save.rooms = s.rooms;
+        if (raw && s.rooms && typeof s.rooms === 'object') save.rooms = s.rooms;
         if (Array.isArray(s.seenPanels)) save.seenPanels = s.seenPanels;
         if (s.settings) Object.assign(save.settings, s.settings);
         return;
@@ -1059,11 +1485,8 @@ const PANELS = [
   ['Pip fits the five parts back into the clock, and it strikes midnight.', 'One by one the echoes curl up by the fire, until there is one cat, asleep.'],
 ];
 const COACH = {
-  1: 'Arrow keys or swipe to move. Reach the cat flap.',
-  2: 'Stand on the plate, then press Loop. Your next life plays beside the last one.',
-  3: 'Space, or a tap on the board, waits one tick. Rewind undoes anything.',
-  4: 'The loop is short. Your echo moves while you move.',
-  5: 'Walk into a crate to push it.',
+  1: 'Move onto the plate, then press Loop. Your next life plays beside this one as an echo.',
+  2: 'Tap the board or press Space to wait a tick. Rewind takes back a step. Pause has the full guide.',
 };
 
 // ----- elements and view -----
@@ -1093,7 +1516,7 @@ function setEra(era) {
 // ----- room state -----
 let room = null;
 let screen = 'title';
-const inRoom = () => room && (screen === 'room' || screen === 'pause' || screen === 'complete' || screen === 'out');
+const inRoom = () => room && (screen === 'room' || screen === 'pause' || screen === 'complete' || screen === 'out' || (screen === 'help' && helpOverRoom));
 
 function enterRoom(id, restore) {
   const def = LEVELS[id - 1], L = C.parseLevel(def);
@@ -1188,7 +1611,8 @@ function restartRoom() {
 function snapshotBoard() { const c = mk(boardC.width, boardC.height); c.getContext('2d').drawImage(boardC, 0, 0); return c; }
 
 // ----- hints -----
-const hintReady = () => room && (room.restartCount >= 3 || now() - room.t0 >= 180000 || room.hintLevel > 0);
+// Hints stay hidden until the room has had a fair go: five restarts or ten minutes.
+const hintReady = () => room && (room.restartCount >= 5 || now() - room.t0 >= 600000 || room.hintLevel > 0);
 function showHint() {
   if (!hintReady()) return;
   const sol = room.def.solution;
@@ -1217,7 +1641,9 @@ function finishRoom() {
   };
   row(true, 'Flap', 'Room finished');
   row(s.fish, 'Fish', s.fish ? 'Fish collected' : 'No fish this time');
-  row(used <= d.par, 'Par', `${used} ${used === 1 ? 'life' : 'lives'} used, par is ${d.par}`);
+  const lives = n => `${n} ${n === 1 ? 'life' : 'lives'}`;
+  row(used <= d.par, 'Par', used < d.par ? `${lives(used)}: under par! ${d.bestKnown ? 'The best known was' : 'Par is'} ${d.par}`
+    : `${lives(used)} used, par is ${d.par}${d.bestKnown ? ' (best known)' : ''}`);
   const head = $('complete-head'); head.textContent = ''; head.append(pixHeading(d.id % 4 === 0 ? ERAS[d.era].prize : 'Room complete', 3, ERAS[d.era].accent));
   $('complete-note').textContent = d.id % 4 === 0 ? `The ${ERAS[d.era].prize} is back in Pip's keeping. ${totalPaws()} of 60 paws.` : `${totalPaws()} of 60 paws.`;
   $('btn-next').textContent = d.id === 20 ? 'The ending' : 'Next room';
@@ -1232,12 +1658,31 @@ function startRoom(id) {
   const era = LEVELS[id - 1].era, queue = [];
   if (id === 1 && !save.seenPanels.includes(0)) queue.push(0);
   if (!save.seenPanels.includes(era)) queue.push(era);
-  const run = () => { if (queue.length) panel(queue.shift(), run); else enterRoom(id); };
+  const run = () => {
+    if (queue.length) { panel(queue.shift(), run); return; }
+    enterRoom(id);
+    // The first time anyone reaches room 1, the controls guide opens over the board before the first move.
+    if (id === 1 && !save.seenPanels.includes('help')) { save.seenPanels.push('help'); writeSave(); openHelp(() => show('room'), true); }
+  };
   run();
 }
 
+// ----- how to play -----
+let helpBack = null, helpOverRoom = false, helpAt = 0;
+function openHelp(back, overRoom) {
+  helpBack = back; helpOverRoom = !!overRoom; helpAt = now();
+  const head = $('help-head'); if (!head.childNodes.length) head.append(pixHeading('How to play', 3, '#fff6e2'));
+  show('help');
+  $('scr-help').scrollTop = 0;
+}
+function helpDone() {
+  if (screen !== 'help' || now() - helpAt < 350) return; // a key held from the story panel must not skip the guide
+  const f = helpBack; helpBack = null; helpOverRoom = false;
+  if (f) f(); else openTitle();
+}
+
 // ----- screens -----
-const SCREENS = ['title', 'select', 'panel', 'complete', 'pause', 'out', 'settings', 'test'];
+const SCREENS = ['title', 'select', 'panel', 'complete', 'pause', 'out', 'settings', 'test', 'help'];
 function show(name) {
   screen = name;
   for (const s of SCREENS) $('scr-' + s).hidden = s !== name;
@@ -1272,8 +1717,9 @@ function openSelect() {
       const pw = document.createElement('span'); pw.className = 'paws';
       for (let i = 0; i < 3; i++) { const c = tinted(SPR.paw, i < paws(d.id) ? E.accent : '#4a4652', 1); c.className = 'pix paw'; pw.append(c); }
       const lv = document.createElement('span'); lv.className = 'best';
-      lv.textContent = r && r.done ? `Best ${r.bestLives} · par ${d.par}` : `Par ${d.par}`;
-      b.setAttribute('aria-label', `Room ${d.id}, ${open ? d.name : 'locked'}. ${paws(d.id)} of 3 paws. ${lv.textContent}.`);
+      const par = d.bestKnown ? `${d.par}*` : d.par;
+      lv.textContent = r && r.done ? `Best ${r.bestLives} · par ${par}` : `Par ${par}`;
+      b.setAttribute('aria-label', `Room ${d.id}, ${open ? d.name : 'locked'}. ${paws(d.id)} of 3 paws. ${lv.textContent.replace('*', ', best known')}.`);
       b.append(num, nm, pw, lv);
       b.addEventListener('click', () => { audioOn(); startRoom(d.id); });
       if (d.id === target) focusEl = b;
@@ -1343,6 +1789,7 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (screen === 'panel') { e.preventDefault(); panelNext(); return; }
+  if (screen === 'help') { if ((k === 'Enter' || k === ' ' || k === 'Escape') && !e.repeat) { e.preventDefault(); helpDone(); } return; }
   if (k.startsWith('Arrow') && screen !== 'test') { e.preventDefault(); spatialNav(k); return; }
   if (screen === 'pause' && (k === 'Escape' || k === 'p' || k === 'P')) { e.preventDefault(); show('room'); return; }
   if (screen === 'out') { if (k === 'z' || k === 'Z' || k === 'Backspace') { e.preventDefault(); rewind(); } else if (k === 'r' || k === 'R') restartRoom(); return; }
@@ -1406,6 +1853,9 @@ function wire() {
   on('btn-out-rewind', rewind);
   on('btn-out-restart', restartRoom);
   on('btn-test-back', openTitle);
+  on('btn-help-done', helpDone);
+  on('btn-title-help', () => openHelp(openTitle, false));
+  on('btn-pause-help', () => openHelp(() => show('pause'), true));
   for (const el of document.querySelectorAll('[data-toggle]')) el.addEventListener('click', () => { audioOn(); toggle(el.dataset.toggle); });
   on('btn-loop', () => doLoop(false));
   on('btn-wait', () => act('W'));
@@ -1429,6 +1879,7 @@ function pollPad(t) {
   pad.prev = cur;
   if (cur.a || cur.x || cur.y || cur.start || dir) audioOn();
   if (screen === 'panel') { if (cur.a && !was.a) panelNext(); return; }
+  if (screen === 'help') { if ((cur.a && !was.a) || (cur.start && !was.start)) helpDone(); return; }
   if (screen === 'complete') { if (cur.a && !was.a) goNext(); return; }
   if (screen === 'pause') { if (cur.start && !was.start) show('room'); return; }
   if (screen === 'title') { if (cur.a && !was.a) $('btn-play').click(); return; }
@@ -1804,10 +2255,17 @@ function runTests() {
     if (i >= LEVELS.length) { out.textContent += bad ? `\n${bad} room(s) FAILED` : '\nAll 20 rooms pass.'; return; }
     const def = LEVELS[i++], L = C.parseLevel(def), r = C.playthrough(L, def.solution);
     const okSol = r.ok && r.fish && r.lives === def.par && r.ticks <= def.loop;
-    let low = true, states = 0;
-    for (let k = 1; k < def.par; k++) { const s = SOLVER.search(L, k, false, { noPath: true }); states += s.explored; if (s.found || s.gaveUp) low = false; }
-    if (!okSol || !low) bad++;
-    out.textContent += `${String(def.id).padStart(2)} ${def.name.padEnd(18)} solution ${okSol ? 'ok ' + String(r.ticks).padStart(2) + '/' + def.loop : 'FAIL'}   fewer lives: ${def.par === 1 ? 'n/a' : low ? 'none (' + states + ' states)' : 'POSSIBLE'}\n`;
+    // Search every way to finish with fewer lives. Searches too big for a browser tab fall back to the offline count.
+    let low = 'n/a', states = 0;
+    for (let k = 1; k < def.par; k++) {
+      const s = FAST.solve(L, k, { maxStates: 1.5e6, keepPath: false });
+      states += s.states;
+      if (s.found) { low = 'POSSIBLE with ' + k; bad++; break; }
+      if (!s.complete) { const pf = (def.proof || []).find(p => p.k === k); low = pf ? `none up to ${k} (offline, ${pf.states.toLocaleString('en-GB')} states)` : 'too big to check here'; break; }
+      low = `none (${states.toLocaleString('en-GB')} states)`;
+    }
+    if (!okSol) bad++;
+    out.textContent += `${String(def.id).padStart(2)} ${def.name.padEnd(18)} solution ${okSol ? 'ok ' + String(r.ticks).padStart(2) + '/' + def.loop : 'FAIL'}   par ${def.par}${def.bestKnown ? '*' : ' '}  fewer lives: ${low}\n`;
     setTimeout(one, 0);
   };
   setTimeout(one, 30);
