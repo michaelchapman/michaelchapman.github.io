@@ -506,11 +506,6 @@ if (typeof module !== 'undefined') module.exports = api; else globalThis.Timecat
 // par: the fewest lives that can finish. `proof` records the exhaustive searches (run offline with the fast
 //   solver) showing that each smaller number of lives cannot finish. `bestKnown` marks a par that is the fewest
 //   lives found but has not been proved; the proof then covers only the smaller counts listed.
-//   hound:  steps on even ticks toward the nearest cat. lever: toggles its channel each time a cat steps on.
-//   pad:    anything arriving on the pad jumps to its twin at `to`.
-// par: the fewest lives that can finish. `proof` records the exhaustive searches (run offline with the fast
-//   solver) showing that each smaller number of lives cannot finish. `bestKnown` marks a par that is the fewest
-//   lives found but has not been proved; the proof then covers only the smaller counts listed.
 // solution: one input string per life, oldest first (U D L R, W = wait). Each earns all three paws.
 'use strict';
 const TIMECAT_LEVELS = [
@@ -674,16 +669,17 @@ const TIMECAT_LEVELS = [
       '#############',
       '#####a#######',
       '#####.#######',
-      '#####.#f#####',
+      '#####.#######',
       '#S....A.B.CE#',
-      '###b#####.###',
+      '###b###f#.###',
       '#########.###',
       '#############',
     ],
     things: [{ t: 'hound', x: 9, y: 4 }, { t: 'hound', x: 9, y: 5 }, { t: 'lever', x: 2, y: 4, ch: 'c' }],
-    // fewer lives checked offline: 1 (174 states), 2 (12614 states), 3 (196666 states)
-    proof: [{ k: 1, states: 174 }, { k: 2, states: 12614 }, { k: 3, states: 196666 }],
-    solution: ['WRRRRUUUWWWWWWWD', 'WRRDWWURRUWUWU', 'WWWWWWWWWWWWWWWWWWRRDUL', 'WWWWWWWWWWWWWRRRRRRUDRRRR'] },
+    // The fish sits below the corridor, not above it, so a hound chasing cats up the arm cannot get stuck on it.
+    // fewer lives checked offline: 1 (254 states), 2 (12308 states), 3 (179690 states)
+    proof: [{ k: 1, states: 254 }, { k: 2, states: 12308 }, { k: 3, states: 179690 }],
+    solution: ['WRRRRUUUWWWWWWWD', 'WRRDWWURRUWUWU', 'WWWWWWWWWWWWWWWWWWRRDUL', 'WWWWWWWWWWWWWRRRRRRDURRRR'] },
   { id: 13, era: 4, name: 'Belt Up', loop: 23, par: 1,
     map: [
       '##########',
@@ -1456,7 +1452,8 @@ function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY), old = raw ? null : localStorage.getItem(OLD_KEY);
     if (raw || old) {
-      const s = JSON.parse(raw || old);
+      let s = null;
+      try { s = JSON.parse(raw || old); } catch (e) { /* a damaged save starts fresh; storage itself still works */ }
       if (s && typeof s === 'object') {
         if (raw && s.rooms && typeof s.rooms === 'object') save.rooms = s.rooms;
         if (Array.isArray(s.seenPanels)) save.seenPanels = s.seenPanels;
@@ -1573,6 +1570,7 @@ function doLoop(auto) {
   if (room.mode !== 'play' && !(auto && room.mode === 'ending')) return;
   if (room.lives.length >= 9) { if (!auto) { sfx('denied'); room.shakeAt = now(); } else { room.mode = 'out'; show('out'); } return; }
   room.wipe = { t0: now(), snap: snapshotBoard() };
+  held.dir = null; pad.dirNext = Infinity; // a direction held as the life ends must not walk the new cat
   room.lives.push('');
   resim();
   sfx('loop', room.lives.length - 1);
@@ -1876,15 +1874,32 @@ function pollPad(t) {
   if (!gp) return;
   const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes || [];
   const dir = b(12) || ax[1] < -0.6 ? 'U' : b(13) || ax[1] > 0.6 ? 'D' : b(14) || ax[0] < -0.6 ? 'L' : b(15) || ax[0] > 0.6 ? 'R' : null;
-  const cur = { dir, a: b(0), x: b(2), y: b(3), back: b(8), start: b(9) }, was = pad.prev;
+  const cur = { dir, a: b(0), b: b(1), x: b(2), y: b(3), back: b(8), start: b(9) }, was = pad.prev;
   pad.prev = cur;
   if (cur.a || cur.x || cur.y || cur.start || dir) audioOn();
   if (screen === 'panel') { if (cur.a && !was.a) panelNext(); return; }
   if (screen === 'help') { if ((cur.a && !was.a) || (cur.start && !was.start)) helpDone(); return; }
-  if (screen === 'complete') { if (cur.a && !was.a) goNext(); return; }
-  if (screen === 'pause') { if (cur.start && !was.start) show('room'); return; }
-  if (screen === 'title') { if (cur.a && !was.a) $('btn-play').click(); return; }
-  if (screen !== 'room') return;
+  if (screen !== 'room') {
+    // Menus: the d-pad moves between buttons, A presses one and B goes back. Out of lives, X rewinds and holding Back restarts.
+    if (screen === 'pause' && cur.start && !was.start) { show('room'); return; }
+    if (screen === 'out') {
+      if (cur.x && !was.x) { rewind(); return; }
+      if (cur.back && !was.back) pad.back = t; else if (!cur.back) pad.back = 0;
+      if (pad.back && t - pad.back >= 500) { pad.back = 0; restartRoom(); return; }
+    }
+    if (dir && dir !== was.dir) spatialNav({ U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight' }[dir]);
+    if (cur.a && !was.a) {
+      const scr = $('scr-' + screen), el = document.activeElement;
+      const btn = el && el.tagName === 'BUTTON' && scr.contains(el) ? el : scr.querySelector('[data-first]') || scr.querySelector('button:not([disabled])');
+      if (btn) btn.click();
+    }
+    if (cur.b && !was.b) {
+      if (screen === 'pause') show('room');
+      else if (screen === 'select' || screen === 'settings' || screen === 'test') openTitle();
+      else if (screen === 'complete') openSelect();
+    }
+    return;
+  }
   if (dir && dir !== was.dir) { act(dir); pad.dirNext = t + 220; } else if (dir && t >= pad.dirNext) { act(dir); pad.dirNext = t + 140; }
   if (cur.a && !was.a) act('W');
   if (cur.y && !was.y) doLoop(false);
