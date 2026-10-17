@@ -43,6 +43,9 @@
 }
 [hidden]{display:none!important}
 html,body{height:100%}
+html{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#app{touch-action:none}
+.menu,.pc-sheet{touch-action:pan-y}
 body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui);font-size:15px;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #app{position:fixed;inset:0;overflow:hidden}
 #scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
@@ -123,7 +126,7 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 
 .hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 144px);transform:translateX(-50%);max-width:calc(100vw - 32px);width:max-content;padding:9px 16px;text-align:center;font-size:14.5px;line-height:1.35;font-weight:700;color:var(--cream);background:rgba(31,24,19,.88);border:1px solid rgba(198,154,75,.5);border-radius:10px;box-shadow:0 6px 18px var(--shadow);transition:opacity .45s ease,transform .45s ease;pointer-events:none}
 .hint span{display:block;font-weight:500;font-size:13px;color:var(--muted)}
-.hint.gone{opacity:0;transform:translate(-50%,6px)}
+.hint.gone{opacity:0;transform:translate(-50%,6px);visibility:hidden;transition:opacity .45s ease,transform .45s ease,visibility 0s .45s}
 
 .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--sky);color:#3a2817;transition:opacity .6s ease}
 .loading div{display:flex;flex-direction:column;align-items:center;gap:6px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
@@ -177,7 +180,20 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .pc-sheet img{display:block;width:100%;height:auto;max-height:min(64vh,600px);object-fit:contain;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
 .pc-sheet .row{flex-wrap:wrap}
 .pc-sheet .box button{min-width:110px}
+.hold{position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;pointer-events:none;opacity:0;transition:opacity .12s}
+.hold.on{opacity:1}
+.hold svg{width:88px;height:88px;display:block;transform:rotate(-90deg)}
+.hold circle{fill:rgba(255,122,92,.12);stroke:#ff7a5c;stroke-width:5;stroke-linecap:round;stroke-dasharray:239;stroke-dashoffset:239;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.hold.on circle{animation:holdfill var(--d,400ms) linear forwards}
+@keyframes holdfill{to{stroke-dashoffset:0}}
+.home-pill{position:absolute;top:calc(env(safe-area-inset-top,0px) + 80px);left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));display:flex;align-items:center;gap:7px;height:42px;padding:0 15px 0 11px;border-radius:21px;font:800 13.5px var(--font-ui);letter-spacing:.02em;color:var(--cream);cursor:pointer;transition:opacity .3s ease,transform .3s ease}
+.home-pill svg{width:20px;height:20px;color:var(--brass-hi)}
+.home-pill.off{opacity:0;transform:translateY(-6px);pointer-events:none;visibility:hidden;transition:opacity .3s ease,transform .3s ease,visibility 0s .3s}
+.home-pill:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
+#app.pc .home-pill{display:none}
 @media (max-height:460px){
+  .hint{padding:6px 12px;font-size:13px;max-width:min(420px,calc(100vw - 32px))}
+  .hint span{font-size:12px}
   .side{flex-direction:row;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(78px,calc(env(safe-area-inset-right,0px) + 74px))}
   .pc-sheet img{max-height:52vh}
 }
@@ -263,6 +279,8 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 
   <div class="pc-frame" id="pc-frame" hidden aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="hold" id="hold" aria-hidden="true"><svg viewBox="0 0 88 88"><circle cx="44" cy="44" r="38"/></svg></div>
+  <button class="home-pill plate off" id="home-pill" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.2 12 4.6l8 6.6"/><path d="M6.2 9.6v9.6h11.6V9.6"/><path d="M10.2 19.2v-5h3.6v5"/></svg><span>Back to the harbour</span></button>
   <div class="pc-bar plate riveted" id="pc-bar" hidden>
     <button class="txt" id="pc-cancel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg><span>Done</span></button>
     <button class="shutter" id="pc-snap" aria-label="Take the picture"></button>
@@ -1640,6 +1658,7 @@ const envScene = new THREE.Scene(), envSky = skyMaterial();
 envScene.add(new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), envSky));
 const pmrem = new THREE.PMREMGenerator(renderer);
 let envRT = null;
+canvas.addEventListener('webglcontextrestored', () => { envRT = null; regenEnv(); });
 function regenEnv() { const rt = pmrem.fromScene(envScene, 0.02, 0.1, 100); scene.environment = rt.texture; if (envRT) envRT.dispose(); envRT = rt; }
 
 // town material: one shader for every surface, patterns drawn in world space
@@ -2003,7 +2022,7 @@ const hourGeo = new THREE.BoxGeometry(0.034, 0.15, 0.012).translate(0, 0.055, 0)
 const minGeo = new THREE.BoxGeometry(0.022, 0.21, 0.012).translate(0, 0.085, 0.012);
 
 // ---------- power: buildings that touch form a district; an engine or mill wheel powers it ----------
-let clusterOf = new Int32Array(V).fill(-1), clusterPowered = [], tension = 0, booted = false, keyHinted = false;
+let clusterOf = new Int32Array(V).fill(-1), clusterPowered = [], tension = 0, booted = false, userEdit = false;
 const srcCount = { e: 0, w: 0 };
 const isPowered = (v) => { const c = clusterOf[v]; return c >= 0 && clusterPowered[c]; };
 const runFactor = (v) => (isPowered(v) ? 1 + tension * 2.5 : tension * 1.6);
@@ -2025,11 +2044,12 @@ function computePower() {
   }
   srcCount.e = ne; srcCount.w = nw;
 }
+// the first engine, mill wheel and stalled clockwork a player builds are explained, once
 function announceMachines(before, gearsBefore) {
-  if (srcCount.e > before.e) flashHint('Steam up', 'This engine house powers every building joined to it');
-  else if (srcCount.w > before.w) flashHint('The mill wheel turns', 'It powers every building joined to this house');
-  else if (gearList.length > gearsBefore && !keyHinted && tension < 0.05 && gearList.some((g) => !g.parent && !isPowered(g.v))) {
-    keyHinted = true;
+  if (srcCount.e > before.e) { if (firstTime('engine')) flashHint('Steam up', 'This engine house powers every building joined to it'); }
+  else if (srcCount.w > before.w) { if (firstTime('wheel')) flashHint('The mill wheel turns', 'It powers every building joined to this house'); }
+  else if (gearList.length > gearsBefore && tension < 0.05 && !seen.has('unpowered') && gearList.some((g) => !g.parent && !isPowered(g.v))) {
+    firstTime('unpowered');
     flashHint('This clockwork has no power', 'Join it to a cast-iron engine house, or wind the key');
   }
 }
@@ -2375,6 +2395,7 @@ function airshipGeometry() {
 const shipGeo = airshipGeometry(), propGeo = propGeometry();
 const ships = [];
 let townCX = 0, townCZ = 0, townRad = 6, mastPos = null;
+const townBox = new THREE.Box3();
 // a coarse map of roof heights: airships cruise low over the water and climb over towers
 const shipHeights = new Map();
 const hkey = (x, z) => Math.floor(x) * 4096 + Math.floor(z);
@@ -2409,7 +2430,9 @@ function syncShips() {
   let sx = 0, sz = 0, n = 0, top = 0;
   for (let v = 0; v < V; v++) { const c = cols[v]; if (!c) continue; sx += X[v]; sz += Z[v]; n++; top = Math.max(top, topY(31 - Math.clz32(c))); }
   if (n) { townCX = sx / n; townCZ = sz / n; }
-  let rad = 3; for (let v = 0; v < V; v++) if (cols[v]) rad = Math.max(rad, Math.hypot(X[v] - townCX, Z[v] - townCZ));
+  let rad = 3; townBox.makeEmpty();
+  for (let v = 0; v < V; v++) if (cols[v]) { rad = Math.max(rad, Math.hypot(X[v] - townCX, Z[v] - townCZ)); townBox.expandByPoint(_v3.set(X[v], 0, Z[v])); }
+  if (!townBox.isEmpty()) { townBox.min.x -= 0.6; townBox.min.z -= 0.6; townBox.max.x += 0.6; townBox.max.z += 0.6; townBox.max.y = top + 0.8; }
   townRad = rad;
   mastPos = null; for (const d of chunkDyn) if (d && d.mast) mastPos = new THREE.Vector3(...d.mast);
   shipHeights.clear();
@@ -2621,7 +2644,7 @@ function flush() {
   computePower();
   rebuildDyn();
   syncShips();
-  if (booted) announceMachines(before, gearsBefore);
+  if (booted && userEdit) announceMachines(before, gearsBefore);
   if (groundDirty) { updateShore(); groundDirty = false; }
 }
 // the mooring mast goes on the tallest tower of five storeys or more; ties keep the mast where it is
@@ -2718,9 +2741,11 @@ async function decodeTown(text) {
   return { ...unpackBytes(bytes), name };
 }
 
-let saveTimer = 0;
-function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 350); }
-function saveNow() { store.set('town2', toB64(packBytes())); }
+let saveTimer = 0, saveDirty = false;
+function scheduleSave() { saveDirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 350); }
+function saveNow() { clearTimeout(saveTimer); saveDirty = false; store.set('town2', toB64(packBytes())); }
+window.addEventListener('pagehide', () => { if (saveDirty) saveNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveDirty) saveNow(); });
 function loadSaved() {
   const t2 = store.get('town2', null);
   if (typeof t2 === 'string' && t2) { try { const { c, mt } = unpackBytes(fromB64(t2)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
@@ -2775,7 +2800,7 @@ function bus() { if (!master) { master = actx.createGain(); master.gain.value = 
 function setVolume(v) { volume = v; store.set('volume', v); if (master && actx) master.gain.setTargetAtTime(volGain(), actx.currentTime, 0.02); }
 function ensureAudio() {
   if (!soundOn) return;
-  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; }
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state !== 'running') actx.resume(); } catch (e) { actx = null; }
 }
 const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
 function plink(level, vol = 1) {
@@ -2896,7 +2921,8 @@ function act(sx, sy, useTool, ptype = 'mouse') {
   const plan = planAction(hit, useTool);
   if (!plan) return false;
   if (plan.msg) { flashHint(plan.msg); return false; }
-  commit(plan.adds || [], plan.removes || [], plan.paints || []);
+  userEdit = true;
+  try { commit(plan.adds || [], plan.removes || [], plan.paints || []); } finally { userEdit = false; }
   const cells = plan.adds || plan.removes || plan.paints;
   flashGhost(cells, plan.adds ? 'build' : plan.removes ? 'remove' : 'paint');
   if (plan.adds) plink(plan.y); else if (plan.removes) thunk(); else brush(plan.y);
@@ -2924,14 +2950,29 @@ function clampGoal() {
   if (r > lim) { goal.tx *= lim / r; goal.tz *= lim / r; }
 }
 function updateCamera(dt) {
-  if (Math.abs(yawVel) > 1e-4) { goal.yaw += yawVel * dt; yawVel *= Math.exp(-dt * 4.5); }
+  // a flick keeps turning, and a two-finger drag keeps gliding, only once the fingers are off the glass
+  if (!pointers.size) {
+    if (Math.abs(yawVel) > 1e-4) { goal.yaw += yawVel * dt; yawVel *= Math.exp(-dt * 4.5); }
+    if (glideV.x || glideV.z) {
+      goal.tx += glideV.x * dt; goal.tz += glideV.z * dt;
+      const k = Math.exp(-dt * 4); glideV.x *= k; glideV.z *= k;
+      if (Math.hypot(glideV.x, glideV.z) < 0.05) glideV.x = glideV.z = 0;
+    }
+  }
   clampGoal();
-  const k = 1 - Math.exp(-dt * (REDUCED ? 30 : 13));
+  // fingers move the view directly; the mouse and buttons ease into place
+  const k = touchCount() ? 1 : 1 - Math.exp(-dt * (REDUCED ? 30 : 13));
   for (const key in view) view[key] += (goal[key] - view[key]) * k;
+  placeCamera();
+}
+function placeCamera() {
   const cp = Math.cos(view.pitch);
   camera.position.set(view.tx + Math.sin(view.yaw) * cp * view.dist, view.ty + Math.sin(view.pitch) * view.dist, view.tz + Math.cos(view.yaw) * cp * view.dist);
   camera.lookAt(view.tx, view.ty, view.tz);
+  camera.updateMatrixWorld();
 }
+// under a finger the view is moved at once, so the next touch event measures against where it really is
+function followNow() { clampGoal(); Object.assign(view, goal); placeCamera(); }
 function worldPerPixel() { return (2 * view.dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / canvas.clientHeight; }
 function pan(dx, dy) {
   const s = worldPerPixel(), cy = Math.cos(goal.yaw), sy = Math.sin(goal.yaw);
@@ -2940,81 +2981,203 @@ function pan(dx, dy) {
   goal.tz += (sy * dx - cy * dy * fwd) * s;
 }
 
+// Touch: one finger turns the view (locking to a turn or a tilt when the drag is clearly one or the other);
+// two fingers drag the ground with them, and pinch or twist about the point between them once the gesture is
+// clearly a pinch or a twist. The view follows the fingers directly. A tap builds; holding a block shows a red
+// outline and a filling ring, then removes it. Mouse: drag turns, shift or middle drag pans, wheel zooms toward
+// the pointer, sideways scroll turns.
 const pointers = new Map();
-let tap = null, longTimer = 0, pinch = null, lastMoveT = 0;
+const HOLD_ARM = 420, HOLD_FIRE = 820;
+let tap = null, holdTimer = 0, fireTimer = 0, multi = null, multiUsed = false, drag = null, lastMoveT = 0, panT = 0;
+const glideV = { x: 0, z: 0 };
 let lastInput = performance.now();
 function noteInput() { lastInput = performance.now(); }
+window.addEventListener('pointerdown', noteInput, true);
+window.addEventListener('keydown', noteInput, true);
+const touchCount = () => { let n = 0; for (const p of pointers.values()) if (p.type !== 'mouse') n++; return n; };
 function pinchState() {
   const [a, b] = [...pointers.values()];
   return { span: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, ang: Math.atan2(b.y - a.y, b.x - a.x) };
 }
+// where a screen point meets the quay level; null near the horizon, where a drag would fling the view away
+const _g0 = new THREE.Vector3(), _g1 = new THREE.Vector3();
+function groundAt(sx, sy, out) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((sx - r.left) / r.width) * 2 - 1, -((sy - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const o = raycaster.ray.origin, d = raycaster.ray.direction;
+  if (d.y > -0.03) return null;
+  const t = (GROUND_TOP - o.y) / d.y;
+  if (t < 0 || t > view.dist * 4 + 40) return null;
+  return out.set(o.x + d.x * t, GROUND_TOP, o.z + d.z * t);
+}
+function dragGround(x0, y0, x1, y1) {
+  if (!groundAt(x0, y0, _g0) || !groundAt(x1, y1, _g1)) { pan(x1 - x0, y1 - y0); return; }
+  let dx = _g1.x - _g0.x, dz = _g1.z - _g0.z;
+  const cap = goal.dist * 0.6, l = Math.hypot(dx, dz);
+  if (l > cap) { dx *= cap / l; dz *= cap / l; }
+  goal.tx -= dx; goal.tz -= dz;
+  const now = performance.now(), dt = Math.max(8, now - panT) / 1000; panT = now;
+  glideV.x = glideV.x * 0.55 - (dx / dt) * 0.45; glideV.z = glideV.z * 0.55 - (dz / dt) * 0.45;
+}
+function zoomAbout(sx, sy, f, exact) {
+  const d0 = goal.dist, d1 = Math.max(4.5, Math.min(75, d0 * f)), k = d1 / d0;
+  goal.dist = d1;
+  if (k === 1 || !groundAt(sx, sy, _g0)) return;
+  goal.tx = _g0.x + (goal.tx - _g0.x) * k; goal.tz = _g0.z + (goal.tz - _g0.z) * k;
+  // the view looks at a point above the quay, so scaling about the ground is close but not exact:
+  // under a finger, measure again and nudge so the spot between the fingers stays put
+  if (exact) { followNow(); if (groundAt(sx, sy, _g1)) { goal.tx += _g0.x - _g1.x; goal.tz += _g0.z - _g1.z; } }
+}
+function rotateAbout(sx, sy, dYaw) {
+  goal.yaw += dYaw;
+  if (!groundAt(sx, sy, _g0)) return;
+  const c = Math.cos(dYaw), s = Math.sin(dYaw), dx = goal.tx - _g0.x, dz = goal.tz - _g0.z;
+  goal.tx = _g0.x + dx * c + dz * s; goal.tz = _g0.z + dz * c - dx * s;
+}
+function startMulti() {
+  const s = pinchState();
+  multi = { span0: s.span, ang0: s.ang, last: s, zoomOn: false, rotOn: false };
+  multiUsed = true; drag = null; yawVel = 0;
+}
+function moveMulti() {
+  const s = pinchState(), m = multi, last = m.last;
+  dragGround(last.mx, last.my, s.mx, s.my);
+  if (!m.zoomOn && Math.abs(Math.log(Math.max(1, s.span) / Math.max(1, m.span0))) > 0.07) m.zoomOn = true;
+  if (m.zoomOn && s.span > 10 && last.span > 10) zoomAbout(s.mx, s.my, last.span / s.span, true);
+  if (!m.rotOn && Math.abs(angDiff(m.ang0, s.ang)) > 0.24) m.rotOn = true;
+  if (m.rotOn) rotateAbout(s.mx, s.my, -angDiff(last.ang, s.ang));
+  m.last = s;
+  followNow();
+}
+function moveOne(p, fx, fy, touch) {
+  const dx = p.x - fx, dy = p.y - fy;
+  if (p.mode === 'pan') { dragGround(fx, fy, p.x, p.y); if (touch) followNow(); return; }
+  if (!drag) drag = { lock: null, ax: 0, ay: 0, lx: 0, ly: 0 };
+  drag.ax += dx; drag.ay += dy;
+  if (touch && !drag.lock && Math.hypot(drag.ax, drag.ay) > 14) {
+    const a = Math.atan2(Math.abs(drag.ay), Math.abs(drag.ax));
+    drag.lock = a < 0.42 ? 'yaw' : a > 1.15 ? 'pitch' : 'free';
+    drag.lx = drag.ax; drag.ly = drag.ay;
+  }
+  // a locked drag lets go once the finger clearly heads the other way
+  if (drag.lock === 'yaw' && Math.abs(drag.ay - drag.ly) > 80) drag.lock = 'free';
+  if (drag.lock === 'pitch' && Math.abs(drag.ax - drag.lx) > 80) drag.lock = 'free';
+  const W = canvas.clientWidth || 400, H = canvas.clientHeight || 400;
+  const ky = touch ? Math.min(0.0075, Math.max(0.0035, 2.8 / W)) : 0.0062;
+  const kp = touch ? Math.min(0.0042, Math.max(0.0016, 1.5 / H)) : 0.0042;
+  const dYaw = !touch || drag.lock !== 'pitch' ? -dx * ky : 0;
+  goal.yaw += dYaw;
+  if (!touch || (drag.lock && drag.lock !== 'yaw')) goal.pitch += dy * kp;
+  const now = performance.now(), dt = Math.max(8, now - lastMoveT) / 1000; lastMoveT = now;
+  yawVel = REDUCED ? 0 : Math.max(-4, Math.min(4, yawVel * 0.6 + (dYaw / dt) * 0.4));
+  if (touch) followNow();
+}
+// what a finger on this spot would act on, allowing for a finger that slips just off a building
+function resolveHit(sx, sy, useTool, ptype) {
+  let hit = pickAt(sx, sy);
+  if (ptype !== 'mouse' && useTool !== 'build' && (!hit || hit.type === 'water')) hit = ringPick(sx, sy) || hit;
+  return hit;
+}
+const holdEl = $('hold');
+function showHoldRing(x, y, ms) {
+  holdEl.style.left = x + 'px'; holdEl.style.top = y + 'px'; holdEl.style.setProperty('--d', ms + 'ms');
+  holdEl.classList.remove('on'); void holdEl.offsetWidth; holdEl.classList.add('on');
+}
+function hideHoldRing() { holdEl.classList.remove('on'); }
+function clearHold() {
+  clearTimeout(holdTimer); clearTimeout(fireTimer); hideHoldRing();
+  if (tap && tap.armed && !ghostFade) { ghost.visible = false; ghostKey = ''; }
+}
+function armRemove(id) {
+  if (!tap || tap.id !== id || pcMode) return;
+  const plan = planAction(resolveHit(tap.x, tap.y, 'remove', tap.type), 'remove');
+  if (!plan || plan.msg) { tap.empty = true; return; }
+  tap.armed = true;
+  ghostFade = 0; ghostKey = ''; setGhost(plan.removes, 'remove'); ghostMat.opacity = 1;
+  showHoldRing(tap.x, tap.y, HOLD_FIRE - HOLD_ARM);
+  fireTimer = setTimeout(() => {
+    if (!tap || tap.id !== id) return;
+    hideHoldRing();
+    const done = act(tap.x, tap.y, 'remove', tap.type);
+    if (done) { try { navigator.vibrate && navigator.vibrate(14); } catch (err) { /* no vibration */ } }
+    tap = null;
+  }, HOLD_FIRE - HOLD_ARM);
+}
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+// a long press must not start the browser's text selection, magnifier or callout
+canvas.addEventListener('touchstart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 canvas.addEventListener('pointerdown', (e) => {
   canvas.focus({ preventScroll: true });
   try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
   ensureAudio(); noteInput(); closeMenu();
-  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button, mode: e.button === 1 || e.shiftKey ? 'pan' : 'orbit' });
+  const touch = e.pointerType !== 'mouse';
+  if (touch && !touchCount()) { Object.assign(goal, view); glideV.x = glideV.z = 0; }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button, type: e.pointerType, mode: e.button === 1 || e.shiftKey ? 'pan' : 'orbit' });
   yawVel = 0;
   if (pointers.size === 1) {
+    multiUsed = false; drag = null; clearHold();
     tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), button: e.button, type: e.pointerType };
-    clearTimeout(longTimer);
-    if (e.pointerType !== 'mouse') {
-      longTimer = setTimeout(() => {
-        if (tap && tap.id === e.pointerId) {
-          const done = act(tap.x, tap.y, 'remove', tap.type);
-          if (done) { try { navigator.vibrate && navigator.vibrate(14); } catch (err) { /* ignore */ } }
-          tap = null;
-        }
-      }, 430);
-    } else { ghostKey = ''; setGhost([], 'build'); }
+    if (touch) holdTimer = setTimeout(() => armRemove(e.pointerId), HOLD_ARM);
+    else { ghostKey = ''; setGhost([], 'build'); }
   } else {
-    tap = null; clearTimeout(longTimer);
-    if (pointers.size === 2) pinch = pinchState();
+    clearHold(); tap = null; drag = null;
+    if (pointers.size === 2) startMulti();
   }
 });
 canvas.addEventListener('pointermove', (e) => {
   const p = pointers.get(e.pointerId);
   if (!p) { if (e.pointerType === 'mouse') hover(e.clientX, e.clientY); return; }
   noteInput();
-  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  const px = p.x, py = p.y;
   p.x = e.clientX; p.y = e.clientY;
-  const slop = e.pointerType === 'mouse' ? 5 : 10;
-  if (tap && tap.id === e.pointerId && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > slop) { tap = null; clearTimeout(longTimer); if (!ghostFade) { ghost.visible = false; ghostKey = ''; } }
-  if (tap) return;
-  if (pointers.size === 1) {
-    if (p.mode === 'pan') pan(dx, dy);
-    else {
-      const now = performance.now(), dtm = Math.max(1, now - lastMoveT); lastMoveT = now;
-      goal.yaw -= dx * 0.0062; goal.pitch += dy * 0.0042;
-      yawVel = REDUCED ? 0 : ((-dx * 0.0062) / (dtm / 1000)) * 0.35;
-    }
-  } else if (pointers.size >= 2 && pinch) {
-    const s = pinchState();
-    if (s.span > 10 && pinch.span > 10) goal.dist *= pinch.span / s.span;
-    pan(s.mx - pinch.mx, s.my - pinch.my);
-    let da = s.ang - pinch.ang; if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2;
-    goal.yaw -= da;
-    pinch = s;
+  const touch = p.type !== 'mouse';
+  if (tap && tap.id === e.pointerId) {
+    if (Math.hypot(p.x - tap.x, p.y - tap.y) <= (touch ? 10 : 5)) return;
+    // it was a drag all along: let go of the tap and catch up with the finger
+    clearHold(); tap = null;
+    if (pointers.size === 1 && !multiUsed) moveOne(p, p.sx, p.sy, touch);
+    return;
   }
+  if (pointers.size === 1) { if (!multiUsed) moveOne(p, px, py, touch); }
+  else if (pointers.size >= 2 && multi) moveMulti();
 });
 function endPointer(e) {
   const p = pointers.get(e.pointerId); if (!p) return;
   pointers.delete(e.pointerId);
-  clearTimeout(longTimer);
   if (tap && tap.id === e.pointerId) {
-    const quick = e.pointerType === 'mouse' || performance.now() - tap.t < 430;
-    if (quick && e.type === 'pointerup') act(tap.x, tap.y, tap.button === 2 ? 'remove' : tool, tap.type);
+    const held = performance.now() - tap.t, armed = tap.armed, empty = tap.empty;
+    clearHold();
+    // a quick tap builds; a slow one on open water still builds; a hold that showed the red outline cancels
+    const ok = e.type === 'pointerup' && !armed && (p.type === 'mouse' || held < HOLD_ARM || (empty && held < HOLD_FIRE + 400));
+    if (ok) act(tap.x, tap.y, tap.button === 2 ? 'remove' : tool, tap.type);
     tap = null;
   }
-  if (pointers.size === 2) pinch = pinchState(); else pinch = null;
-  if (performance.now() - lastMoveT > 90) yawVel = 0;
-  if (e.pointerType === 'mouse') hover(e.clientX, e.clientY);
+  if (pointers.size >= 2) startMulti(); else multi = null;
+  if (!pointers.size) {
+    drag = null;
+    const now = performance.now();
+    // a slow, careful drag stops where it is let go; only a flick carries on
+    if (now - lastMoveT > 90 || Math.abs(yawVel) < 0.6) yawVel = 0; else yawVel *= 0.6;
+    const sp = Math.hypot(glideV.x, glideV.z);
+    if (now - panT > 90 || REDUCED || sp < 0.8) glideV.x = glideV.z = 0;
+    else if (sp > 30) { glideV.x *= 30 / sp; glideV.z *= 30 / sp; }
+  }
+  if (p.type === 'mouse') hover(e.clientX, e.clientY);
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !pointers.size) { if (!ghostFade) { ghost.visible = false; ghostKey = ''; } gridLines.material.uniforms.uOn.value = 0; } });
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); noteInput(); goal.dist *= Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0012)); }, { passive: false });
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault(); noteInput(); glideV.x = glideV.z = 0;
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  if (e.ctrlKey) { zoomAbout(e.clientX, e.clientY, Math.exp(e.deltaY * unit * 0.01)); return; }
+  // a trackpad's sideways swipe turns the view; scrolling zooms toward the pointer
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { goal.yaw -= e.deltaX * unit * 0.004; return; }
+  zoomAbout(e.clientX, e.clientY, Math.exp(e.deltaY * unit * 0.0012));
+}, { passive: false });
 document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('selectstart', (e) => { if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) e.preventDefault(); });
 
 let hoverQueued = null;
 function hover(x, y) { hoverQueued = [x, y]; }
@@ -3075,7 +3238,11 @@ function setMat(m, announce) {
   curMat = m; store.set('mat', m);
   coins.forEach((c) => c.setAttribute('aria-checked', String(+c.dataset.m === m)));
   $('mat-name').textContent = MATS[m].name;
-  if (announce) { flashHint(MATS[m].name, MATS[m].line.charAt(0).toUpperCase() + MATS[m].line.slice(1)); if (tool === 'remove') setTool('build'); }
+  if (announce) {
+    if (firstTime('mat' + m)) flashHint(MATS[m].name, MATS[m].line.charAt(0).toUpperCase() + MATS[m].line.slice(1));
+    else if (!$('mat-name').offsetWidth) flashHint(MATS[m].name, null, 1100);
+    if (tool === 'remove') setTool('build');
+  }
   ghostKey = '';
 }
 coins.forEach((c) => c.addEventListener('click', () => { ensureAudio(); setMat(+c.dataset.m, true); plink(5 + +c.dataset.m, 0.4); }));
@@ -3090,10 +3257,14 @@ let hintTimer = 0;
 function showHint(main, sub) { hintEl.classList.remove('tip'); hintEl.textContent = ''; hintEl.append(document.createTextNode(main)); if (sub) { const s = document.createElement('span'); s.textContent = sub; hintEl.append(s); } hintEl.classList.remove('gone'); }
 function hideHint() { hintEl.classList.add('gone'); }
 let hintFlashing = false;
-function flashHint(msg, sub) { clearTimeout(hintTimer); hintFlashing = true; showHint(msg, sub); hintTimer = setTimeout(() => { hintFlashing = false; restHint(); }, sub ? 2600 : 2200); }
+function flashHint(msg, sub, ms) { clearTimeout(hintTimer); hintFlashing = true; showHint(msg, sub); hintTimer = setTimeout(() => { hintFlashing = false; restHint(); }, ms || (sub ? 2600 : 2200)); }
+// each explanation is shown once per player; after that the game simply does the thing
+const SEEN_BEFORE = ['mat0', 'mat1', 'mat2', 'mat3', 'mat4', 'mat5', 'engine', 'wheel', 'unpowered', 'wound', 'time0', 'time1', 'time2', 'time3'];
+const seen = new Set(store.get('seen', null) || (hinted ? SEEN_BEFORE : []));
+function firstTime(key) { if (seen.has(key)) return false; seen.add(key); store.set('seen', [...seen]); return true; }
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold to remove. Drag to turn, pinch to zoom, two fingers to pan. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -3110,7 +3281,7 @@ function renderTime() {
 }
 function cycleTime() {
   setTime(todIndex + 1); renderTime(); renderPcTime(); tipEvent('time');
-  flashHint(TIMES[todIndex].name, TIMES[todIndex].line);
+  if (firstTime('time' + todIndex)) flashHint(TIMES[todIndex].name, TIMES[todIndex].line); else flashHint(TIMES[todIndex].name, null, 1100);
   plink(todIndex === 3 ? 2 : 6 + todIndex, 0.35);
 }
 timeBtn.addEventListener('click', () => { ensureAudio(); noteInput(); cycleTime(); });
@@ -3130,7 +3301,8 @@ function addTension(x) {
 }
 function hintWind() {
   if (windHinted) return; windHinted = true;
-  if (currentTip() && currentTip().id === 'key') return;
+  if (currentTip() && currentTip().id === 'key') { firstTime('wound'); return; }
+  if (!firstTime('wound')) return;
   flashHint('Wound up', 'Every machine runs faster, and clockwork turns even without an engine');
 }
 keyBtn.addEventListener('pointerdown', (e) => {
@@ -3202,7 +3374,15 @@ function exitPostcard() {
   gridLines.visible = true; restHint();
   $('pc-btn').focus({ preventScroll: true });
 }
+let snapping = false;
 async function snapPostcard() {
+  if (snapping) return;
+  snapping = true;
+  try { await takePostcard(); } finally { snapping = false; }
+}
+async function takePostcard() {
+  // finish a time-of-day change first, so the caption names what the picture shows
+  if (todK < 1) { todK = 1; todState = todTo; applyTod(todState); setTimeout(regenEnv, 0); }
   ensureAudio(); noise(0.035, 3200, 0.12, 'bandpass'); setTimeout(() => noise(0.07, 1500, 0.09, 'bandpass'), 70);
   const crop = pcCrop(), W = canvas.clientWidth, H = canvas.clientHeight;
   const prevPR = renderer.getPixelRatio(), prevBump = townUniforms.uBump.value;
@@ -3431,7 +3611,8 @@ $('name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pre
 const menu = $('menu'), gear = $('gear');
 function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of ['confirm', 'share-box', 'open-box', 'name-box']) $(id).hidden = true; }
 gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of ['confirm', 'share-box', 'open-box', 'name-box']) $(id).hidden = true; });
-$('m-view').addEventListener('click', () => { Object.assign(goal, homeView); closeMenu(); });
+$('m-view').addEventListener('click', () => { goHome(); closeMenu(); });
+$('home-pill').addEventListener('click', () => { goHome(); });
 function renderSound() { $('m-sound').setAttribute('aria-pressed', String(soundOn)); $('m-sound-val').textContent = soundOn ? 'On' : 'Off'; }
 $('m-sound').addEventListener('click', () => { soundOn = !soundOn; store.set('sound', soundOn); renderSound(); if (soundOn) { ensureAudio(); plink(5); } });
 renderSound();
@@ -3499,6 +3680,18 @@ function renderQuality() { for (const q of ['auto', 'high', 'low']) $('q-' + q).
 for (const q of ['auto', 'high', 'low']) $('q-' + q).addEventListener('click', () => { quality = q; store.set('quality', q); renderQuality(); applyTier(q === 'low' ? 'low' : 'high'); perfSamples.length = 0; perfStart = performance.now() + 1000; });
 renderQuality();
 
+// a 'Back to the harbour' button appears when no part of the town is on screen
+const frustum = new THREE.Frustum(), _pm = new THREE.Matrix4(), homePill = $('home-pill');
+let lostShown = false, lostCheckT = 0;
+function checkLost() {
+  let lost = false;
+  if (cellCount && !pcMode && !townBox.isEmpty()) {
+    _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(_pm);
+    lost = !frustum.intersectsBox(townBox);
+  }
+  if (lost === lostShown) return;
+  lostShown = lost; homePill.classList.toggle('off', !lost); homePill.tabIndex = lost ? 0 : -1;
+}
 function resize() {
   const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
   renderer.setSize(w, h, false);
@@ -3525,9 +3718,9 @@ const perfSamples = []; let perfStart = performance.now() + 1500;
 function recentre() {
   let sx = 0, sz = 0, n = 0;
   for (let v = 0; v < V; v++) if (cols[v]) { sx += X[v]; sz += Z[v]; n++; }
-  if (n) { goal.tx = sx / n; goal.tz = sz / n; }
-  homeView = { ...goal };
+  if (n) { goal.tx = homeView.tx = sx / n; goal.tz = homeView.tz = sz / n; }
 }
+function goHome() { glideV.x = glideV.z = 0; yawVel = 0; recentre(); Object.assign(goal, { ty: homeView.ty, dist: homeView.dist, pitch: homeView.pitch }); }
 function boot(data) {
   let centre = -1;
   if (data && typeof data.town === 'string') { try { const { c, mt } = unpackBytes(fromB64(data.town)); cols.set(c); mats.set(mt); } catch (e) { if (!loadSaved()) centre = starterTown(); } }
@@ -3552,7 +3745,7 @@ function boot(data) {
   restHint();
   // a town code in the address opens that town (works when hosted on a normal site)
   if (/^#BH[zr]/.test(location.hash)) {
-    decodeTown(location.hash).then(({ c, mt, name }) => { replaceTown(c, mt, name); recentre(); Object.assign(view, goal); flashHint('Opened a shared town', 'Undo brings your own harbour back'); }).catch(() => flashHint('That town link did not open'));
+    decodeTown(location.hash).then(({ c, mt, name }) => { replaceTown(c, mt, name); recentre(); Object.assign(view, goal); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* framed */ } flashHint('Opened a shared town', 'Undo brings your own harbour back'); }).catch(() => flashHint('That town link did not open'));
   }
   let last = performance.now(), frame = 0;
   function loop(now) {
@@ -3571,7 +3764,8 @@ function boot(data) {
     updateShips(dt, now / 1000);
     if (ghostFade > 0) { ghostFade = Math.max(0, ghostFade - dt * ghostRate); ghostMat.opacity = Math.min(1, ghostFade * 1.5); if (!ghostFade) { ghost.visible = false; ghostKey = ''; ghostMat.opacity = 0.95; } }
     renderer.render(scene, camera);
-    if (quality === 'auto' && tier !== 'lowest' && now > perfStart && !document.hidden && !pcMode) {
+    if (now - lostCheckT > 400) { lostCheckT = now; checkLost(); }
+    if (quality === 'auto' && tier !== 'lowest' && now > perfStart && !document.hidden && !pcMode && !idle) {
       perfSamples.push(dt);
       if (perfSamples.length >= 90) {
         const sorted = perfSamples.slice().sort((a, b) => a - b);
@@ -3584,7 +3778,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateSteam(step); updateShips(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0) };
+window.__brasshaven = { V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateSteam(step); updateShips(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0) };
 try {
   window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 } catch (e) {
