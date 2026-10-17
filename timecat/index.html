@@ -1,0 +1,2323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+<title>Timecat</title>
+<style>
+/* Layout: one screen. A pixel-art canvas fills the stage, menus are chunky panels laid over it, and a button bar sits under the board. */
+:root {
+  color-scheme: dark;
+  --bg: #2b1d16;        /* era background; the game swaps these three per era */
+  --main: #c98f4a;      /* era main colour */
+  --accent: #f2d9a0;    /* era accent */
+  --ink: #fff6e2;       /* lamp-cream text */
+  --ink-dim: #c4b497;
+  --panel: #17110d;     /* soot-brown panel */
+  --edge: #0b0806;
+  --font-body: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#app { height: 100%; max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 8px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+#stage { position: relative; flex: 1 1 auto; min-height: 0; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; outline: none; image-rendering: pixelated; }
+.pix { image-rendering: pixelated; display: block; max-width: 100%; }
+.scr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; overflow-y: auto; }
+.scr.dim { background: rgba(8, 5, 3, 0.74); }
+.scr.pass { pointer-events: none; justify-content: flex-end; padding-bottom: 4%; }
+.scr.pass > * { pointer-events: auto; }
+.card { box-sizing: border-box; width: 100%; max-width: 430px; background: var(--panel); border: 2px solid var(--main); box-shadow: 0 5px 0 var(--edge); padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.card h2, .card p { margin: 0; }
+.card .head { display: flex; justify-content: center; min-height: 21px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.note { color: var(--ink-dim); font-size: 14px; text-align: center; margin: 0; }
+button { font: inherit; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--panel); border: 2px solid var(--main); box-shadow: 0 4px 0 var(--edge); padding: 10px 16px; min-height: 48px; min-width: 48px; cursor: pointer; border-radius: 0; touch-action: manipulation; }
+button:hover:not(:disabled) { background: color-mix(in srgb, var(--main) 22%, var(--panel)); }
+button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--edge); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--main); color: var(--edge); border-color: var(--accent); }
+button.primary:hover:not(:disabled) { background: var(--accent); }
+button[aria-pressed="false"] { color: var(--ink-dim); border-style: dashed; }
+
+/* title */
+#scr-title .row { flex-direction: column; align-items: center; width: min(260px, 100%); }
+#scr-title .row button { width: 100%; }
+@media (max-height: 480px) { #scr-title .row { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 100%); } }   /* short landscape screens: two columns leave room for the title art */
+
+/* story */
+.story { box-sizing: border-box; width: 100%; max-width: 560px; background: var(--panel); border: 2px solid var(--main); box-shadow: 0 5px 0 var(--edge); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.story p { margin: 0 0 6px; font-size: 16px; text-wrap: pretty; }
+.story button { align-self: flex-end; }
+
+/* room select */
+#scr-select { justify-content: flex-start; align-items: stretch; background: var(--bg); gap: 8px; padding: 6px 6px 16px; }
+.bar-top { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+.bar-top .note { margin-right: auto; text-align: left; }
+#select-body h3 { margin: 14px 0 6px; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+.doors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.door { --door: var(--main); border-color: var(--door); display: grid; grid-template-rows: auto 1fr auto auto; justify-items: center; gap: 6px; padding: 10px 6px 8px; text-transform: none; letter-spacing: 0; font-weight: 400; min-height: 118px; border-radius: 26px 26px 0 0; }
+.door .name { font-size: 14px; font-weight: 700; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
+.door .paws { display: flex; gap: 4px; }
+.door .best { font-size: 14px; color: var(--ink-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.paw { width: 18px; height: 16px; }
+@media (max-width: 560px) { .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* room complete */
+#complete-body { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#complete-body li { display: grid; grid-template-columns: 27px 3.4em 1fr; align-items: center; gap: 10px; }
+#complete-body li .paw { width: 27px; height: 24px; }
+#complete-body li.off { color: var(--ink-dim); }
+#complete-body li span { font-size: 14px; }
+
+/* how to play: shown before room 1, and from the title and pause screens */
+#scr-help { justify-content: flex-start; padding: 8px 0 16px; box-sizing: border-box; }
+#scr-help .card { max-width: 600px; margin: auto 0; gap: 10px; padding: 14px 16px; }   /* centred when it fits, scrolls from the top when it does not */
+.help .lead { font-size: 14px; text-wrap: pretty; }
+.ctl { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.ctl li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.ctl .ico { width: 34px; height: 34px; box-sizing: border-box; border: 2px solid var(--main); box-shadow: 0 2px 0 var(--edge); display: grid; place-items: center; color: var(--ink); }
+.ctl .ico svg { width: 18px; height: 18px; fill: currentColor; }
+.ctl .ico .glyph { font-weight: 700; font-size: 18px; line-height: 1; }
+.ctl b { text-transform: uppercase; letter-spacing: 0.04em; font-size: 14px; }
+.ctl .how { color: var(--accent); font-size: 13px; }
+.ctl .what { display: block; color: var(--ink-dim); font-size: 13px; line-height: 1.35; text-wrap: pretty; }
+.help .note { font-size: 13px; text-align: left; text-wrap: pretty; }
+
+/* under the board */
+#coach { text-align: center; color: var(--ink); font-size: 14px; margin: 0; min-height: 1.45em; text-wrap: balance; }
+#bar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding-bottom: 2px; }
+#bar button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 14px; }
+#bar svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+#bar .glyph { font-size: 20px; line-height: 1; width: 20px; text-align: center; }
+#btn-restart { background-image: linear-gradient(to right, var(--main) calc(var(--hold, 0) * 100%), transparent 0); }
+/* on a phone the labels sit small under the icons, so every button still says what it does */
+@media (max-width: 520px) { #bar { gap: 4px; } #bar button { flex-direction: column; justify-content: center; gap: 3px; padding: 5px 2px 4px; min-width: 50px; } #bar .lbl { font-size: 9px; letter-spacing: 0; line-height: 1; } }
+@media (pointer: coarse) { #btn-wait { display: none; } }
+#test-out { box-sizing: border-box; width: 100%; max-width: 640px; max-height: 70%; overflow: auto; background: var(--panel); border: 2px solid var(--main); padding: 12px; margin: 0; font-size: 13px; white-space: pre; -webkit-user-select: text; user-select: text; }
+@media (prefers-reduced-motion: reduce) { button:active:not(:disabled) { transform: none; } }
+</style>
+
+</head>
+<body>
+<div id="app" data-era="1">
+  <div id="stage">
+    <canvas id="cv" tabindex="0" aria-label="Timecat game board"></canvas>
+
+    <section id="scr-title" class="scr pass" hidden>
+      <div class="row">
+        <button id="btn-play" class="primary" data-first>Play</button>
+        <button id="btn-rooms">Rooms</button>
+        <button id="btn-title-help">How to play</button>
+        <button id="btn-settings">Settings</button>
+      </div>
+      <p id="title-paws" class="note"></p>
+      <p id="title-note" class="note" hidden>This browser is blocking storage, so progress will not be kept after you close the page.</p>
+    </section>
+
+    <section id="scr-select" class="scr" hidden>
+      <div class="bar-top">
+        <h2 style="margin:0" id="select-head"></h2>
+        <p id="select-paws" class="note"></p>
+        <button id="btn-select-back">Back</button>
+      </div>
+      <div id="select-body"></div>
+    </section>
+
+    <section id="scr-panel" class="scr pass" hidden>
+      <div class="story">
+        <div id="story-text"></div>
+        <button id="story-next" class="primary" data-first>Continue</button>
+      </div>
+    </section>
+
+    <section id="scr-complete" class="scr dim" hidden>
+      <div class="card">
+        <div class="head" id="complete-head"></div>
+        <ul id="complete-body"></ul>
+        <p id="complete-note" class="note"></p>
+        <div class="row">
+          <button id="btn-next" class="primary" data-first>Next room</button>
+          <button id="btn-replay">Replay</button>
+          <button id="btn-complete-rooms">Rooms</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-pause" class="scr dim" hidden>
+      <div class="card">
+        <div class="head" id="pause-head"></div>
+        <div class="row">
+          <button id="btn-resume" class="primary" data-first>Resume</button>
+          <button id="btn-pause-restart">Restart room</button>
+          <button id="btn-pause-rooms">Rooms</button>
+          <button id="btn-pause-help">How to play</button>
+        </div>
+        <div class="row">
+          <button data-toggle="sound" aria-pressed="true">Sound: on</button>
+          <button data-toggle="music" aria-pressed="true">Music: on</button>
+          <button data-toggle="reducedMotion" aria-pressed="false">Reduced motion: off</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-out" class="scr dim" hidden>
+      <div class="card">
+        <div class="head" id="out-head"></div>
+        <p class="note">All nine lives are spent. Nothing is lost: rewind a step, or start the room again.</p>
+        <div class="row">
+          <button id="btn-out-rewind" class="primary" data-first>Rewind</button>
+          <button id="btn-out-restart">Restart room</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-help" class="scr dim" hidden>
+      <div class="card help">
+        <div class="head" id="help-head"></div>
+        <p class="lead">Every step is one tick. When you Loop, or the clock runs out, time jumps back to the start and your last life replays as an echo beside you.</p>
+        <ul class="ctl">
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1l3.5 4H11v4h4V6.5l4 3.5-4 3.5V11h-4v4h2.5L10 19l-3.5-4H9v-4H5v2.5L1 10l4-3.5V9h4V5H6.5z"/></svg></span><div><b>Move</b> <span class="how">Arrow keys or WASD, or swipe the board</span><span class="what">One step, one tick. Echoes, hounds and scarabs move with you.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h10v3l-4 4 4 4v3H5v-3l4-4-4-4z"/></svg></span><div><b>Wait</b> <span class="how">Space, or tap the board</span><span class="what">Stay put for a tick while everything else moves.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4a6 6 0 1 0 6 6h-3a3 3 0 1 1-3-3v3l5-4.5L10 1z"/></svg></span><div><b>Loop</b> <span class="how">L or Enter</span><span class="what">End this life. Time jumps back to the start and this life replays as an echo beside the next. Nine lives per room.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12L2 10zM18 4v12l-8-6z"/></svg></span><div><b>Rewind</b> <span class="how">Z or Backspace, hold to keep going</span><span class="what">Take back a step, or keep going back into earlier lives. Nothing is lost.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3v12H4zM16 4v12L7 10z"/></svg></span><div><b>Restart</b> <span class="how">Hold R, or hold the button</span><span class="what">Clear every life and start the room again. Rewind undoes it.</span></div></li>
+        <li><span class="ico"><span class="glyph" aria-hidden="true">?</span></span><div><b>Hint</b> <span class="how">H</span><span class="what">Appears after ten minutes or five restarts. Each press traces one more life of a solution.</span></div></li>
+        <li><span class="ico"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h4v12H5zM11 4h4v12h-4z"/></svg></span><div><b>Pause</b> <span class="how">Esc or P</span><span class="what">Settings, the room list and this guide.</span></div></li>
+        </ul>
+        <p class="note">Above the board: ticks left, your nine lives (with a mark at par) and the fish. Below it: every life's moves on one timeline. Gamepad: A wait, Y loop, X rewind, hold Back to restart, Start to pause.</p>
+        <div class="row"><button id="btn-help-done" class="primary" data-first>Got it</button></div>
+      </div>
+    </section>
+
+    <section id="scr-settings" class="scr dim" hidden>
+      <div class="card">
+        <div class="head" id="settings-head"></div>
+        <div class="row">
+          <button data-toggle="sound" aria-pressed="true" data-first>Sound: on</button>
+          <button data-toggle="music" aria-pressed="true">Music: on</button>
+          <button data-toggle="reducedMotion" aria-pressed="false">Reduced motion: off</button>
+        </div>
+        <div class="row">
+          <button id="btn-erase">Erase progress</button>
+          <button id="btn-settings-back" class="primary">Back</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-test" class="scr dim" hidden>
+      <pre id="test-out"></pre>
+      <button id="btn-test-back" data-first>Back to the game</button>
+    </section>
+  </div>
+
+  <p id="coach" hidden></p>
+  <div id="bar" hidden>
+    <button id="btn-rewind" title="Rewind (Z). Hold to scrub back." aria-label="Rewind"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12L2 10zM18 4v12l-8-6z"/></svg><span class="lbl">Rewind</span></button>
+    <button id="btn-wait" title="Wait one tick (Space)" aria-label="Wait"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h10v3l-4 4 4 4v3H5v-3l4-4-4-4z"/></svg><span class="lbl">Wait</span></button>
+    <button id="btn-loop" title="Loop (L): end this life and start the next" aria-label="Loop"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4a6 6 0 1 0 6 6h-3a3 3 0 1 1-3-3v3l5-4.5L10 1z"/></svg><span class="lbl">Loop</span></button>
+    <button id="btn-restart" title="Restart the room. Hold for half a second (R)." aria-label="Restart room, hold"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h3v12H4zM16 4v12L7 10z"/></svg><span class="lbl">Restart</span></button>
+    <button id="btn-hint" title="Hint (H)" aria-label="Hint" hidden><span class="glyph" aria-hidden="true">?</span><span class="lbl">Hint</span></button>
+    <button id="btn-pause" title="Pause (Esc)" aria-label="Pause"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h4v12H5zM11 4h4v12h-4z"/></svg><span class="lbl">Pause</span></button>
+  </div>
+</div>
+
+<script>
+(function () {
+// Timecat core simulation. Pure functions, no DOM. Works in a browser or in Node.
+// The whole rule set lives in step(); simulate() replays every life from tick 0.
+'use strict';
+
+const DIR = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0], W: [0, 0] };
+const BELT = { '^': 'U', v: 'D', '<': 'L', '>': 'R' };
+const CH = { a: 1, b: 2, c: 4, d: 8 };
+
+function parseLevel(def) {
+  const h = def.map.length, w = def.map[0].length;
+  const L = {
+    def, id: def.id, name: def.name, loop: def.loop, par: def.par, w, h, n: w * h,
+    solid: new Uint8Array(w * h), plate: new Uint8Array(w * h), belt: new Array(w * h).fill(null),
+    doorAt: new Int8Array(w * h).fill(-1), leverAt: new Uint8Array(w * h), pad: new Int16Array(w * h).fill(-1),
+    doors: [], crates: [], scarabs: [], hounds: [], vents: [], lasers: [], receivers: [],
+    start: -1, exit: -1, fish: -1, recvAt: new Int8Array(w * h).fill(-1),
+  };
+  const at = (x, y) => y * w + x;
+  def.map.forEach((row, y) => {
+    if (row.length !== w) throw new Error(`room ${def.id}: row ${y} is ${row.length} wide, expected ${w}`);
+    [...row].forEach((c, x) => {
+      const i = at(x, y);
+      if (c === '#') L.solid[i] = 1;
+      else if (c === 'S') L.start = i;
+      else if (c === 'E') L.exit = i;
+      else if (c === 'f') L.fish = i;
+      else if (c === 'o') L.crates.push(i);
+      else if (CH[c]) L.plate[i] = CH[c];
+      else if (CH[c.toLowerCase()]) { L.doorAt[i] = L.doors.length; L.doors.push({ i, ch: CH[c.toLowerCase()] }); }
+      else if (BELT[c]) L.belt[i] = BELT[c];
+      else if (c !== '.') throw new Error(`room ${def.id}: unknown glyph ${c}`);
+    });
+  });
+  for (const t of def.things || []) {
+    const i = at(t.x, t.y);
+    if (L.solid[i] && t.t !== 'laser' && t.t !== 'receiver') throw new Error(`room ${def.id}: ${t.t} inside a wall`);
+    if (t.t === 'plate') L.plate[i] = CH[t.ch];
+    else if (t.t === 'lever') L.leverAt[i] = CH[t.ch];
+    else if (t.t === 'scarab') {
+      const [dx, dy] = DIR[t.dir], track = [];
+      for (let k = 0; k < t.len; k++) track.push(at(t.x + dx * k, t.y + dy * k));
+      L.scarabs.push({ track });
+    } else if (t.t === 'hound') L.hounds.push(i);
+    else if (t.t === 'vent') L.vents.push({ i, period: t.period, on: t.on, phase: t.phase || 0 });
+    else if (t.t === 'pad') { const j = at(t.to[0], t.to[1]); L.pad[i] = j; L.pad[j] = i; }
+    else if (t.t === 'laser') { L.solid[i] = 1; L.lasers.push({ i, dir: t.dir, off: t.offCh ? CH[t.offCh] : 0 }); }
+    else if (t.t === 'receiver') { L.solid[i] = 1; L.recvAt[i] = L.receivers.length; L.receivers.push({ i, ch: CH[t.ch] }); }
+    else throw new Error(`room ${def.id}: unknown thing ${t.t}`);
+  }
+  if (L.start < 0 || L.exit < 0) throw new Error(`room ${def.id}: needs S and E`);
+  L.crates.sort((p, q) => p - q);
+  L.delta = { U: -w, D: w, L: -1, R: 1, W: 0 };
+  // Tick-dependent hazards repeat with this period (hounds step on even ticks).
+  let period = L.hounds.length ? 2 : 1;
+  const gcd = (p, q) => (q ? gcd(q, p % q) : p);
+  for (const v of L.vents) period = (period * v.period) / gcd(period, v.period);
+  L.phasePeriod = period;
+  return L;
+}
+
+// The state at tick 0 for a given number of cats.
+function initialState(L, nCats) {
+  const s = {
+    t: 0, cats: new Array(nCats).fill(L.start), crates: L.crates.slice(), lev: 0,
+    sc: L.scarabs.map(() => ({ k: 0, d: 1 })), hd: L.hounds.slice(),
+    ch: 0, open: 0, lit: 0, fish: false, won: false, beam: null, steam: null,
+  };
+  settle(L, s, 0);
+  hazardsStatic(L, s, 0); // beams and steam as they stand before the first move
+  settle(L, s, 0);        // a receiver lit from the start counts from tick 0
+  return s;
+}
+
+const catAt = (s, i) => s.cats.includes(i);
+const crateAt = (s, i) => s.crates.includes(i);
+const houndAt = (s, i) => s.hd.includes(i);
+function scarabAt(L, s, i) { for (let n = 0; n < s.sc.length; n++) if (L.scarabs[n].track[s.sc[n].k] === i) return true; return false; }
+const doorShut = (L, s, i) => L.doorAt[i] >= 0 && !(s.open & (1 << L.doorAt[i]));
+
+// Step 6: channels and doors. Receivers count the beams of the previous tick (s.lit).
+function settle(L, s, t) {
+  let ch = s.lev | s.lit;
+  for (const c of s.cats) if (c >= 0) ch |= L.plate[c];
+  for (const c of s.crates) ch |= L.plate[c];
+  s.ch = ch;
+  let open = 0;
+  L.doors.forEach((d, n) => {
+    if ((ch & d.ch) || catAt(s, d.i) || crateAt(s, d.i) || houndAt(s, d.i) || scarabAt(L, s, d.i)) open |= 1 << n;
+  });
+  s.open = open;
+  return ch;
+}
+
+// Step 7, second half: steam and beams for this tick.
+function hazardsStatic(L, s, t) {
+  // Vents: steam fills the vent tile and its four neighbours unless a crate seals the vent.
+  let steam = null;
+  for (const v of L.vents) {
+    if ((t + v.phase) % v.period >= v.on || crateAt(s, v.i)) continue;
+    steam = steam || new Set();
+    steam.add(v.i);
+    for (const k of 'UDLR') { const j = v.i + L.delta[k]; if (!L.solid[j] && !doorShut(L, s, j)) steam.add(j); }
+  }
+  // Lasers: a beam runs until a wall, crate, closed door or receiver.
+  let beam = null, lit = 0;
+  for (const z of L.lasers) {
+    if (z.off && (s.ch & z.off)) continue;
+    for (let j = z.i + L.delta[z.dir]; ; j += L.delta[z.dir]) {
+      if (L.recvAt[j] >= 0) { lit |= L.receivers[L.recvAt[j]].ch; break; }
+      if (L.solid[j] || crateAt(s, j) || doorShut(L, s, j)) break;
+      (beam = beam || new Set()).add(j);
+    }
+  }
+  s.steam = steam; s.beam = beam; s.lit = lit;
+}
+
+// Advance one tick. `actions` has one of U D L R W per cat, oldest life first; the last cat is live.
+function step(L, prev, actions) {
+  const s = {
+    t: prev.t + 1, cats: prev.cats.slice(), crates: prev.crates.slice(), lev: prev.lev,
+    sc: prev.sc.map(o => ({ k: o.k, d: o.d })), hd: prev.hd.slice(),
+    ch: prev.ch, open: prev.open, lit: prev.lit, fish: prev.fish, won: false, beam: null, steam: null,
+  };
+  const t = s.t, nC = s.cats.length;
+  const hazardAt = i => houndAt(s, i) || scarabAt(L, s, i);
+  const crateFree = i => !L.solid[i] && !doorShut(L, s, i) && !crateAt(s, i) && !catAt(s, i) && !hazardAt(i);
+  const crate0 = s.crates.slice();
+
+  // 2-3. Cats move in life order and push crates. Doors are as they stood at the end of the last tick.
+  for (let c = 0; c < nC; c++) {
+    const p = s.cats[c], a = actions[c];
+    if (p < 0 || a === 'W') continue;
+    const q = p + L.delta[a];
+    if (L.solid[q] || doorShut(L, s, q)) continue;
+    const ci = s.crates.indexOf(q);
+    if (ci >= 0) {
+      const r = q + L.delta[a];
+      if (!crateFree(r)) continue;
+      s.crates[ci] = r;
+    }
+    s.cats[c] = q;
+  }
+
+  // 4a. Belts: crates first (chains resolve), then cats.
+  {
+    const done = new Array(s.crates.length).fill(false);
+    for (let again = true; again;) {
+      again = false;
+      for (let n = 0; n < s.crates.length; n++) {
+        const b = L.belt[s.crates[n]];
+        if (done[n] || !b) continue;
+        const q = s.crates[n] + L.delta[b];
+        if (crateFree(q)) { s.crates[n] = q; done[n] = true; again = true; }
+      }
+    }
+    for (let c = 0; c < nC; c++) {
+      const p = s.cats[c];
+      if (p < 0 || !L.belt[p]) continue;
+      const q = p + L.delta[L.belt[p]];
+      if (!L.solid[q] && !doorShut(L, s, q) && !crateAt(s, q)) s.cats[c] = q;
+    }
+  }
+  // 4b. Teleporters: anything that arrived on a pad this tick jumps to its twin.
+  for (let n = 0; n < s.crates.length; n++) {
+    const p = s.crates[n];
+    if (p !== crate0[n] && L.pad[p] >= 0 && crateFree(L.pad[p])) s.crates[n] = L.pad[p];
+  }
+  const arrived = new Array(nC).fill(false);
+  for (let c = 0; c < nC; c++) {
+    let p = s.cats[c];
+    if (p < 0 || p === prev.cats[c]) continue;
+    arrived[c] = true;
+    if (L.pad[p] >= 0 && !crateAt(s, L.pad[p])) s.cats[c] = L.pad[p];
+  }
+  // 5. Levers toggle once for each cat that arrived on them.
+  for (let c = 0; c < nC; c++) if (arrived[c] && s.cats[c] >= 0) s.lev ^= L.leverAt[s.cats[c]];
+
+  // 6. Channels and doors. Receivers use the beams of the previous tick.
+  settle(L, s, t);
+
+  // 7. Hazards act.
+  const scOld = [], scNew = [];
+  s.sc.forEach((o, n) => {
+    const tr = L.scarabs[n].track;
+    const ok = k => k >= 0 && k < tr.length && !crateAt(s, tr[k]) && !doorShut(L, s, tr[k]);
+    scOld.push(tr[o.k]);
+    if (!ok(o.k + o.d)) o.d = -o.d;
+    if (ok(o.k + o.d)) o.k += o.d;
+    scNew.push(tr[o.k]);
+  });
+  const hdOld = s.hd.slice();
+  if (t % 2 === 0) {
+    for (let n = 0; n < s.hd.length; n++) {
+      const hp = s.hd[n], hx = hp % L.w, hy = (hp / L.w) | 0;
+      let best = -1, bd = 1e9;
+      for (let c = 0; c < nC; c++) {
+        const p = s.cats[c];
+        if (p < 0) continue;
+        const d = Math.abs((p % L.w) - hx) + Math.abs(((p / L.w) | 0) - hy);
+        if (d < bd) { bd = d; best = p; }
+      }
+      if (best < 0 || bd === 0) continue;
+      const dx = (best % L.w) - hx, dy = ((best / L.w) | 0) - hy;
+      const sx = dx > 0 ? 'R' : 'L', sy = dy > 0 ? 'D' : 'U';
+      const order = Math.abs(dx) >= Math.abs(dy) ? [dx && sx, dy && sy] : [dy && sy, dx && sx];
+      for (const k of order) {
+        if (!k) continue;
+        const q = hp + L.delta[k];
+        if (L.solid[q] || doorShut(L, s, q) || crateAt(s, q) || houndAt(s, q)) continue;
+        s.hd[n] = q;
+        break;
+      }
+    }
+  }
+  settle(L, s, t); // a hazard standing in a doorway keeps that door open
+  hazardsStatic(L, s, t);
+
+  // 8. Cats are caught.
+  for (let c = 0; c < nC; c++) {
+    const p = s.cats[c], p0 = prev.cats[c];
+    if (p < 0) continue;
+    let hit = (s.steam && s.steam.has(p)) || (s.beam && s.beam.has(p));
+    for (let n = 0; !hit && n < scNew.length; n++) hit = scNew[n] === p || (scNew[n] === p0 && scOld[n] === p && p !== p0);
+    for (let n = 0; !hit && n < s.hd.length; n++) hit = s.hd[n] === p || (s.hd[n] === p0 && hdOld[n] === p && p !== p0);
+    if (hit) { (s.gone = s.gone || []).push([c, p]); s.cats[c] = -1; } // gone: for the renderer only
+  }
+  // 9. Fish and flap.
+  if (L.fish >= 0 && s.cats.includes(L.fish)) s.fish = true;
+  s.won = s.cats[nC - 1] === L.exit;
+  return s;
+}
+
+// Replay every life from tick 0. `lives` is an array of input strings; the last one is the live cat.
+function simulate(L, lives) {
+  const live = lives[lives.length - 1];
+  let s = initialState(L, lives.length);
+  const n = Math.min(live.length, L.loop);
+  for (let t = 0; t < n && !s.won && s.cats[lives.length - 1] >= 0; t++) {
+    s = step(L, s, lives.map(str => str[t] || 'W'));
+  }
+  s.caught = s.cats[lives.length - 1] < 0;
+  s.lifeOver = s.caught || s.t >= L.loop;
+  return s;
+}
+
+// Play the lives in the order a player would record them and report what happens.
+function playthrough(L, lives) {
+  if (lives.length > 9) return { ok: false, why: 'more than nine lives' };
+  for (let n = 1; n <= lives.length; n++) {
+    const str = lives[n - 1];
+    if (str.length > L.loop) return { ok: false, why: `life ${n} is longer than the loop` };
+    const s = simulate(L, lives.slice(0, n));
+    if (n < lives.length) {
+      if (s.won) return { ok: false, why: `life ${n} already reaches the flap` };
+      if (s.t < str.length) return { ok: false, why: `life ${n} is caught at tick ${s.t}, before its inputs end` };
+    } else {
+      if (!s.won) return { ok: false, why: s.caught ? `live cat caught at tick ${s.t}` : 'live cat does not reach the flap', state: s };
+      return { ok: true, ticks: s.t, fish: s.fish, lives: lives.length, state: s };
+    }
+  }
+}
+
+const api = { DIR, parseLevel, initialState, step, simulate, playthrough };
+if (typeof module !== 'undefined') module.exports = api; else globalThis.TimecatCore = api;
+
+})();
+
+(function () {
+// Timecat: all 20 rooms (second edition: harder, with pars proved by exhaustive search).
+// map glyphs: # wall, . floor, S start, E cat flap, f fish, a-d plate, A-D door, o crate, ^ v < > belt.
+// things: objects that need parameters (see parseLevel in timecat-core.js).
+//   scarab: starts on (x, y) and patrols `len` tiles from there in direction `dir`.
+//   vent:   on while (tick + phase) % period < on. Steam fills the vent tile and its four neighbours.
+//   laser / receiver: sit in a wall tile. `offCh` switches a laser off while that channel is active.
+//   plate:  a plate that shares its tile with a belt.
+//   hound:  steps on even ticks toward the nearest cat. lever: toggles its channel each time a cat steps on.
+//   pad:    anything arriving on the pad jumps to its twin at `to`.
+// par: the fewest lives that can finish. `proof` records the exhaustive searches (run offline with the fast
+//   solver) showing that each smaller number of lives cannot finish. `bestKnown` marks a par that is the fewest
+//   lives found but has not been proved; the proof then covers only the smaller counts listed.
+// solution: one input string per life, oldest first (U D L R, W = wait). Each earns all three paws.
+'use strict';
+const TIMECAT_LEVELS = [
+  { id: 1, era: 1, name: 'Hold the Door', loop: 16, par: 2,
+    map: [
+      '#########',
+      '#S..a..f#',
+      '######A##',
+      '#E......#',
+      '#########',
+    ],
+    // fewer lives checked offline: 1 (13 states)
+    proof: [{ k: 1, states: 13 }],
+    solution: ['RRR', 'RRRRRRLDDLLLLL'] },
+  { id: 2, era: 1, name: 'After You', loop: 20, par: 2,
+    map: [
+      '#######',
+      '#S.a..#',
+      '#B###A#',
+      '#.#b.f#',
+      '#.#####',
+      '#....E#',
+      '#######',
+    ],
+    // fewer lives checked offline: 1 (5 states)
+    proof: [{ k: 1, states: 5 }],
+    solution: ['RRRRDDLL', 'WWRRWWLLDDDDRRRR'] },
+  { id: 3, era: 1, name: 'Doorstop', loop: 20, par: 2,
+    map: [
+      '#########',
+      '#S..a...#',
+      '#######A#',
+      '#E..B..b#',
+      '#####f###',
+      '#########',
+    ],
+    // fewer lives checked offline: 1 (7 states)
+    proof: [{ k: 1, states: 7 }],
+    solution: ['WWWRRRRRRDWDWLLD', 'RRRRRRDWWDLLLLLL'] },
+  { id: 4, era: 1, name: 'Clockwork', loop: 34, par: 2,
+    map: [
+      '#############',
+      '#S...A...B..#',
+      '##a###b####.#',
+      '###########.#',
+      '#E...C......#',
+      '###f#####c###',
+      '#############',
+    ],
+    // fewer lives checked offline: 1 (5 states)
+    proof: [{ k: 1, states: 5 }],
+    solution: ['WRDURRRRDURRRWRRDDDLLD', 'RRRRWWRRRRWWRRDDDLLLLLLLLDULL'] },
+  { id: 5, era: 2, name: 'Heavy Lifting', loop: 33, par: 1,
+    map: [
+      '#########',
+      '#S......#',
+      '#.#o#.#.#',
+      '#.....#.#',
+      '#f###a#A#',
+      '#######E#',
+      '#########',
+    ],
+    // fewer lives checked offline: n/a
+    solution: ['RRDULLDDDURRRLUURRDDUURRDDDD'] },
+  { id: 6, era: 2, name: 'Scarab Run', loop: 33, par: 1,
+    map: [
+      '###########',
+      '#S........#',
+      '#####o###.#',
+      '#....a....#',
+      '#######f#A#',
+      '#########.#',
+      '#########E#',
+      '###########',
+    ],
+    things: [{ t: 'scarab', x: 1, y: 3, dir: 'R', len: 9 }],
+    // fewer lives checked offline: n/a
+    solution: ['WWWRRRRDURRRRDDLLDWWWWURRDDD'] },
+  { id: 7, era: 2, name: 'Beetle Gate', loop: 34, par: 3,
+    map: [
+      '#############',
+      '#S..........#',
+      '##a########.#',
+      '###########.#',
+      '##########.A#',
+      '###########.#',
+      '####c###b##.#',
+      '#EC...B.....#',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 10, y: 4, dir: 'R', len: 2 }],
+    // fewer lives checked offline: 1 (28 states), 2 (875 states)
+    proof: [{ k: 1, states: 28 }, { k: 2, states: 875 }],
+    solution: ['RD', 'RRRRRRRRRRDDDDDDLLLLLWWLLUDRD', 'RRRRRRRRRRDDDDDDLLLUDLLLLLLWL'] },
+  { id: 8, era: 2, name: 'The Weighing Room', loop: 48, par: 4,
+    map: [
+      '#############',
+      '#S.D........#',
+      '#d####a####.#',
+      '##########.A#',
+      '###########.#',
+      '#...........#',
+      '#.######b####',
+      '#B.##########',
+      '#.##c#f##.###',
+      '#........C.E#',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 10, y: 3, dir: 'R', len: 2 }, { t: 'scarab', x: 2, y: 7, dir: 'L', len: 2 }, { t: 'scarab', x: 9, y: 8, dir: 'D', len: 2 }],
+    // fewer lives checked offline: 1 (6 states), 2 (3532 states), 3 (378506 states)
+    proof: [{ k: 1, states: 6 }, { k: 2, states: 3532 }, { k: 3, states: 378506 }],
+    solution: ['DWWURRRRRD', 'RRRRRRRRRRDWDDDLLLD', 'WWRRWRRRRRRRRDDDWDLLLLLLLLLLDDDWDRRRUDRRU', 'WRRRRRRRRRRDDDWDLLLLLLLLLLDDDDRRRRRRRRRWR'] },
+  { id: 9, era: 3, name: 'Pull', loop: 32, par: 1,
+    map: [
+      '############',
+      '#S.a....A.E#',
+      '##.#########',
+      '##.....#####',
+      '##.###.#####',
+      '##.....#####',
+      '####f#######',
+      '############',
+    ],
+    things: [{ t: 'lever', x: 6, y: 4, ch: 'a' }],
+    // fewer lives checked offline: n/a
+    solution: ['RDDDDRRDURRUULLLLUURRRRRRRR'] },
+  { id: 10, era: 3, name: 'Here, Boy', loop: 21, par: 2,
+    map: [
+      '#############',
+      '#####.#######',
+      '#a###.#######',
+      '#.###.#######',
+      '#S.A.......E#',
+      '#####.#######',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }],
+    // fewer lives checked offline: 1 (59 states)
+    proof: [{ k: 1, states: 59 }],
+    solution: ['UUDDRRWWWR', 'WRRWWRRDDUURRRRRR'] },
+  { id: 11, era: 3, name: 'Decoy', loop: 25, par: 2,
+    map: [
+      '#############',
+      '#####.#######',
+      '#a###.#######',
+      '#.###.#######',
+      '#S.A.......E#',
+      '#####.#######',
+      '#####.#######',
+      '#####f#######',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }, { t: 'hound', x: 10, y: 4 }, { t: 'lever', x: 5, y: 6, ch: 'a' }],
+    // fewer lives checked offline: 1 (82 states)
+    proof: [{ k: 1, states: 82 }],
+    solution: ['WWUUWWWDDR', 'WWWRRRRDDDWWUUURRRRRR'] },
+  { id: 12, era: 3, name: 'The Kennels', loop: 29, par: 4,
+    map: [
+      '#############',
+      '#####a#######',
+      '#####.#######',
+      '#####.#######',
+      '#S....A.B.CE#',
+      '###b###f#.###',
+      '#########.###',
+      '#############',
+    ],
+    things: [{ t: 'hound', x: 9, y: 4 }, { t: 'hound', x: 9, y: 5 }, { t: 'lever', x: 2, y: 4, ch: 'c' }],
+    // The fish sits below the corridor, not above it, so a hound chasing cats up the arm cannot get stuck on it.
+    // fewer lives checked offline: 1 (254 states), 2 (12308 states), 3 (179690 states)
+    proof: [{ k: 1, states: 254 }, { k: 2, states: 12308 }, { k: 3, states: 179690 }],
+    solution: ['WRRRRUUUWWWWWWWD', 'WRRDWWURRUWUWU', 'WWWWWWWWWWWWWWWWWWRRDUL', 'WWWWWWWWWWWWWRRRRRRDURRRR'] },
+  { id: 13, era: 4, name: 'Belt Up', loop: 23, par: 1,
+    map: [
+      '##########',
+      '#S..>>>v.#',
+      '#.#.o##v.#',
+      '#.#...#a.#',
+      '#.#####..#',
+      '#...f....#',
+      '####A#####',
+      '####E#####',
+      '##########',
+    ],
+    // fewer lives checked offline: n/a
+    solution: ['RRDDRUURWRDDDLLLLDD'] },
+  { id: 14, era: 4, name: 'Letting Off Steam', loop: 25, par: 1,
+    map: [
+      '#########',
+      '###.#.###',
+      '#S......#',
+      '####.##.#',
+      '#E......#',
+      '###.#.###',
+      '#####f###',
+      '#########',
+    ],
+    things: [{ t: 'vent', x: 3, y: 1, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 5, y: 1, period: 4, on: 2, phase: 2 }, { t: 'vent', x: 4, y: 3, period: 4, on: 2, phase: 0 }, { t: 'vent', x: 3, y: 5, period: 3, on: 1, phase: 0 }, { t: 'vent', x: 5, y: 5, period: 6, on: 1, phase: 0 }],
+    // fewer lives checked offline: n/a
+    solution: ['RRRRWRWWRDDLLDDUULLLL'] },
+  { id: 15, era: 4, name: 'Assembly Line', loop: 23, par: 3,
+    map: [
+      '#############',
+      '#.o>>>>>>>>v#',
+      '#.#########v#',
+      '#.#########c#',
+      '#.##.##.##.##',
+      '#S..A..B..CE#',
+      '##.###.##f###',
+      '##a###b######',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 4, y: 4, dir: 'D', len: 2 }, { t: 'scarab', x: 7, y: 4, dir: 'D', len: 2 }, { t: 'scarab', x: 10, y: 4, dir: 'D', len: 2 }],
+    // fewer lives checked offline: 1 (518 states), 2 (18514 states)
+    proof: [{ k: 1, states: 518 }, { k: 2, states: 18514 }],
+    solution: ['RDDUULUUUURRWRRR', 'WRRRRWWWWRDD', 'WRRRRWWWWWWRRRRDURR'] },
+  { id: 16, era: 4, name: 'The Boiler', loop: 33, par: 4,
+    map: [
+      '#############',
+      '#.o>>>>>>>>v#',
+      '#.#########v#',
+      '#.#########d#',
+      '#.##.#.#.#.##',
+      '#S..A.B.C.DE#',
+      '##.##.#.#####',
+      '##af#.#.#####',
+      '#####b#c#####',
+      '#############',
+    ],
+    things: [{ t: 'vent', x: 4, y: 4, period: 3, on: 1, phase: 0 }, { t: 'vent', x: 6, y: 4, period: 4, on: 2, phase: 1 }, { t: 'vent', x: 8, y: 4, period: 3, on: 1, phase: 1 }, { t: 'vent', x: 10, y: 4, period: 4, on: 2, phase: 3 }],
+    // fewer lives checked offline: 1 (2688 states), 2 (75228 states), 3 (2623832 states)
+    proof: [{ k: 1, states: 2688 }, { k: 2, states: 75228 }, { k: 3, states: 2623832 }],
+    solution: ['RDDRLWWUULUUUUR', 'WWWWWRRRRWWWWWDDD', 'WWWWWRRRRWWWWWWWWRRWWDDD', 'WWWWWRRRRWWWWWWWWWWWWRRWRRRR'] },
+  { id: 17, era: 5, name: 'Mind the Gap', loop: 19, par: 1,
+    map: [
+      '#########',
+      '#S.o.#..#',
+      '#....#..#',
+      '#f.###a.#',
+      '#######A#',
+      '#######E#',
+      '#########',
+    ],
+    things: [{ t: 'pad', x: 4, y: 1, to: [6,2] }, { t: 'pad', x: 4, y: 2, to: [7,1] }],
+    // fewer lives checked offline: n/a
+    solution: ['DDUURRDRLDDDDDD'] },
+  { id: 18, era: 5, name: 'Red Line', loop: 17, par: 2,
+    map: [
+      '#########',
+      '#S.a##f##',
+      '#.####.##',
+      '#.o..A..#',
+      '######.##',
+      '######E##',
+      '#########',
+    ],
+    things: [{ t: 'laser', x: 8, y: 3, dir: 'L' }],
+    // fewer lives checked offline: 1 (18 states)
+    proof: [{ k: 1, states: 18 }],
+    solution: ['WWRR', 'DDRRRRRUUDDDD'] },
+  { id: 19, era: 5, name: 'Relay', loop: 34, par: 2,
+    map: [
+      '#############',
+      '#S.a....o..f#',
+      '#.###########',
+      '#.....A.....#',
+      '#.###########',
+      '#..CC..b#####',
+      '#.###.#######',
+      '#d###..DE####',
+      '#############',
+    ],
+    things: [{ t: 'laser', x: 12, y: 3, dir: 'L' }, { t: 'receiver', x: 0, y: 3, ch: 'c' }, { t: 'laser', x: 6, y: 6, dir: 'L', offCh: 'b' }, { t: 'pad', x: 10, y: 1, to: [7,5] }],
+    // fewer lives checked offline: 1 (92 states)
+    proof: [{ k: 1, states: 92 }],
+    solution: ['RRRRRRRRRRLLLLLLLLWLLDDDDDD', 'WWWWWWWWWWWWWWDDDDRRRWWRDDRRR'] },
+  { id: 20, era: 5, name: 'Midnight', loop: 24, par: 5, bestKnown: true,
+    map: [
+      '#############',
+      '######S######',
+      '##f###..>>>v#',
+      '#......####v#',
+      '####a#.####d#',
+      '######.######',
+      '######...#..#',
+      '#b.....####c#',
+      '##A#.#.######',
+      '##.#.#.#.#.##',
+      '######.ABCDE#',
+      '#######.#.###',
+      '#############',
+    ],
+    things: [{ t: 'scarab', x: 7, y: 11, dir: 'U', len: 2 }, { t: 'vent', x: 8, y: 9, period: 3, on: 1, phase: 0 }, { t: 'scarab', x: 9, y: 11, dir: 'U', len: 2 }, { t: 'vent', x: 10, y: 9, period: 3, on: 1, phase: 1 }, { t: 'scarab', x: 1, y: 3, dir: 'R', len: 3 }, { t: 'hound', x: 2, y: 9 }, { t: 'laser', x: 12, y: 6, dir: 'L', offCh: 'a' }, { t: 'pad', x: 8, y: 6, to: [10,6] }],
+    // fewer lives checked offline: 1 (3248 states), 2 (221537 states), 3 (11338440 states)
+    proof: [{ k: 1, states: 3248 }, { k: 2, states: 221537 }, { k: 3, states: 11338440 }],
+    solution: ['WWDDLLLLUWWDRRD', 'DDDDDDLLLLL', 'DRRRD', 'WWWWWWWWDDDDDRRRD', 'WWWWWWDDDDDDDDDRRRRR'] },
+];
+if (typeof module !== 'undefined') module.exports = TIMECAT_LEVELS; else globalThis.TIMECAT_LEVELS = TIMECAT_LEVELS;
+
+})();
+
+(function () {
+// Fast exhaustive solver for Timecat. Same rules as timecat-core.js step(), rewritten over typed arrays
+// with a compact hash table so that searches of tens of millions of states fit in memory.
+// Checked against the core step by fastcheck.js on random play.
+'use strict';
+const C = typeof require !== 'undefined' ? require('./timecat-core.js') : globalThis.TimecatCore;
+
+function engine(L, k, usesTick) {
+  const W = L.w, N = L.n, m = L.crates.length, ns = L.scarabs.length, nh = L.hounds.length, nd = L.doors.length;
+  if (nd > 31) throw new Error('too many doors');
+  const D = { U: -W, D: W, L: -1, R: 1, W: 0 };
+  const ACT = 'WUDLR', AD = [0, -W, W, -1, 1];
+  const solid = L.solid, doorAt = L.doorAt, plate = L.plate, pad = L.pad, leverAt = L.leverAt, recvAt = L.recvAt;
+  const beltD = new Int32Array(N); for (let i = 0; i < N; i++) beltD[i] = L.belt[i] ? D[L.belt[i]] : 0;
+  const doorI = L.doors.map(d => d.i), doorCh = L.doors.map(d => d.ch);
+  const tracks = L.scarabs.map(s => s.track);
+  const vents = L.vents, lasers = L.lasers.map(z => ({ i: z.i, d: D[z.dir], off: z.off })), receivers = L.receivers;
+  const nbr4 = [-W, W, -1, 1];
+  // state layout in an Int32Array
+  const oCat = 0, oCr = k, oLev = k + m, oSk = oLev + 1, oSd = oSk + ns, oHd = oSd + ns, oOpen = oHd + nh, oLit = oOpen + 1, oFish = oLit + 1, LEN = oFish + 1;
+  const KL = k + m + 1 + ns + nh + 4 + 1 + 1 + 1; // key bytes, last byte is the phase
+  const P = L.phasePeriod;
+  const cats0 = new Int32Array(k), crate0 = new Int32Array(m), scOld = new Int32Array(ns), scNew = new Int32Array(ns), hdOld = new Int32Array(nh), arrived = new Uint8Array(k);
+  const steamG = new Int32Array(N), beamG = new Int32Array(N); let gen = 0;
+  let open = 0;
+  const S = new Int32Array(LEN);
+  const doorShut = i => { const d = doorAt[i]; return d >= 0 && !((open >>> d) & 1); };
+  const crateAt = i => { for (let n = 0; n < m; n++) if (S[oCr + n] === i) return true; return false; };
+  const catAt = i => { for (let c = 0; c < k; c++) if (S[oCat + c] === i) return true; return false; };
+  const houndAt = i => { for (let n = 0; n < nh; n++) if (S[oHd + n] === i) return true; return false; };
+  const scarabAt = i => { for (let n = 0; n < ns; n++) if (tracks[n][S[oSk + n]] === i) return true; return false; };
+  const crateFree = i => !solid[i] && !doorShut(i) && !crateAt(i) && !catAt(i) && !houndAt(i) && !scarabAt(i);
+  let ch = 0;
+  function settle() {
+    let c2 = S[oLev] | S[oLit];
+    for (let c = 0; c < k; c++) { const p = S[oCat + c]; if (p >= 0) c2 |= plate[p]; }
+    for (let n = 0; n < m; n++) c2 |= plate[S[oCr + n]];
+    ch = c2;
+    let o = 0;
+    for (let n = 0; n < nd; n++) { const i = doorI[n]; if ((c2 & doorCh[n]) || catAt(i) || crateAt(i) || houndAt(i) || scarabAt(i)) o |= 1 << n; }
+    open = o; S[oOpen] = o;
+  }
+  function statics(t) {
+    gen++;
+    for (const v of vents) {
+      if ((t + v.phase) % v.period >= v.on || crateAt(v.i)) continue;
+      steamG[v.i] = gen;
+      for (const d of nbr4) { const j = v.i + d; if (!solid[j] && !doorShut(j)) steamG[j] = gen; }
+    }
+    let lit = 0;
+    for (const z of lasers) {
+      if (z.off && (ch & z.off)) continue;
+      for (let j = z.i + z.d; ; j += z.d) {
+        if (recvAt[j] >= 0) { lit |= receivers[recvAt[j]].ch; break; }
+        if (solid[j] || crateAt(j) || doorShut(j)) break;
+        beamG[j] = gen;
+      }
+    }
+    S[oLit] = lit;
+  }
+  // one tick, in place on S; acts holds action indices into ACT
+  function step(t, acts) {
+    open = S[oOpen];
+    for (let c = 0; c < k; c++) cats0[c] = S[oCat + c];
+    for (let n = 0; n < m; n++) crate0[n] = S[oCr + n];
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c], a = acts[c];
+      if (p < 0 || a === 0) continue;
+      const q = p + AD[a];
+      if (solid[q] || doorShut(q)) continue;
+      let ci = -1; for (let n = 0; n < m; n++) if (S[oCr + n] === q) { ci = n; break; }
+      if (ci >= 0) { const r = q + AD[a]; if (!crateFree(r)) continue; S[oCr + ci] = r; }
+      S[oCat + c] = q;
+    }
+    if (m) {
+      let done = 0;
+      for (let again = true; again;) {
+        again = false;
+        for (let n = 0; n < m; n++) {
+          const b = beltD[S[oCr + n]];
+          if ((done >> n) & 1 || !b) continue;
+          const q = S[oCr + n] + b;
+          if (crateFree(q)) { S[oCr + n] = q; done |= 1 << n; again = true; }
+        }
+      }
+    }
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c];
+      if (p < 0 || !beltD[p]) continue;
+      const q = p + beltD[p];
+      if (!solid[q] && !doorShut(q) && !crateAt(q)) S[oCat + c] = q;
+    }
+    for (let n = 0; n < m; n++) { const p = S[oCr + n]; if (p !== crate0[n] && pad[p] >= 0 && crateFree(pad[p])) S[oCr + n] = pad[p]; }
+    for (let c = 0; c < k; c++) {
+      arrived[c] = 0; const p = S[oCat + c];
+      if (p < 0 || p === cats0[c]) continue;
+      arrived[c] = 1;
+      if (pad[p] >= 0 && !crateAt(pad[p])) S[oCat + c] = pad[p];
+    }
+    for (let c = 0; c < k; c++) if (arrived[c] && S[oCat + c] >= 0) S[oLev] ^= leverAt[S[oCat + c]];
+    settle();
+    for (let n = 0; n < ns; n++) {
+      const tr = tracks[n], ok = kk => kk >= 0 && kk < tr.length && !crateAt(tr[kk]) && !doorShut(tr[kk]);
+      scOld[n] = tr[S[oSk + n]];
+      if (!ok(S[oSk + n] + S[oSd + n])) S[oSd + n] = -S[oSd + n];
+      if (ok(S[oSk + n] + S[oSd + n])) S[oSk + n] += S[oSd + n];
+      scNew[n] = tr[S[oSk + n]];
+    }
+    for (let n = 0; n < nh; n++) hdOld[n] = S[oHd + n];
+    if (t % 2 === 0) {
+      for (let n = 0; n < nh; n++) {
+        const hp = S[oHd + n], hx = hp % W, hy = (hp / W) | 0;
+        let best = -1, bd = 1e9;
+        for (let c = 0; c < k; c++) { const p = S[oCat + c]; if (p < 0) continue; const d = Math.abs((p % W) - hx) + Math.abs(((p / W) | 0) - hy); if (d < bd) { bd = d; best = p; } }
+        if (best < 0 || bd === 0) continue;
+        const dx = (best % W) - hx, dy = ((best / W) | 0) - hy;
+        const mx = dx ? (dx > 0 ? 1 : -1) : 0, my = dy ? (dy > 0 ? W : -W) : 0;
+        const first = Math.abs(dx) >= Math.abs(dy) ? mx : my, second = Math.abs(dx) >= Math.abs(dy) ? my : mx;
+        for (const mv of [first, second]) {
+          if (!mv) continue;
+          const q = hp + mv;
+          if (solid[q] || doorShut(q) || crateAt(q) || houndAt(q)) continue;
+          S[oHd + n] = q; break;
+        }
+      }
+    }
+    settle();
+    statics(t);
+    for (let c = 0; c < k; c++) {
+      const p = S[oCat + c], p0 = cats0[c];
+      if (p < 0) continue;
+      let hit = steamG[p] === gen || beamG[p] === gen;
+      for (let n = 0; !hit && n < ns; n++) hit = scNew[n] === p || (scNew[n] === p0 && scOld[n] === p && p !== p0);
+      for (let n = 0; !hit && n < nh; n++) hit = S[oHd + n] === p || (S[oHd + n] === p0 && hdOld[n] === p && p !== p0);
+      if (hit) S[oCat + c] = -1;
+    }
+    if (L.fish >= 0 && !S[oFish]) for (let c = 0; c < k; c++) if (S[oCat + c] === L.fish) { S[oFish] = 1; break; }
+  }
+  function encode(out, o, t) {
+    let j = o;
+    for (let c = 0; c < k; c++) out[j++] = S[oCat + c] < 0 ? 255 : S[oCat + c];
+    for (let n = 0; n < m; n++) out[j++] = S[oCr + n];
+    out[j++] = S[oLev];
+    for (let n = 0; n < ns; n++) out[j++] = S[oSk + n] * 2 + (S[oSd + n] > 0 ? 1 : 0);
+    for (let n = 0; n < nh; n++) out[j++] = S[oHd + n];
+    const op = S[oOpen]; out[j++] = op & 255; out[j++] = (op >>> 8) & 255; out[j++] = (op >>> 16) & 255; out[j++] = (op >>> 24) & 255;
+    out[j++] = S[oLit]; out[j++] = S[oFish]; out[j++] = usesTick ? t : t % P;
+  }
+  function decode(src, o) {
+    let j = o;
+    for (let c = 0; c < k; c++) { const v = src[j++]; S[oCat + c] = v === 255 ? -1 : v; }
+    for (let n = 0; n < m; n++) S[oCr + n] = src[j++];
+    S[oLev] = src[j++];
+    for (let n = 0; n < ns; n++) { const v = src[j++]; S[oSk + n] = v >> 1; S[oSd + n] = v & 1 ? 1 : -1; }
+    for (let n = 0; n < nh; n++) S[oHd + n] = src[j++];
+    S[oOpen] = src[j] | (src[j + 1] << 8) | (src[j + 2] << 16) | (src[j + 3] << 24); j += 4;
+    S[oLit] = src[j++]; S[oFish] = src[j++];
+  }
+  function fromCore(s) {
+    for (let c = 0; c < k; c++) S[oCat + c] = s.cats[c];
+    for (let n = 0; n < m; n++) S[oCr + n] = s.crates[n];
+    S[oLev] = s.lev;
+    for (let n = 0; n < ns; n++) { S[oSk + n] = s.sc[n].k; S[oSd + n] = s.sc[n].d; }
+    for (let n = 0; n < nh; n++) S[oHd + n] = s.hd[n];
+    S[oOpen] = s.open; S[oLit] = s.lit; S[oFish] = s.fish ? 1 : 0;
+  }
+  return { S, step, encode, decode, fromCore, KL, LEN, ACT, AD, live: () => S[oCat + k - 1], fish: () => S[oFish], oCat, P };
+}
+
+// Exhaustive breadth-first search over every combination of inputs for k cats.
+// Returns { found, ticks, lives (when found and keepPath), states, complete }.
+function solve(L, k, opts = {}) {
+  const needFish = !!opts.needFish, maxStates = opts.maxStates || 40e6, keep = opts.keepPath !== false, log = opts.log;
+  const fixed = opts.fixed || null;
+  const E = engine(L, k, !!fixed), KL = E.KL;
+  let cap = 1 << 20, keys = new Uint8Array(cap * KL), par = keep ? new Int32Array(cap) : null, actc = keep ? new Int32Array(cap) : null;
+  let tbits = 21, tsize = 1 << tbits, table = new Int32Array(tsize), count = 0;
+  const tmp = new Uint8Array(KL);
+  const hash = (b, o) => { let h = 2166136261; for (let i = 0; i < KL; i++) { h ^= b[o + i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+  function grow() {
+    const nc = cap * 2, nk = new Uint8Array(nc * KL); nk.set(keys); keys = nk;
+    if (keep) { const np = new Int32Array(nc); np.set(par); par = np; const na = new Int32Array(nc); na.set(actc); actc = na; }
+    cap = nc;
+  }
+  function rehash() {
+    tbits++; tsize = 1 << tbits; table = new Int32Array(tsize);
+    for (let s = 0; s < count; s++) { let h = hash(keys, s * KL) & (tsize - 1); while (table[h]) h = (h + 1) & (tsize - 1); table[h] = s + 1; }
+  }
+  function insert(b, from, ac) { // returns new index, or -1 if already seen
+    let h = hash(b, 0) & (tsize - 1);
+    for (;;) {
+      const e = table[h];
+      if (!e) break;
+      const o = (e - 1) * KL; let same = true;
+      for (let i = 0; i < KL; i++) if (keys[o + i] !== b[i]) { same = false; break; }
+      if (same) return -1;
+      h = (h + 1) & (tsize - 1);
+    }
+    if (count >= cap) grow();
+    keys.set(b, count * KL); if (keep) { par[count] = from; actc[count] = ac; }
+    table[h] = count + 1; count++;
+    if (count * 2 > tsize) rehash();
+    return count - 1;
+  }
+  const s0 = C.initialState(L, k);
+  E.fromCore(s0); E.encode(tmp, 0, 0); insert(tmp, -1, 0);
+  let lo = 0, hi = 1;
+  const acts = new Int32Array(k), opts5 = [], nopt = new Int32Array(k), idx = new Int32Array(k);
+  for (let c = 0; c < k; c++) opts5.push(new Int32Array(5));
+  const extract = (s, t) => {
+    const lives = new Array(k).fill('');
+    for (let q = s; q > 0; q = par[q]) { let a = actc[q]; const col = []; for (let c = 0; c < k; c++) { col.push(E.ACT[a % 5]); a = Math.floor(a / 5); } for (let c = 0; c < k; c++) lives[c] = col[c] + lives[c]; }
+    return lives.map((v, i) => (i < k - 1 ? v.replace(/W+$/, '') : v));
+  };
+  for (let t = 0; t < L.loop && lo < hi; t++) {
+    for (let s = lo; s < hi; s++) {
+      E.decode(keys, s * KL);
+      if (E.live() === L.exit) continue; // the room is over once the live cat reaches the flap
+      const base = E.S.slice();
+      for (let c = 0; c < k; c++) {
+        const p = base[E.oCat + c]; let n = 0;
+        if (fixed && fixed[c] != null) { opts5[c][n++] = Math.max(0, E.ACT.indexOf(fixed[c][t] || 'W')); nopt[c] = n; idx[c] = 0; continue; }
+        opts5[c][n++] = 0;
+        if (p >= 0) for (let a = 1; a < 5; a++) if (!L.solid[p + E.AD[a]]) opts5[c][n++] = a;
+        nopt[c] = n; idx[c] = 0;
+      }
+      for (;;) {
+        let code = 0, mul = 1;
+        for (let c = 0; c < k; c++) { acts[c] = opts5[c][idx[c]]; code += acts[c] * mul; mul *= 5; }
+        E.S.set(base);
+        E.step(t + 1, acts);
+        const lp = E.live();
+        if (lp >= 0) {
+          E.encode(tmp, 0, t + 1);
+          const ni = insert(tmp, s, code);
+          if (ni >= 0) {
+            if (lp === L.exit && (!needFish || E.fish())) return { found: true, ticks: t + 1, lives: keep ? extract(ni, t + 1) : null, states: count, complete: true };
+            if (count >= maxStates) return { found: false, states: count, complete: false };
+          }
+        }
+        let c = 0;
+        while (c < k && ++idx[c] === nopt[c]) idx[c++] = 0;
+        if (c === k) break;
+      }
+    }
+    lo = hi; hi = count;
+    if (log) log(t + 1, count);
+  }
+  return { found: false, states: count, complete: true };
+}
+if (typeof module !== 'undefined') module.exports = { engine, solve }; else globalThis.TimecatFast = { engine, solve };
+
+})();
+
+(function () {
+'use strict';
+// ===== Art: palettes, pixel font, sprites, tile painters. Everything is drawn in code. =====
+const T = 16; // tile size in art pixels
+
+const ERAS = [null,
+  { name: 'The Workshop', when: 'Tonight', prize: 'Hour Hand', bg: '#2b1d16', main: '#c98f4a', accent: '#f2d9a0', floor: '#7d5631', floor2: '#6c4829', wall: '#45301f', wall2: '#5b4029' },
+  { name: 'Thebes', when: '1300 BC', prize: 'Minute Hand', bg: '#3a2a14', main: '#e3c078', accent: '#2aa198', floor: '#bb9a5c', floor2: '#a98a50', wall: '#634a26', wall2: '#806235' },
+  { name: 'The Castle', when: '1348', prize: 'Second Hand', bg: '#22262c', main: '#7b8794', accent: '#e07b39', floor: '#5b6470', floor2: '#4f5863', wall: '#343a43', wall2: '#474f5a' },
+  { name: 'The Mill', when: '1888', prize: 'Pendulum', bg: '#2a1a17', main: '#8c3b2e', accent: '#dfe6e9', floor: '#74514a', floor2: '#66463f', wall: '#4a2620', wall2: '#8c3b2e' },
+  { name: 'The Station', when: '2999', prize: 'Winding Key', bg: '#0e1430', main: '#5ad1e6', accent: '#ff4d6d', floor: '#2b3763', floor2: '#243058', wall: '#161d42', wall2: '#33407a' },
+];
+const CHAN = { 1: '#f5b942', 2: '#45d6b5', 4: '#b79bff', 8: '#ff7fb0' };
+const CHAN_DIM = { 1: '#8a6420', 2: '#22725f', 4: '#5e4c94', 8: '#8f3f5f' };
+const ECHO = '#7fd4ff';
+
+// ----- 5x7 pixel font (capitals, digits, a little punctuation) -----
+const FONT = {};
+(function () {
+  const G = {
+    A: '.###./#...#/#...#/#####/#...#/#...#/#...#', B: '####./#...#/#...#/####./#...#/#...#/####.', C: '.###./#...#/#..../#..../#..../#...#/.###.',
+    D: '####./#...#/#...#/#...#/#...#/#...#/####.', E: '#####/#..../#..../####./#..../#..../#####', F: '#####/#..../#..../####./#..../#..../#....',
+    G: '.###./#...#/#..../#.###/#...#/#...#/.###.', H: '#...#/#...#/#...#/#####/#...#/#...#/#...#', I: '.###./..#../..#../..#../..#../..#../.###.',
+    J: '..###/...#./...#./...#./...#./#..#./.##..', K: '#...#/#..#./#.#../##.../#.#../#..#./#...#', L: '#..../#..../#..../#..../#..../#..../#####',
+    M: '#...#/##.##/#.#.#/#.#.#/#...#/#...#/#...#', N: '#...#/##..#/#.#.#/#..##/#...#/#...#/#...#', O: '.###./#...#/#...#/#...#/#...#/#...#/.###.',
+    P: '####./#...#/#...#/####./#..../#..../#....', Q: '.###./#...#/#...#/#...#/#.#.#/#..#./.##.#', R: '####./#...#/#...#/####./#.#../#..#./#...#',
+    S: '.####/#..../#..../.###./....#/....#/####.', T: '#####/..#../..#../..#../..#../..#../..#..', U: '#...#/#...#/#...#/#...#/#...#/#...#/.###.',
+    V: '#...#/#...#/#...#/#...#/#...#/.#.#./..#..', W: '#...#/#...#/#...#/#.#.#/#.#.#/##.##/#...#', X: '#...#/#...#/.#.#./..#../.#.#./#...#/#...#',
+    Y: '#...#/#...#/.#.#./..#../..#../..#../..#..', Z: '#####/....#/...#./..#../.#.../#..../#####',
+    0: '.###./#...#/#..##/#.#.#/##..#/#...#/.###.', 1: '..#../.##../..#../..#../..#../..#../.###.', 2: '.###./#...#/....#/...#./..#../.#.../#####',
+    3: '####./....#/....#/.###./....#/....#/####.', 4: '...#./..##./.#.#./#..#./#####/...#./...#.', 5: '#####/#..../####./....#/....#/#...#/.###.',
+    6: '.###./#..../#..../####./#...#/#...#/.###.', 7: '#####/....#/...#./..#../..#../..#../..#..', 8: '.###./#...#/#...#/.###./#...#/#...#/.###.',
+    9: '.###./#...#/#...#/.####/....#/....#/.###.', ' ': '...../...../...../...../...../...../.....',
+    '.': '...../...../...../...../...../.##../.##..', ',': '...../...../...../...../.##../..#../.#...', '!': '..#../..#../..#../..#../..#../...../..#..',
+    '?': '.###./#...#/....#/...#./..#../...../..#..', "'": '..#../..#../...../...../...../...../.....', '-': '...../...../...../.###./...../...../.....',
+    ':': '...../.##../.##../...../.##../.##../.....', '/': '....#/....#/...#./..#../.#.../#..../#....',
+  };
+  for (const k in G) FONT[k] = G[k].split('/');
+})();
+const textW = (str, sc) => str.length * 6 * sc - sc;
+function pixText(g, str, x, y, sc, color, align) {
+  str = String(str).toUpperCase();
+  if (align === 'center') x -= Math.round(textW(str, sc) / 2);
+  else if (align === 'right') x -= textW(str, sc);
+  g.fillStyle = color;
+  for (let i = 0; i < str.length; i++) {
+    const gl = FONT[str[i]] || FONT['?'];
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if (gl[r][c] === '#') g.fillRect(x + (i * 6 + c) * sc, y + r * sc, sc, sc);
+  }
+}
+// A heading drawn in the pixel font, for HTML screens.
+function pixHeading(text, sc, color) {
+  const c = document.createElement('canvas');
+  c.width = textW(text, 1); c.height = 7;
+  pixText(c.getContext('2d'), text, 0, 0, 1, color);
+  c.style.width = c.width * sc + 'px'; c.style.height = 7 * sc + 'px';
+  c.className = 'pix'; c.setAttribute('role', 'img'); c.setAttribute('aria-label', text);
+  return c;
+}
+const DIG3 = { 1: '.#./##./.#./.#./###', 2: '##./..#/.#./#../###', 3: '##./..#/.#./..#/##.', 4: '#.#/#.#/###/..#/..#', 5: '###/#../##./..#/##.', 6: '.##/#../###/#.#/###', 7: '###/..#/.#./.#./.#.', 8: '###/#.#/###/#.#/###', 9: '###/#.#/###/..#/##.' };
+function tinyDigit(g, d, x, y, color) {
+  const rows = DIG3[d].split('/');
+  g.fillStyle = color;
+  rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === '#') g.fillRect(x + i, y + j, 1, 1); }));
+}
+
+// ----- sprites -----
+function sprite(rows, pal, outline) {
+  const c = document.createElement('canvas');
+  c.width = rows[0].length; c.height = rows.length;
+  const g = c.getContext('2d');
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
+  if (outline) {
+    const w = c.width, h = c.height, solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && pal[rows[y][x]];
+    g.fillStyle = outline;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!solid(x, y) && (solid(x + 1, y) || solid(x - 1, y) || solid(x, y + 1) || solid(x, y - 1))) g.fillRect(x, y, 1, 1);
+    }
+  }
+  return c;
+}
+function flipped(src) {
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d'); g.translate(src.width, 0); g.scale(-1, 1); g.drawImage(src, 0, 0);
+  return c;
+}
+function tinted(src, color, amount) {
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d'); g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = 'source-atop'; g.globalAlpha = amount; g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+const CAT_PAL = { k: '#1c1b26', g: '#b9f26d', p: '#f08aa0', w: '#f4efe4', y: '#e2aa3f', d: '#6d6c80' };
+const CAT_ROWS = {
+  sideA: ['................', '................', '..........k...k.', '..........kk.kk.', '.k........kkkkk.', '.k........kgkgk.', '.k........kkkkp.', '.kk......kkwwk..', '..kkkkkkkkkwy...', '..kkkkkkkkkkw...', '..kkkkkkkkkkk...', '..kkkkkkkkkkk...', '..kk.kk..kk.kk..', '..ww.ww..ww.ww..', '................', '................'],
+  sideB: ['................', '................', '..........k...k.', '..........kk.kk.', '..k.......kkkkk.', '.k........kgkgk.', '.k........kkkkp.', '.kk......kkwwk..', '..kkkkkkkkkwy...', '..kkkkkkkkkkw...', '..kkkkkkkkkkk...', '..kkkkkkkkkkk...', '...kkkk..kkkk...', '....ww....ww....', '................', '................'],
+  frontA: ['................', '................', '....k......k....', '....kk....kk....', '....kkkkkkkk....', '....kgkkkkgk....', '....kkkppkkk....', '....kkwwwwkk....', '.....kwwwwk.....', '....kkkyykkk....', '...kkkkwwkkkk...', '...kkkkwwkkkk...', '...kkkkkkkkkk...', '...kk.kkkk.kk...', '...ww.w..w.ww...', '................'],
+  frontB: ['................', '................', '....k......k....', '....kk....kk....', '....kkkkkkkk....', '....kgkkkkgk....', '....kkkppkkk....', '....kkwwwwkk....', '.....kwwwwk.....', '....kkkyykkk....', '...kkkkwwkkkk...', '...kkkkwwkkkk...', '...kkkkkkkkkk...', '...kkkk..kkkk...', '....ww....ww....', '................'],
+  backA: ['................', '................', '....k......k....', '....kk....kk....', '....kkkkkkkk....', '....kkkkkkkk....', '....kkkkkkkk....', '....kkkkkkkk....', '.....kkkkkk.....', '....kkkkkkkk....', '...kkkkkkkkkk...', '...kkkkkkkkkk.k.', '...kkkkkkkkkkk..', '...kk.kkkk.kk...', '...ww.w..w.ww...', '................'],
+  backB: ['................', '................', '....k......k....', '....kk....kk....', '....kkkkkkkk....', '....kkkkkkkk....', '....kkkkkkkk....', '....kkkkkkkk....', '.....kkkkkk.....', '....kkkkkkkk....', '...kkkkkkkkkk...', '...kkkkkkkkkkk..', '...kkkkkkkkkk.k.', '...kkkk..kkkk...', '....ww....ww....', '................'],
+  nap: ['................', '................', '................', '................', '................', '................', '................', '.....kkkkkk.k.k.', '...kkkkkkkkkkkk.', '..kkkkkkkkkkkkk.', '.kkkkkkkkkkkddk.', '.kkkkkkkkkkkkkp.', '.kwwkkkkkkkkkk..', '..kkkkkkkkkkk...', '................', '................'],
+};
+const SPR = {};
+function buildSprites() {
+  const rim = 'rgba(255,246,224,0.6)';
+  const mk = rows => sprite(rows, CAT_PAL, rim);
+  const sA = mk(CAT_ROWS.sideA), sB = mk(CAT_ROWS.sideB);
+  SPR.cat = { R: [sA, sB], L: [flipped(sA), flipped(sB)], D: [mk(CAT_ROWS.frontA), mk(CAT_ROWS.frontB)], U: [mk(CAT_ROWS.backA), mk(CAT_ROWS.backB)], nap: mk(CAT_ROWS.nap) };
+  SPR.echo = {};
+  for (const k of ['R', 'L', 'D', 'U']) SPR.echo[k] = SPR.cat[k].map(c => tinted(c, ECHO, 0.72));
+  SPR.echo.nap = tinted(SPR.cat.nap, ECHO, 0.72);
+  SPR.scarab = sprite(['................', '................', '.....o....o.....', '......o..o......', '..o...dddd...o..', '...o.dssssd.o...', '....dsshhssd....', '..oodssddssdoo..', '....dssddssd....', '....dssddssd....', '...odssddssdo...', '..o..dssssd..o..', '......dddd......', '................', '................', '................'],
+    { o: '#e3c078', d: '#0d4f4a', s: '#2aa198', h: '#8ff0e0' });
+  const hound = sprite(['................', '................', '...........nn...', '..........bbbb..', '.n........bbebk.', '.n.......bbbbbk.', '..b.....rrbbww..', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '..bbbbbbbbbb....', '..bb.bb..bb.bb..', '..bb.bb..bb.bb..', '..nn.nn..nn.nn..', '................', '................'],
+    { b: '#9a6238', n: '#4f2f1c', e: '#fff7e0', k: '#1a1410', r: '#d83a3a', w: '#f4efe4' }, 'rgba(0,0,0,0.5)');
+  SPR.hound = { R: hound, L: flipped(hound) };
+  SPR.fish = sprite(['.............', '...ff.....f..', '..fffff..ff..', '.fkfffffffb..', '.ffbbbbbfff..', '..bbbbb..ff..', '...bb.....f..', '.............'], { f: '#8fd8ee', b: '#d9f3fa', k: '#16202a' }, 'rgba(0,0,0,0.45)');
+  SPR.fishGrey = tinted(SPR.fish, '#3b3b46', 0.85);
+  SPR.urn = sprite(['................', '................', '.....uuuuuu.....', '......uuuu......', '.....uuuuuu.....', '....uuhhhhuu....', '...uuhuuuuuuu...', '...uuuuuuuuuu...', '...uttttttttu...', '...uuuuuuuuuu...', '...uuuuuuuuuu...', '....uuuuuuuu....', '.....uuuuuu.....', '......uuuu......', '.....uuuuuu.....', '................'],
+    { u: '#c8743c', h: '#e9a070', t: '#2aa198' }, 'rgba(0,0,0,0.5)');
+  SPR.crate = sprite(['................', '................', '..dddddddddddd..', '..dbbbbbbbbbbd..', '..dbdbbbbbbdbd..', '..dbbdbbbbdbbd..', '..dbbbdbbdbbbd..', '..dbbbbddbbbbd..', '..dbbbbddbbbbd..', '..dbbbdbbdbbbd..', '..dbbdbbbbdbbd..', '..dbdbbbbbbdbd..', '..dbbbbbbbbbbd..', '..dddddddddddd..', '................', '................'],
+    { d: '#5a3a1c', b: '#b98a4e' }, 'rgba(0,0,0,0.45)');
+  SPR.head = sprite(['#.....#', '##...##', '#######', '#.###.#', '#######', '.#####.'], { '#': '#ffffff' });
+  SPR.paw = sprite(['..#.#.#..', '.##.#.##.', '.##...##.', '...###...', '..#####..', '.#######.', '.#######.', '..##.##..'], { '#': '#ffffff' });
+  const shapes = { 1: ['.####.', '##..##', '#....#', '#....#', '##..##', '.####.'], 2: ['..##..', '..##..', '.####.', '.####.', '######', '######'], 4: ['######', '######', '######', '######', '######', '######'], 8: ['..##..', '.####.', '######', '######', '.####.', '..##..'] };
+  SPR.shape = {}; SPR.shapeDim = {}; SPR.shapeDark = {};
+  for (const ch of [1, 2, 4, 8]) {
+    SPR.shape[ch] = sprite(shapes[ch], { '#': CHAN[ch] });
+    SPR.shapeDim[ch] = sprite(shapes[ch], { '#': CHAN_DIM[ch] });
+    SPR.shapeDark[ch] = sprite(shapes[ch], { '#': 'rgba(0,0,0,0.55)' });
+  }
+}
+
+// ----- low-level helpers -----
+const R = (g, c, x, y, w, h) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+function disc(g, cx, cy, r, color) {
+  g.fillStyle = color;
+  for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(r * r - y * y)); g.fillRect(cx - w, cy + y, w * 2 + 1, 1); }
+}
+function pixLine(g, x0, y0, x1, y1, color) {
+  g.fillStyle = color;
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  for (let e = dx + dy, n = 0; n < 400; n++) {
+    g.fillRect(x0, y0, 1, 1);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+const hash2 = (x, y) => { let h = (x * 374761393 + y * 668265263) ^ 0x5bd1e995; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+
+// ----- the unchanging layer of a room: floors and walls -----
+function paintStatic(L, era) {
+  const E = ERAS[era], c = document.createElement('canvas');
+  c.width = L.w * T; c.height = L.h * T;
+  const g = c.getContext('2d');
+  R(g, E.bg, 0, 0, c.width, c.height);
+  const isWall = (x, y) => x < 0 || y < 0 || x >= L.w || y >= L.h || L.def.map[y][x] === '#';
+  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+    const px = x * T, py = y * T;
+    if (!isWall(x, y)) {
+      R(g, E.floor, px, py, T, T);
+      if (era === 1) { R(g, E.floor2, px, py + 7, T, 1); R(g, E.floor2, px, py + 15, T, 1); R(g, E.floor2, px + ((x * 5 + y * 3) % 12) + 2, py, 1, 7); R(g, E.floor2, px + ((x * 7 + y * 5) % 12) + 2, py + 8, 1, 7); }
+      else if (era === 2) { R(g, E.floor2, px, py + 15, T, 1); R(g, E.floor2, px + (y % 2 ? 7 : 15), py, 1, T); }
+      else if (era === 3) { R(g, E.floor2, px, py + 15, T, 1); R(g, E.floor2, px + 15, py, 1, T); if (hash2(x, y) > 0.6) pixLine(g, px + 3, py + 4, px + 7, py + 9, E.floor2); }
+      else if (era === 4) { for (let j = 3; j < T; j += 4) R(g, E.floor2, px, py + j, T, 1); R(g, E.floor2, px + 7, py, 1, 4); R(g, E.floor2, px + 15, py + 4, 1, 4); R(g, E.floor2, px + 7, py + 8, 1, 4); R(g, E.floor2, px + 15, py + 12, 1, 4); }
+      else { R(g, E.floor2, px, py, T, 1); R(g, E.floor2, px, py, 1, T); R(g, E.wall2, px + 2, py + 2, 1, 1); R(g, E.wall2, px + 13, py + 13, 1, 1); }
+      for (let n = 0; n < 2; n++) { const hx = hash2(x * 3 + n, y * 7), hy = hash2(x * 11, y * 5 + n); R(g, 'rgba(0,0,0,0.10)', px + 1 + Math.floor(hx * 13), py + 1 + Math.floor(hy * 13), 1, 1); }
+      if (isWall(x, y - 1)) R(g, 'rgba(0,0,0,0.28)', px, py, T, 3); // shadow under the wall above
+      if (isWall(x - 1, y)) R(g, 'rgba(0,0,0,0.14)', px, py, 2, T);
+    } else {
+      let near = false;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!isWall(x + dx, y + dy)) near = true;
+      if (!near) continue;
+      R(g, E.wall, px, py, T, T);
+      for (let j = 0; j < T; j += 4) { R(g, 'rgba(0,0,0,0.15)', px, py + j + 3, T, 1); R(g, 'rgba(0,0,0,0.15)', px + ((j / 4) % 2 ? 4 : 11), py + j, 1, 3); }
+      if (!isWall(x, y + 1)) { R(g, E.wall2, px, py + 11, T, 5); R(g, 'rgba(255,255,255,0.10)', px, py + 11, T, 1); for (let i = 3; i < T; i += 6) R(g, 'rgba(0,0,0,0.25)', px + i, py + 12, 1, 4); }
+      if (!isWall(x, y - 1)) R(g, 'rgba(255,255,255,0.08)', px, py, T, 1);
+    }
+  }
+  return c;
+}
+
+// ----- things that change -----
+function drawShape(g, set, ch, x, y) { g.drawImage(set[ch], x + 5, y + 5); }
+function drawPlate(g, x, y, ch, down) {
+  R(g, 'rgba(0,0,0,0.45)', x + 1, y + 1, 14, 14);
+  R(g, down ? '#3a3a44' : '#8d8d9a', x + 2, y + 2, 12, 12);
+  R(g, down ? '#2c2c35' : '#b9b9c6', x + 2, y + 2, 12, 1);
+  R(g, down ? '#2c2c35' : '#5c5c68', x + 2, y + 13, 12, 1);
+  drawShape(g, down ? SPR.shape : SPR.shapeDark, ch, x, y + (down ? 0 : -1));
+  if (!down) g.drawImage(SPR.shapeDim[ch], x + 5, y + 4);
+  else { g.globalAlpha = 0.25; R(g, CHAN[ch], x + 2, y + 2, 12, 12); g.globalAlpha = 1; drawShape(g, SPR.shape, ch, x, y); }
+}
+function drawDoor(g, x, y, ch, open) {
+  if (open) {
+    R(g, 'rgba(0,0,0,0.25)', x, y, T, T);
+    R(g, CHAN_DIM[ch], x, y, 2, T); R(g, CHAN_DIM[ch], x + 14, y, 2, T);
+    R(g, CHAN[ch], x, y, 2, 2); R(g, CHAN[ch], x + 14, y, 2, 2); R(g, CHAN[ch], x, y + 14, 2, 2); R(g, CHAN[ch], x + 14, y + 14, 2, 2);
+    g.globalAlpha = 0.35; drawShape(g, SPR.shape, ch, x, y); g.globalAlpha = 1;
+  } else {
+    R(g, '#15151b', x, y, T, T);
+    R(g, CHAN_DIM[ch], x + 1, y + 1, 14, 14);
+    R(g, 'rgba(255,255,255,0.18)', x + 1, y + 1, 14, 1); R(g, 'rgba(0,0,0,0.3)', x + 1, y + 14, 14, 1);
+    R(g, 'rgba(0,0,0,0.3)', x + 7, y + 1, 2, 14);
+    R(g, '#15151b', x + 4, y + 4, 8, 8);
+    drawShape(g, SPR.shape, ch, x, y);
+  }
+}
+function drawLever(g, x, y, ch, on) {
+  R(g, 'rgba(0,0,0,0.4)', x + 2, y + 10, 12, 5);
+  R(g, '#6e6e7a', x + 3, y + 10, 10, 4); R(g, '#9a9aa6', x + 3, y + 10, 10, 1);
+  const tx = on ? 12 : 3;
+  pixLine(g, x + 7, y + 11, x + tx, y + 3, '#d8d8e0'); pixLine(g, x + 8, y + 11, x + tx + 1, y + 3, '#8a8a96');
+  R(g, on ? CHAN[ch] : CHAN_DIM[ch], x + tx - 1, y + 1, 4, 4);
+  R(g, on ? '#ffffff' : 'rgba(255,255,255,0.3)', x + tx, y + 2, 1, 1);
+  R(g, on ? CHAN[ch] : CHAN_DIM[ch], x + 6, y + 12, 4, 1);
+}
+function drawBelt(g, x, y, dir, time, still) {
+  R(g, '#23232b', x, y, T, T);
+  const horiz = dir === 'L' || dir === 'R';
+  if (horiz) { R(g, '#4d4d5a', x, y + 1, T, 2); R(g, '#4d4d5a', x, y + 13, T, 2); } else { R(g, '#4d4d5a', x + 1, y, 2, T); R(g, '#4d4d5a', x + 13, y, 2, T); }
+  const off = still ? 0 : Math.floor(time / 90) % 8, sgn = dir === 'R' || dir === 'D' ? 1 : -1;
+  g.save(); g.beginPath(); g.rect(x, y, T, T); g.clip();
+  g.fillStyle = '#c9a23a';
+  const chevron = [[0, 4], [1, 5], [2, 6], [3, 7], [3, 8], [2, 9], [1, 10], [0, 11]];
+  for (let k = -1; k < 3; k++) {
+    const base = k * 8 + sgn * off + (sgn < 0 ? 7 : 0);
+    for (const [i, j2] of chevron) {
+      const a = base + sgn * i;
+      if (horiz) g.fillRect(x + a, y + j2, 1, 1); else g.fillRect(x + j2, y + a, 1, 1);
+    }
+  }
+  g.restore();
+}
+function drawPad(g, x, y, pair, time, still) {
+  const col = ['#b79bff', '#5ad1e6', '#ff9d5c'][pair % 3], ph = still ? 0 : Math.floor(time / 160) % 3;
+  R(g, '#12121a', x + 1, y + 1, 14, 14);
+  for (let i = 0; i < 3; i++) {
+    g.globalAlpha = (i + 3 - ph) % 3 === 0 ? 1 : 0.4;
+    const m = 2 + i * 2, s = T - m * 2;
+    R(g, col, x + m, y + m, s, 1); R(g, col, x + m, y + m + s - 1, s, 1); R(g, col, x + m, y + m, 1, s); R(g, col, x + m + s - 1, y + m, 1, s);
+  }
+  g.globalAlpha = 1; R(g, '#ffffff', x + 7, y + 7, 2, 2);
+}
+function drawVent(g, x, y, v, tick, sealed) {
+  const i = (tick + v.phase) % v.period, on = i < v.on, next = (i + 1) % v.period < v.on;
+  R(g, '#17171d', x + 2, y + 2, 12, 12);
+  R(g, on ? '#f0f4f6' : next ? '#e07b39' : '#55555f', x + 3, y + 3, 10, 10);
+  for (let j = 4; j < 12; j += 2) R(g, '#17171d', x + 4, y + j, 8, 1);
+  if (sealed) return;
+  const n = Math.min(v.period, 6), w = n * 2 - 1, x0 = x + Math.floor((T - w) / 2);
+  R(g, 'rgba(0,0,0,0.6)', x0 - 1, y + 13, w + 2, 3);
+  for (let k = 0; k < n; k++) R(g, k === i ? '#ffffff' : k < v.on ? '#e07b39' : '#6a6a76', x0 + k * 2, y + 14, 1, 1);
+}
+function drawSteam(g, x, y, time, seed) {
+  for (let k = 0; k < 5; k++) {
+    const t = time / 300 + k * 1.7 + seed, px = x + 3 + Math.floor((Math.sin(t * 1.3 + k) * 0.5 + 0.5) * 9), py = y + 12 - Math.floor(((t * 5 + k * 3) % 11));
+    g.globalAlpha = 0.55 + 0.3 * Math.sin(t + k); disc(g, px, py, 2 + (k % 2), '#f0f4f6');
+  }
+  g.globalAlpha = 0.25; R(g, '#f0f4f6', x, y, T, T); g.globalAlpha = 1;
+}
+function drawEmitter(g, x, y, dir, on) {
+  R(g, '#3d3d4a', x + 2, y + 2, 12, 12); R(g, '#62627a', x + 2, y + 2, 12, 2); R(g, '#1c1c24', x + 4, y + 4, 8, 8);
+  const lens = on ? '#ff4d6d' : '#6b2a38', m = { L: [1, 6, 3, 4], R: [12, 6, 3, 4], U: [6, 1, 4, 3], D: [6, 12, 4, 3] }[dir];
+  R(g, lens, x + 6, y + 6, 4, 4); R(g, lens, x + m[0], y + m[1], m[2], m[3]);
+  if (on) R(g, '#ffd0d8', x + 7, y + 7, 1, 1);
+}
+function drawReceiver(g, x, y, ch, lit) {
+  R(g, '#3d3d4a', x + 2, y + 2, 12, 12); R(g, '#62627a', x + 2, y + 2, 12, 2); R(g, '#101016', x + 4, y + 4, 8, 8);
+  if (lit) { g.globalAlpha = 0.5; R(g, CHAN[ch], x + 3, y + 3, 10, 10); g.globalAlpha = 1; }
+  drawShape(g, lit ? SPR.shape : SPR.shapeDim, ch, x, y);
+}
+function drawFlap(g, x, y, E, time, still) {
+  const glow = still ? 0.5 : 0.35 + 0.25 * Math.sin(time / 350);
+  g.globalAlpha = glow; R(g, E.accent, x, y, T, T); g.globalAlpha = 1;
+  R(g, '#3a2414', x + 2, y + 2, 12, 13); R(g, '#3a2414', x + 3, y + 1, 10, 1);
+  R(g, '#0c0a10', x + 4, y + 4, 8, 11); R(g, '#0c0a10', x + 5, y + 3, 6, 1);
+  R(g, E.accent, x + 5, y + 5, 6, 8); R(g, 'rgba(0,0,0,0.25)', x + 5, y + 9, 6, 1);
+  R(g, '#3a2414', x + 7, y + 6, 2, 1);
+}
+function drawStart(g, x, y, E) {
+  g.globalAlpha = 0.5; R(g, E.accent, x + 3, y + 5, 10, 7); g.globalAlpha = 0.8;
+  R(g, E.accent, x + 3, y + 5, 10, 1); R(g, E.accent, x + 3, y + 11, 10, 1); g.globalAlpha = 1;
+}
+
+// ===== Audio: every sound is synthesised with the Web Audio API. =====
+let AC = null, sfxBus = null, musBus = null, noiseBuf = null, musTimer = null, musEra = 0, musStep = 0, musNext = 0;
+function audioOn() {
+  try {
+    if (!AC) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return false;
+      AC = new Ctx();
+      sfxBus = AC.createGain(); sfxBus.connect(AC.destination);
+      musBus = AC.createGain(); musBus.connect(AC.destination);
+      noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      applyVolumes();
+    }
+    if (AC.state === 'suspended') AC.resume();
+    return true;
+  } catch (e) { return false; }
+}
+function applyVolumes() {
+  if (!AC) return;
+  sfxBus.gain.value = save.settings.sound ? 1 : 0;
+  musBus.gain.value = save.settings.music ? 1 : 0;
+}
+function tone(f, d, type, v, t, to, bus) {
+  if (!AC) return;
+  const t0 = AC.currentTime + (t || 0), o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'square'; o.frequency.setValueAtTime(f, t0);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + d);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  o.connect(g); g.connect(bus || sfxBus); o.start(t0); o.stop(t0 + d + 0.02);
+}
+function noise(d, v, freq, kind, t) {
+  if (!AC) return;
+  const t0 = AC.currentTime + (t || 0), s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; s.loop = true; f.type = kind || 'lowpass'; f.frequency.value = freq;
+  g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+  s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t0, Math.random() * 0.5); s.stop(t0 + d + 0.02);
+  return g;
+}
+const NOTE = n => 261.63 * Math.pow(2, n / 12);
+const SFX = {
+  step() { tone(880, 0.05, 'triangle', 0.22, 0, 560); noise(0.02, 0.08, 3000, 'highpass'); },
+  wait() { tone(520, 0.06, 'triangle', 0.2, 0, 360); },
+  bump() { tone(130, 0.08, 'triangle', 0.25, 0, 90); },
+  push() { noise(0.12, 0.16, 500); tone(160, 0.08, 'triangle', 0.14, 0, 110); },
+  loop(n) { const sc = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23, 24]; for (let i = 0; i < 4; i++) tone(NOTE(sc[Math.min(14, n + i * 2)]), 0.14, 'square', 0.1, i * 0.07); },
+  rewind(k) { const f = Math.max(240, 760 - k * 22); tone(f * 0.7, 0.05, 'square', 0.07, 0, f); },
+  click() { tone(1700, 0.02, 'square', 0.08); },
+  thunk(up) { tone(up ? 150 : 100, 0.14, 'triangle', 0.26, 0.16, up ? 95 : 60); noise(0.08, 0.1, 400, 'lowpass', 0.16); },
+  purr() { const g = noise(0.32, 0.22, 260); if (g) for (let i = 0; i < 8; i++) { const t = AC.currentTime + i * 0.04; g.gain.setValueAtTime(0.22, t); g.gain.setValueAtTime(0.06, t + 0.02); } tone(NOTE(19), 0.12, 'triangle', 0.1, 0.02); tone(NOTE(24), 0.18, 'triangle', 0.1, 0.1); },
+  caught() { tone(620, 0.32, 'sawtooth', 0.14, 0, 110); noise(0.22, 0.14, 2600, 'highpass'); },
+  zap() { tone(300, 0.14, 'square', 0.08, 0, 1500); },
+  win() { for (let i = 0; i < 3; i++) { tone(NOTE(21), 0.7, 'sine', 0.2, i * 0.36); tone(NOTE(33), 0.5, 'triangle', 0.06, i * 0.36); tone(NOTE(28), 0.6, 'sine', 0.06, i * 0.36); } },
+  denied() { tone(180, 0.1, 'square', 0.08, 0, 140); },
+  smash() { noise(0.45, 0.35, 1800, 'highpass'); noise(0.25, 0.3, 300); tone(90, 0.25, 'triangle', 0.3, 0, 50); for (let i = 0; i < 7; i++) tone(2200 + ((i * 937) % 1900), 0.09, 'triangle', 0.07, 0.04 + i * 0.05); },
+};
+function sfx(name, arg) { if (AC && save.settings.sound) SFX[name](arg); }
+
+// Music: one eight-bar loop per era, eighth notes at 90 bpm. Digits are scale degrees, a dot is a rest.
+const TUNES = [null,
+  { root: 0, scale: [0, 2, 4, 5, 7, 9, 11], mel: '0.2.4.2.4.5.4.2.0.2.4.7.5.4.2...0.2.4.2.4.5.7.5.4.2.1.2.0.......', bass: [0, 3, 0, 4, 0, 3, 4, 0] },
+  { root: 2, scale: [0, 1, 4, 5, 7, 8, 10], mel: '0.1.2.1.0...4.3.2.1.0.1.2.......4.3.2.1.2.3.4.5.4.2.1.0.0.......', bass: [0, 0, 1, 0, 0, 3, 1, 0] },
+  { root: 2, scale: [0, 2, 3, 5, 7, 9, 10], mel: '0...4...3.2.0...2.3.4.6.4.......7...6.4.3.2.3.4.2.0.1.2.0.......', bass: [0, 6, 3, 0, 0, 3, 6, 0] },
+  { root: 7, scale: [0, 2, 4, 5, 7, 9, 10], mel: '0.0.4.0.0.0.5.0.0.0.4.0.6.5.4.2.0.0.4.0.0.0.5.0.7.6.5.4.2.1.0...', bass: [0, 0, 0, 3, 0, 0, 4, 0] },
+  { root: 9, scale: [0, 3, 5, 7, 10], mel: '0.2.4.2.5.4.2.4.0.2.4.5.7...5...6.5.4.2.4.2.1.2.0.1.2.4.2.......', bass: [0, 0, 3, 2, 0, 3, 1, 0] },
+];
+function degree(tune, d, octave) { const n = tune.scale.length; return NOTE(tune.root + tune.scale[((d % n) + n) % n] + 12 * (Math.floor(d / n) + octave)); }
+function musicTick() {
+  if (!AC || !musEra) return;
+  const tune = TUNES[musEra], beat = 60 / 90 / 2;
+  if (musNext < AC.currentTime) musNext = AC.currentTime + 0.05;
+  while (musNext < AC.currentTime + 0.35) {
+    const at = musNext - AC.currentTime, ch = tune.mel[musStep];
+    if (ch !== '.') tone(degree(tune, Number(ch), 0), beat * 0.9, 'square', 0.028, at, null, musBus);
+    if (musStep % 4 === 0) tone(degree(tune, tune.bass[musStep >> 3], -2), beat * 1.8, 'triangle', 0.075, at, null, musBus);
+    musStep = (musStep + 1) % 64; musNext += beat;
+  }
+}
+function music(era) {
+  if (era === musEra) return;
+  musEra = era; musStep = 0; musNext = 0;
+  if (!musTimer) musTimer = setInterval(musicTick, 100);
+}
+
+// ===== Game: state, input, rendering, screens =====
+const C = globalThis.TimecatCore, LEVELS = globalThis.TIMECAT_LEVELS, FAST = globalThis.TimecatFast;
+const $ = id => document.getElementById(id);
+const now = () => performance.now();
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ----- save data -----
+// v2: the rooms were redesigned, so room progress starts fresh; settings and seen story panels carry over from v1.
+const SAVE_KEY = 'timecat.v2', OLD_KEY = 'timecat.v1';
+const save = { rooms: {}, seenPanels: [], settings: { sound: true, music: true, reducedMotion: false } };
+let storageOK = true;
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY), old = raw ? null : localStorage.getItem(OLD_KEY);
+    if (raw || old) {
+      let s = null;
+      try { s = JSON.parse(raw || old); } catch (e) { /* a damaged save starts fresh; storage itself still works */ }
+      if (s && typeof s === 'object') {
+        if (raw && s.rooms && typeof s.rooms === 'object') save.rooms = s.rooms;
+        if (Array.isArray(s.seenPanels)) save.seenPanels = s.seenPanels;
+        if (s.settings) Object.assign(save.settings, s.settings);
+        return;
+      }
+    }
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) save.settings.reducedMotion = true;
+  } catch (e) { storageOK = false; }
+}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { storageOK = false; } }
+const roomSave = id => save.rooms[id] || null;
+function paws(id) { const r = roomSave(id), d = LEVELS[id - 1]; return r && r.done ? 1 + (r.fish ? 1 : 0) + (r.bestLives <= d.par ? 1 : 0) : 0; }
+const totalPaws = () => LEVELS.reduce((n, d) => n + paws(d.id), 0);
+function lastDone() { let m = 0; for (const d of LEVELS) if (roomSave(d.id) && roomSave(d.id).done) m = d.id; return m; }
+const unlocked = id => id <= lastDone() + 2;
+function nextRoom() { for (const d of LEVELS) if (!(roomSave(d.id) && roomSave(d.id).done)) return d.id; return 1; }
+
+// ----- story -----
+const PANELS = [
+  ['One minute to midnight. Pip knocks the Meridian Clock off the mantelpiece.', 'It shatters, and time starts to loop.'],
+  ['The workshop is stuck in a loop a few seconds long.', 'Pip has nine lives. Each one already lived stays behind as an echo.'],
+  ['The cat flap opens onto Thebes, 1300 BC.', 'The Minute Hand lies somewhere among the urns and the scarabs.'],
+  ['A castle, 1348. Cold stone, heavy levers and hungry hounds.', 'The Second Hand is in the kennels.'],
+  ['A mill, 1888. Belts that never stop and a boiler that never cools.', 'The Pendulum swings somewhere in the steam.'],
+  ['An orbital station, 2999. Red beams and humming pads.', 'The Winding Key waits at the far end of time.'],
+  ['Pip fits the five parts back into the clock, and it strikes midnight.', 'One by one the echoes curl up by the fire, until there is one cat, asleep.'],
+];
+const COACH = {
+  1: 'Move onto the plate, then press Loop. Your next life plays beside this one as an echo.',
+  2: 'Tap the board or press Space to wait a tick. Rewind takes back a step. Pause has the full guide.',
+};
+
+// ----- elements and view -----
+const cv = $('cv'), stage = $('stage'), app = $('app');
+const G = cv.getContext('2d');
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+let boardC = mk(16, 16), boardG = boardC.getContext('2d');
+let hudC = mk(16, 34), hudG = hudC.getContext('2d');
+let stripC = mk(16, 28), stripG = stripC.getContext('2d');
+let lowC = mk(160, 96), lowG = lowC.getContext('2d');
+const view = { W: 320, H: 480, dpr: 1 };
+function resize() {
+  const r = stage.getBoundingClientRect();
+  view.W = Math.max(200, Math.floor(r.width)); view.H = Math.max(200, Math.floor(r.height));
+  view.dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = Math.round(view.W * view.dpr); cv.height = Math.round(view.H * view.dpr);
+}
+function setEra(era) {
+  const E = ERAS[era];
+  app.dataset.era = era;
+  document.documentElement.style.setProperty('--bg', E.bg);
+  document.documentElement.style.setProperty('--main', E.main);
+  document.documentElement.style.setProperty('--accent', E.accent);
+  music(era);
+}
+
+// ----- room state -----
+let room = null;
+let screen = 'title';
+const inRoom = () => room && (screen === 'room' || screen === 'pause' || screen === 'complete' || screen === 'out' || (screen === 'help' && helpOverRoom));
+
+function enterRoom(id, restore) {
+  const def = LEVELS[id - 1], L = C.parseLevel(def);
+  setEra(def.era);
+  boardC = mk(L.w * T, L.h * T); boardG = boardC.getContext('2d');
+  const padPair = {}; let pn = 0;
+  for (let i = 0; i < L.n; i++) if (L.pad[i] >= 0 && padPair[i] === undefined) { padPair[i] = padPair[L.pad[i]] = pn++; }
+  room = {
+    id, def, L, lives: [''], restarts: [], st: null, prev: null, tw: 0, mode: 'play', buf: null, modeAt: 0,
+    static: paintStatic(L, def.era), padPair, fx: [], wipe: null, rewindAt: -1e9, rewindRun: 0, shakeAt: -1e9,
+    t0: now(), restartCount: 0, hintLevel: 0, hintPath: null, hface: L.hounds.map(() => 'L'),
+  };
+  if (restore && Array.isArray(restore.lives) && restore.lives.length) { room.lives = restore.lives.slice(0, 9).map(String); room.restarts = (restore.restarts || []).map(a => a.slice()); }
+  resim();
+  show('room');
+  updateBar();
+}
+function resim() {
+  room.st = C.simulate(room.L, room.lives);
+  room.prev = room.st; room.tw = 0; room.buf = null;
+  room.mode = room.st.won ? 'won' : room.st.lifeOver ? 'ending' : 'play';
+  room.modeAt = now();
+}
+const liveIdx = () => room.lives.length - 1;
+const tweenDur = () => (save.settings.reducedMotion ? 0 : 120);
+const tweening = t => room.tw && t - room.tw < tweenDur();
+
+function act(a) {
+  if (!room || screen !== 'room' || room.mode !== 'play') return;
+  const t = now();
+  if (tweening(t)) { room.buf = a; return; }
+  const lv = room.lives, n = lv.length, tick = room.st.t, prev = room.st;
+  lv[n - 1] += a;
+  const s = C.step(room.L, prev, lv.map(str => str[tick] || 'W'));
+  s.caught = s.cats[n - 1] < 0; s.lifeOver = s.caught || s.t >= room.L.loop;
+  room.prev = prev; room.st = s; room.tw = t;
+  room.L.hounds.forEach((_, h) => { const dx = (s.hd[h] % room.L.w) - (prev.hd[h] % room.L.w); if (dx) room.hface[h] = dx > 0 ? 'R' : 'L'; });
+  // sounds and effects
+  const moved = s.cats[n - 1] !== prev.cats[n - 1];
+  if (a === 'W') sfx('wait'); else if (moved || s.caught) sfx('step'); else { sfx('bump'); room.shakeAt = t; }
+  if (s.crates.some((c, i) => c !== prev.crates[i])) sfx('push');
+  if (s.ch !== prev.ch || s.lev !== prev.lev) { sfx('click'); if (s.open !== prev.open) sfx('thunk', s.open > prev.open); }
+  for (let c = 0; c < n; c++) if (s.cats[c] >= 0 && prev.cats[c] >= 0 && dist(s.cats[c], prev.cats[c]) > 2) { sfx('zap'); break; }
+  if (s.fish && !prev.fish) { sfx('purr'); room.fx.push({ kind: 'spark', i: room.L.fish, t0: t }); }
+  if (s.gone) { for (const [, p] of s.gone) room.fx.push({ kind: 'poof', i: p, t0: t + tweenDur() * 0.6 }); sfx('caught'); }
+  if (s.won) { room.mode = 'won'; room.modeAt = t; sfx('win'); room.fx.push({ kind: 'spark', i: room.L.exit, t0: t }); }
+  else if (s.lifeOver) { room.mode = 'ending'; room.modeAt = t; }
+}
+function dist(a, b) { const w = room.L.w; return Math.abs((a % w) - (b % w)) + Math.abs(Math.floor(a / w) - Math.floor(b / w)); }
+
+function doLoop(auto) {
+  if (!room || screen !== 'room') return;
+  if (room.mode !== 'play' && !(auto && room.mode === 'ending')) return;
+  if (room.lives.length >= 9) { if (!auto) { sfx('denied'); room.shakeAt = now(); } else { room.mode = 'out'; show('out'); } return; }
+  room.wipe = { t0: now(), snap: snapshotBoard() };
+  held.dir = null; pad.dirNext = Infinity; // a direction held as the life ends must not walk the new cat
+  room.lives.push('');
+  resim();
+  sfx('loop', room.lives.length - 1);
+  updateBar();
+}
+function rewind() {
+  if (!room || (screen !== 'room' && screen !== 'out')) return;
+  if (room.mode === 'won') return;
+  const lv = room.lives, n = lv.length;
+  if (lv[n - 1].length) lv[n - 1] = lv[n - 1].slice(0, -1);
+  else if (n > 1) {
+    lv.pop();
+    if (C.simulate(room.L, lv).lifeOver) lv[lv.length - 1] = lv[lv.length - 1].slice(0, -1);
+  } else if (room.restarts.length) room.lives = room.restarts.pop();
+  else { sfx('denied'); return; }
+  const t = now();
+  room.rewindRun = t - room.rewindAt < 400 ? room.rewindRun + 1 : 0;
+  room.rewindAt = t; room.wipe = null;
+  resim();
+  sfx('rewind', room.rewindRun);
+  if (screen === 'out') show('room');
+  updateBar();
+}
+function restartRoom() {
+  if (!room) return;
+  if (room.lives.length === 1 && !room.lives[0].length) return;
+  room.restarts.push(room.lives.slice());
+  if (room.restarts.length > 20) room.restarts.shift();
+  room.wipe = { t0: now(), snap: snapshotBoard() };
+  room.lives = [''];
+  room.restartCount++;
+  resim();
+  sfx('loop', 0);
+  show('room');
+  updateBar();
+}
+function snapshotBoard() { const c = mk(boardC.width, boardC.height); c.getContext('2d').drawImage(boardC, 0, 0); return c; }
+
+// ----- hints -----
+// Hints stay hidden until the room has had a fair go: five restarts or ten minutes.
+const hintReady = () => room && (room.restartCount >= 5 || now() - room.t0 >= 600000 || room.hintLevel > 0);
+function showHint() {
+  if (!hintReady()) return;
+  const sol = room.def.solution;
+  room.hintLevel = room.hintLevel >= sol.length ? 1 : room.hintLevel + 1;
+  const k = room.hintLevel, lives = sol.slice(0, k), path = [room.L.start];
+  let s = C.initialState(room.L, k);
+  for (let t = 0; t < lives[k - 1].length; t++) { s = C.step(room.L, s, lives.map(v => v[t] || 'W')); if (s.cats[k - 1] < 0) break; path.push(s.cats[k - 1]); }
+  room.hintPath = path; room.hintAt = now();
+  sfx('click');
+  updateBar();
+}
+
+// ----- finishing a room -----
+function finishRoom() {
+  const s = room.st, d = room.def, used = room.lives.length;
+  const old = roomSave(d.id) || { done: false, fish: false, bestLives: 99 };
+  save.rooms[d.id] = { done: true, fish: old.fish || s.fish, bestLives: Math.min(old.bestLives, used) };
+  writeSave();
+  const body = $('complete-body'); body.textContent = '';
+  const row = (on, label, detail) => {
+    const li = document.createElement('li'); li.className = on ? 'on' : 'off';
+    const c = tinted(SPR.paw, on ? ERAS[d.era].accent : '#5a5560', 1); c.className = 'pix paw';
+    const b = document.createElement('b'); b.textContent = label;
+    const sp = document.createElement('span'); sp.textContent = detail;
+    li.append(c, b, sp); body.append(li);
+  };
+  row(true, 'Flap', 'Room finished');
+  row(s.fish, 'Fish', s.fish ? 'Fish collected' : 'No fish this time');
+  const lives = n => `${n} ${n === 1 ? 'life' : 'lives'}`;
+  row(used <= d.par, 'Par', used < d.par ? `${lives(used)}: under par! ${d.bestKnown ? 'The best known was' : 'Par is'} ${d.par}`
+    : `${lives(used)} used, par is ${d.par}${d.bestKnown ? ' (best known)' : ''}`);
+  const head = $('complete-head'); head.textContent = ''; head.append(pixHeading(d.id % 4 === 0 ? ERAS[d.era].prize : 'Room complete', 3, ERAS[d.era].accent));
+  $('complete-note').textContent = d.id % 4 === 0 ? `The ${ERAS[d.era].prize} is back in Pip's keeping. ${totalPaws()} of 60 paws.` : `${totalPaws()} of 60 paws.`;
+  $('btn-next').textContent = d.id === 20 ? 'The ending' : 'Next room';
+  show('complete');
+}
+function goNext() {
+  const id = room.id;
+  if (id === 20) { panel(6, () => openSelect()); return; }
+  startRoom(id + 1);
+}
+function startRoom(id) {
+  const era = LEVELS[id - 1].era, queue = [];
+  if (id === 1 && !save.seenPanels.includes(0)) queue.push(0);
+  if (!save.seenPanels.includes(era)) queue.push(era);
+  const run = () => {
+    if (queue.length) { panel(queue.shift(), run); return; }
+    enterRoom(id);
+    // The first time anyone reaches room 1, the controls guide opens over the board before the first move.
+    if (id === 1 && !save.seenPanels.includes('help')) { save.seenPanels.push('help'); writeSave(); openHelp(() => show('room'), true); }
+  };
+  run();
+}
+
+// ----- how to play -----
+let helpBack = null, helpOverRoom = false, helpAt = 0;
+function openHelp(back, overRoom) {
+  helpBack = back; helpOverRoom = !!overRoom; helpAt = now();
+  const head = $('help-head'); if (!head.childNodes.length) head.append(pixHeading('How to play', 3, '#fff6e2'));
+  show('help');
+  $('scr-help').scrollTop = 0;
+}
+function helpDone() {
+  if (screen !== 'help' || now() - helpAt < 350) return; // a key held from the story panel must not skip the guide
+  const f = helpBack; helpBack = null; helpOverRoom = false;
+  if (f) f(); else openTitle();
+}
+
+// ----- screens -----
+const SCREENS = ['title', 'select', 'panel', 'complete', 'pause', 'out', 'settings', 'test', 'help'];
+function show(name) {
+  screen = name;
+  for (const s of SCREENS) $('scr-' + s).hidden = s !== name;
+  $('bar').hidden = !(name === 'room' || name === 'out');
+  const coach = room && name === 'room' ? COACH[room.id] : null;
+  $('coach').hidden = !coach; if (coach) $('coach').textContent = coach;
+  const first = name === 'room' ? cv : $('scr-' + name).querySelector('[data-first]') || $('scr-' + name).querySelector('button:not([disabled])');
+  if (first && first.focus) first.focus({ preventScroll: true });
+  held.dir = null; held.rew = false; holdRestart = 0;
+}
+function openTitle() {
+  setEra(1);
+  $('btn-play').textContent = lastDone() ? 'Continue' : 'Play';
+  $('title-paws').textContent = lastDone() ? `${totalPaws()} of 60 paws` : '';
+  show('title');
+}
+function openSelect() {
+  setEra(room ? room.def.era : LEVELS[nextRoom() - 1].era);
+  const wrap = $('select-body'); wrap.textContent = '';
+  $('select-paws').textContent = `${totalPaws()} of 60 paws`;
+  let focusEl = null; const target = room ? room.id : nextRoom();
+  for (let era = 1; era <= 5; era++) {
+    const E = ERAS[era], h = document.createElement('h3');
+    h.textContent = `${E.name} · ${E.when}`; h.style.color = E.main;
+    const grid = document.createElement('div'); grid.className = 'doors';
+    for (const d of LEVELS.filter(l => l.era === era)) {
+      const b = document.createElement('button'), r = roomSave(d.id), open = unlocked(d.id);
+      b.className = 'door'; b.disabled = !open; b.style.setProperty('--door', E.main);
+      b.id = 'door-' + d.id;
+      const num = document.createElement('span'); num.className = 'num'; num.append(pixHeading(String(d.id), 3, open ? E.accent : '#6a6470'));
+      const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = open ? d.name : 'Locked';
+      const pw = document.createElement('span'); pw.className = 'paws';
+      for (let i = 0; i < 3; i++) { const c = tinted(SPR.paw, i < paws(d.id) ? E.accent : '#4a4652', 1); c.className = 'pix paw'; pw.append(c); }
+      const lv = document.createElement('span'); lv.className = 'best';
+      const par = d.bestKnown ? `${d.par}*` : d.par;
+      lv.textContent = r && r.done ? `Best ${r.bestLives} · par ${par}` : `Par ${par}`;
+      b.setAttribute('aria-label', `Room ${d.id}, ${open ? d.name : 'locked'}. ${paws(d.id)} of 3 paws. ${lv.textContent.replace('*', ', best known')}.`);
+      b.append(num, nm, pw, lv);
+      b.addEventListener('click', () => { audioOn(); startRoom(d.id); });
+      if (d.id === target) focusEl = b;
+      grid.append(b);
+    }
+    wrap.append(h, grid);
+  }
+  show('select');
+  if (focusEl && !focusEl.disabled) { focusEl.focus({ preventScroll: true }); focusEl.scrollIntoView({ block: 'center' }); }
+}
+let panelDone = null, panelId = 0, panelAt = 0;
+function panel(id, done) {
+  panelId = id; panelDone = done; panelAt = now();
+  setEra(id >= 1 && id <= 5 ? id : 1);
+  if (!save.seenPanels.includes(id)) { save.seenPanels.push(id); writeSave(); }
+  const lines = PANELS[id].slice();
+  if (id === 6 && totalPaws() === 60) lines.push('For a moment, all nine of them are there.');
+  const box = $('story-text'); box.textContent = '';
+  for (const l of lines) { const p = document.createElement('p'); p.textContent = l; box.append(p); }
+  show('panel');
+}
+function panelNext() { if (now() - panelAt < 350) return; const f = panelDone; panelDone = null; if (f) f(); }
+function syncToggles() {
+  for (const [k, label] of [['sound', 'Sound'], ['music', 'Music'], ['reducedMotion', 'Reduced motion']]) {
+    for (const el of document.querySelectorAll(`[data-toggle="${k}"]`)) { el.setAttribute('aria-pressed', String(!!save.settings[k])); el.textContent = `${label}: ${save.settings[k] ? 'on' : 'off'}`; }
+  }
+  applyVolumes();
+}
+function toggle(k) { save.settings[k] = !save.settings[k]; writeSave(); syncToggles(); }
+function updateBar() {
+  if (!room) return;
+  $('btn-hint').hidden = !hintReady();
+  $('btn-loop').disabled = room.lives.length >= 9;
+}
+
+// ----- input -----
+const held = { dir: null, dirAt: 0, dirNext: 0, rew: false, rewNext: 0 };
+let holdRestart = 0;
+const KEY_DIR = { ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R', w: 'U', s: 'D', a: 'L', d: 'R', W: 'U', S: 'D', A: 'L', D: 'R' };
+function spatialNav(key) {
+  const els = [...$('scr-' + screen).querySelectorAll('button:not([disabled])')].filter(e => e.offsetParent), cur = document.activeElement;
+  if (!els.includes(cur)) { if (els[0]) els[0].focus(); return; }
+  const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let best = null, bd = 1e9;
+  for (const e of els) {
+    if (e === cur) continue;
+    const q = e.getBoundingClientRect(), dx = q.left + q.width / 2 - cx, dy = q.top + q.height / 2 - cy;
+    const ok = key === 'ArrowRight' ? dx > 4 && Math.abs(dy) < Math.abs(dx) : key === 'ArrowLeft' ? dx < -4 && Math.abs(dy) < Math.abs(dx) : key === 'ArrowDown' ? dy > 4 : dy < -4;
+    const d = (key === 'ArrowUp' || key === 'ArrowDown') ? Math.abs(dy) * 1 + Math.abs(dx) * 2 : Math.abs(dx) + Math.abs(dy) * 2;
+    if (ok && d < bd) { bd = d; best = e; }
+  }
+  if (best) { best.focus(); best.scrollIntoView({ block: 'nearest' }); }
+}
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  audioOn();
+  const k = e.key;
+  if (k === 'm' || k === 'M') { toggle('sound'); if (save.settings.music !== save.settings.sound) toggle('music'); return; }
+  if (screen === 'room') {
+    if (KEY_DIR[k]) { e.preventDefault(); if (!e.repeat) { act(KEY_DIR[k]); held.dir = KEY_DIR[k]; held.dirKey = k; held.dirNext = now() + 220; } return; }
+    if (k === ' ') { e.preventDefault(); if (!e.repeat) act('W'); return; }
+    if (k === 'l' || k === 'L' || k === 'Enter') { e.preventDefault(); if (!e.repeat) doLoop(false); return; }
+    if (k === 'z' || k === 'Z' || k === 'Backspace') { e.preventDefault(); if (!e.repeat) { rewind(); held.rew = true; held.rewNext = now() + 220; } return; }
+    if (k === 'r' || k === 'R') { if (!e.repeat) holdRestart = now(); return; }
+    if (k === 'h' || k === 'H') { showHint(); return; }
+    if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); show('pause'); return; }
+    return;
+  }
+  if (screen === 'panel') { e.preventDefault(); panelNext(); return; }
+  if (screen === 'help') { if ((k === 'Enter' || k === ' ' || k === 'Escape') && !e.repeat) { e.preventDefault(); helpDone(); } return; }
+  if (k.startsWith('Arrow') && screen !== 'test') { e.preventDefault(); spatialNav(k); return; }
+  if (screen === 'pause' && (k === 'Escape' || k === 'p' || k === 'P')) { e.preventDefault(); show('room'); return; }
+  if (screen === 'out') { if (k === 'z' || k === 'Z' || k === 'Backspace') { e.preventDefault(); rewind(); } else if (k === 'r' || k === 'R') restartRoom(); return; }
+  if (screen === 'complete') {
+    if (k === 'r' || k === 'R') { enterRoom(room.id); return; }
+    if (k === 'Escape') { openSelect(); return; }
+    return;
+  }
+  if ((screen === 'select' || screen === 'settings' || screen === 'test') && k === 'Escape') { openTitle(); return; }
+});
+window.addEventListener('keyup', e => {
+  if (e.key === held.dirKey) held.dir = null;
+  if (e.key === 'z' || e.key === 'Z' || e.key === 'Backspace') held.rew = false;
+  if (e.key === 'r' || e.key === 'R') holdRestart = 0;
+});
+window.addEventListener('blur', () => { held.dir = null; held.rew = false; holdRestart = 0; });
+
+// pointer: swipe to move, tap to wait
+let ptr = null;
+cv.addEventListener('pointerdown', e => {
+  audioOn();
+  if (screen === 'panel') { panelNext(); return; }
+  if (screen !== 'room') return;
+  ptr = { x: e.clientX, y: e.clientY, type: e.pointerType };
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+});
+cv.addEventListener('pointerup', e => {
+  if (!ptr || screen !== 'room') { ptr = null; return; }
+  const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y, type = ptr.type; ptr = null;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) >= 24) act(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+  else if (type !== 'mouse') act('W');
+});
+cv.addEventListener('pointercancel', () => { ptr = null; });
+
+function holdButton(el, start, stop) {
+  el.addEventListener('pointerdown', e => { e.preventDefault(); audioOn(); start(); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, stop);
+  el.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); e.stopPropagation(); start(); } });
+  el.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); stop(); } });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+function wire() {
+  const on = (id, f) => $(id).addEventListener('click', () => { audioOn(); f(); });
+  on('btn-play', () => { if (lastDone()) startRoom(nextRoom()); else startRoom(1); });
+  on('btn-rooms', openSelect);
+  on('btn-settings', () => { syncToggles(); $('btn-erase').textContent = 'Erase progress'; $('btn-erase').dataset.armed = ''; show('settings'); });
+  on('btn-settings-back', openTitle);
+  on('btn-select-back', openTitle);
+  on('btn-erase', () => {
+    const b = $('btn-erase');
+    if (b.dataset.armed) { save.rooms = {}; save.seenPanels = []; writeSave(); room = null; b.textContent = 'Progress erased'; b.dataset.armed = ''; }
+    else { b.dataset.armed = '1'; b.textContent = 'Press again to erase everything'; }
+  });
+  on('story-next', panelNext);
+  on('btn-next', goNext);
+  on('btn-replay', () => enterRoom(room.id));
+  on('btn-complete-rooms', openSelect);
+  on('btn-resume', () => show('room'));
+  on('btn-pause-restart', restartRoom);
+  on('btn-pause-rooms', openSelect);
+  on('btn-out-rewind', rewind);
+  on('btn-out-restart', restartRoom);
+  on('btn-test-back', openTitle);
+  on('btn-help-done', helpDone);
+  on('btn-title-help', () => openHelp(openTitle, false));
+  on('btn-pause-help', () => openHelp(() => show('pause'), true));
+  for (const el of document.querySelectorAll('[data-toggle]')) el.addEventListener('click', () => { audioOn(); toggle(el.dataset.toggle); });
+  on('btn-loop', () => doLoop(false));
+  on('btn-wait', () => act('W'));
+  on('btn-pause', () => { if (screen === 'room') show('pause'); });
+  on('btn-hint', showHint);
+  holdButton($('btn-rewind'), () => { rewind(); held.rew = true; held.rewNext = now() + 220; }, () => { held.rew = false; });
+  holdButton($('btn-restart'), () => { holdRestart = now(); }, () => { holdRestart = 0; });
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+}
+
+// gamepad
+const pad = { prev: [], dirNext: 0, rewNext: 0, back: 0 };
+function pollPad(t) {
+  let gp = null;
+  try { const all = navigator.getGamepads ? navigator.getGamepads() : []; for (const p of all) if (p && p.connected) { gp = p; break; } } catch (e) { return; }
+  if (!gp) return;
+  const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), ax = gp.axes || [];
+  const dir = b(12) || ax[1] < -0.6 ? 'U' : b(13) || ax[1] > 0.6 ? 'D' : b(14) || ax[0] < -0.6 ? 'L' : b(15) || ax[0] > 0.6 ? 'R' : null;
+  const cur = { dir, a: b(0), b: b(1), x: b(2), y: b(3), back: b(8), start: b(9) }, was = pad.prev;
+  pad.prev = cur;
+  if (cur.a || cur.x || cur.y || cur.start || dir) audioOn();
+  if (screen === 'panel') { if (cur.a && !was.a) panelNext(); return; }
+  if (screen === 'help') { if ((cur.a && !was.a) || (cur.start && !was.start)) helpDone(); return; }
+  if (screen !== 'room') {
+    // Menus: the d-pad moves between buttons, A presses one and B goes back. Out of lives, X rewinds and holding Back restarts.
+    if (screen === 'pause' && cur.start && !was.start) { show('room'); return; }
+    if (screen === 'out') {
+      if (cur.x && !was.x) { rewind(); return; }
+      if (cur.back && !was.back) pad.back = t; else if (!cur.back) pad.back = 0;
+      if (pad.back && t - pad.back >= 500) { pad.back = 0; restartRoom(); return; }
+    }
+    if (dir && dir !== was.dir) spatialNav({ U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight' }[dir]);
+    if (cur.a && !was.a) {
+      const scr = $('scr-' + screen), el = document.activeElement;
+      const btn = el && el.tagName === 'BUTTON' && scr.contains(el) ? el : scr.querySelector('[data-first]') || scr.querySelector('button:not([disabled])');
+      if (btn) btn.click();
+    }
+    if (cur.b && !was.b) {
+      if (screen === 'pause') show('room');
+      else if (screen === 'select' || screen === 'settings' || screen === 'test') openTitle();
+      else if (screen === 'complete') openSelect();
+    }
+    return;
+  }
+  if (dir && dir !== was.dir) { act(dir); pad.dirNext = t + 220; } else if (dir && t >= pad.dirNext) { act(dir); pad.dirNext = t + 140; }
+  if (cur.a && !was.a) act('W');
+  if (cur.y && !was.y) doLoop(false);
+  if (cur.x && !was.x) { rewind(); pad.rewNext = t + 220; } else if (cur.x && t >= pad.rewNext) { rewind(); pad.rewNext = t + 80; }
+  if (cur.back && !was.back) pad.back = t; else if (!cur.back) pad.back = 0;
+  if (pad.back && t - pad.back >= 500) { pad.back = 0; restartRoom(); }
+  if (cur.start && !was.start) show('pause');
+}
+
+// ----- per-frame logic -----
+function update(t) {
+  pollPad(t);
+  if (screen !== 'room' || !room) return;
+  if (held.dir && t >= held.dirNext) { act(held.dir); held.dirNext = t + 140; }
+  if (held.rew && t >= held.rewNext) { rewind(); held.rewNext = t + 80; }
+  if (holdRestart && t - holdRestart >= 500) { holdRestart = 0; restartRoom(); }
+  $('btn-restart').style.setProperty('--hold', holdRestart ? clamp((t - holdRestart) / 500, 0, 1) : 0);
+  if (room.buf && !tweening(t)) { const a = room.buf; room.buf = null; act(a); }
+  if (room.mode === 'won' && t - room.modeAt > 750) finishRoom();
+  else if (room.mode === 'ending' && t - room.modeAt > 600) doLoop(true);
+  if ((Math.floor(t / 1000) % 5) === 0 && $('btn-hint').hidden && hintReady()) updateBar();
+}
+
+// ----- drawing the room -----
+function facing(i) {
+  const str = room.lives[i], t = Math.min(room.st.t, str.length);
+  for (let j = t - 1; j >= 0; j--) if (str[j] !== 'W') return str[j];
+  return 'D';
+}
+function drawRoomBoard(t) {
+  const L = room.L, s = room.st, p = room.prev, E = ERAS[room.def.era], g = boardG, still = save.settings.reducedMotion;
+  const dur = tweenDur(), a = dur && room.tw ? clamp((t - room.tw) / dur, 0, 1) : 1;
+  const X = i => (i % L.w) * T, Y = i => Math.floor(i / L.w) * T;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.drawImage(room.static, 0, 0);
+  const weight = i => s.crates.includes(i) || s.cats.includes(i);
+  // floor-level things
+  drawStart(g, X(L.start), Y(L.start), E);
+  for (const sc of L.scarabs) for (const i of sc.track) { R(g, 'rgba(0,0,0,0.22)', X(i) + 6, Y(i) + 6, 4, 4); R(g, 'rgba(42,161,152,0.55)', X(i) + 7, Y(i) + 7, 2, 2); }
+  for (let i = 0; i < L.n; i++) {
+    const x = X(i), y = Y(i);
+    if (L.belt[i]) drawBelt(g, x, y, L.belt[i], t, still);
+    if (L.pad[i] >= 0) drawPad(g, x, y, room.padPair[i], t, still);
+    if (L.plate[i]) {
+      if (L.belt[i]) { R(g, 'rgba(0,0,0,0.7)', x + 3, y + 3, 10, 10); drawShape(g, weight(i) ? SPR.shape : SPR.shapeDim, L.plate[i], x, y); }
+      else drawPlate(g, x, y, L.plate[i], weight(i));
+    }
+    if (L.leverAt[i]) drawLever(g, x, y, L.leverAt[i], !!(s.lev & L.leverAt[i]));
+  }
+  for (const v of L.vents) drawVent(g, X(v.i), Y(v.i), v, s.t, s.crates.includes(v.i));
+  drawFlap(g, X(L.exit), Y(L.exit), E, t, still);
+  L.doors.forEach((d, n) => drawDoor(g, X(d.i), Y(d.i), d.ch, !!(s.open & (1 << n))));
+  if (L.fish >= 0 && !s.fish) g.drawImage(SPR.fish, X(L.fish) + 2, Y(L.fish) + 4 + (still ? 0 : Math.round(Math.sin(t / 300))));
+  for (const z of L.lasers) drawEmitter(g, X(z.i), Y(z.i), z.dir, !(z.off && (s.ch & z.off)));
+  for (const r of L.receivers) drawReceiver(g, X(r.i), Y(r.i), r.ch, !!(s.lit & r.ch));
+  // hint trail
+  if (room.hintPath) {
+    const hp = room.hintPath, n = hp.length, head = Math.floor((t - room.hintAt) / 260) % (n + 3);
+    for (let j = 0; j < n; j++) { g.globalAlpha = j <= head ? 0.9 : 0.35; R(g, '#ffffff', X(hp[j]) + 7, Y(hp[j]) + 7, 2, 2); }
+    g.globalAlpha = 0.8; const hi = hp[Math.min(head, n - 1)]; g.drawImage(tintedPaw(), X(hi) + 4, Y(hi) + 4); g.globalAlpha = 1;
+    tinyDigit(g, room.hintLevel, X(hp[0]) + 1, Y(hp[0]) + 1, '#ffffff');
+  }
+  // moving things
+  const between = (i0, i1) => {
+    if (i0 < 0) return null;
+    if (i1 < 0 || i0 === i1 || a >= 1) return { x: X(i1 < 0 ? i0 : i1), y: Y(i1 < 0 ? i0 : i1), al: 1 };
+    if (dist(i0, i1) > 2) return a < 0.5 ? { x: X(i0), y: Y(i0), al: 1 - a * 2 } : { x: X(i1), y: Y(i1), al: a * 2 - 1 };
+    return { x: Math.round(X(i0) + (X(i1) - X(i0)) * a), y: Math.round(Y(i0) + (Y(i1) - Y(i0)) * a), al: 1 };
+  };
+  const crateSpr = room.def.era === 2 ? SPR.urn : SPR.crate;
+  s.crates.forEach((c, n) => { const q = between(p.crates[n] === undefined ? c : p.crates[n], c); g.globalAlpha = q.al; g.drawImage(crateSpr, q.x, q.y); g.globalAlpha = 1; });
+  const n = s.cats.length;
+  for (let c = 0; c < n; c++) {
+    const live = c === n - 1;
+    let i1 = s.cats[c], i0 = p.cats.length === n ? p.cats[c] : i1, fade = 1;
+    if (i1 < 0) {
+      const gone = s.gone && s.gone.find(e => e[0] === c);
+      if (!gone || i0 < 0 || a >= 1) continue;
+      i1 = gone[1]; fade = 1 - a * 0.7;
+    }
+    const q = between(i0, i1); if (!q) continue;
+    const set = live ? SPR.cat : SPR.echo, napping = !live && s.t >= room.lives[c].length;
+    const moving = a < 1 && i0 !== i1;
+    const frame = moving ? (s.t & 1) : (live && !still && (Math.floor(t / 200) % 14 === 0) ? 1 : 0);
+    const img = napping ? set.nap : set[facing(c)][frame];
+    g.globalAlpha = q.al * fade * (live ? 1 : 0.72);
+    g.drawImage(img, q.x, q.y - (live && room.mode === 'won' ? Math.min(4, Math.floor((t - room.modeAt) / 60)) : 0));
+    g.globalAlpha = 1;
+    if (!live) {
+      R(g, 'rgba(10,20,40,0.75)', q.x + 11, q.y, 5, 7); tinyDigit(g, c + 1, q.x + 12, q.y + 1, ECHO);
+      if (napping && !still) { const ph = Math.floor(t / 500 + c) % 3; R(g, '#ffffff', q.x + 2 + ph, q.y + 3 - ph, 2, 1); R(g, '#ffffff', q.x + 3 + ph, q.y + 4 - ph, 1, 1); R(g, '#ffffff', q.x + 2 + ph, q.y + 5 - ph, 2, 1); }
+    }
+  }
+  L.scarabs.forEach((sc, k) => {
+    const q = between(sc.track[p.sc[k] ? p.sc[k].k : s.sc[k].k], sc.track[s.sc[k].k]);
+    g.drawImage(SPR.scarab, q.x, q.y + (still ? 0 : (Math.floor(t / 180) & 1)));
+  });
+  s.hd.forEach((h, k) => {
+    const q = between(p.hd[k] === undefined ? h : p.hd[k], h);
+    g.drawImage(SPR.hound[room.hface[k]], q.x, q.y);
+    if ((s.t + 1) % 2 === 0) { R(g, '#1a1410', q.x + 6, q.y - 2, 4, 6); R(g, '#ff5a4a', q.x + 7, q.y - 1, 2, 2); R(g, '#ff5a4a', q.x + 7, q.y + 2, 2, 1); }
+  });
+  // steam and beams
+  if (s.steam) for (const i of s.steam) drawSteam(g, X(i), Y(i), still ? 0 : t, i);
+  for (const z of L.lasers) {
+    if (z.off && (s.ch & z.off)) continue;
+    const d = L.delta[z.dir]; let j = z.i + d, last = -1;
+    while (s.beam && s.beam.has(j)) { last = j; j += d; }
+    if (last < 0) continue;
+    const x0 = Math.min(X(z.i + d), X(last)), y0 = Math.min(Y(z.i + d), Y(last)), x1 = Math.max(X(z.i + d), X(last)) + T, y1 = Math.max(Y(z.i + d), Y(last)) + T;
+    const horiz = z.dir === 'L' || z.dir === 'R', fl = still ? 0 : (Math.floor(t / 70) & 1);
+    g.globalAlpha = 0.3; if (horiz) R(g, '#ff4d6d', x0, y0 + 5, x1 - x0, 6); else R(g, '#ff4d6d', x0 + 5, y0, 6, y1 - y0);
+    g.globalAlpha = 1; if (horiz) { R(g, '#ff4d6d', x0, y0 + 7, x1 - x0, 2); R(g, '#ffd0d8', x0, y0 + 7 + fl, x1 - x0, 1); } else { R(g, '#ff4d6d', x0 + 7, y0, 2, y1 - y0); R(g, '#ffd0d8', x0 + 7 + fl, y0, 1, y1 - y0); }
+  }
+  // effects
+  room.fx = room.fx.filter(f => t - f.t0 < 520);
+  for (const f of room.fx) {
+    const u = (t - f.t0) / 500; if (u < 0) continue;
+    const cx = X(f.i) + 8, cy = Y(f.i) + 8;
+    g.globalAlpha = clamp(1 - u, 0, 1);
+    for (let k = 0; k < 8; k++) {
+      const ang = k * Math.PI / 4 + (f.kind === 'spark' ? u * 2 : 0), rr = 3 + u * (f.kind === 'spark' ? 11 : 8);
+      R(g, f.kind === 'spark' ? E.accent : '#f4efe4', Math.round(cx + Math.cos(ang) * rr) - 1, Math.round(cy + Math.sin(ang) * rr) - 1, f.kind === 'spark' ? 1 : 2, f.kind === 'spark' ? 1 : 2);
+    }
+    g.globalAlpha = 1;
+  }
+  // loop wipe: the old loop is swept away anticlockwise
+  if (room.wipe) {
+    const u = (t - room.wipe.t0) / (still ? 150 : 400);
+    if (u >= 1) room.wipe = null;
+    else if (still) { g.globalAlpha = 1 - u; g.drawImage(room.wipe.snap, 0, 0); g.globalAlpha = 1; }
+    else {
+      const cx = boardC.width / 2, cy = boardC.height / 2, top = -Math.PI / 2;
+      g.save(); g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, boardC.width + boardC.height, top, top + Math.PI * 2 * (1 - u), false); g.closePath(); g.clip();
+      g.drawImage(room.wipe.snap, 0, 0); g.restore();
+    }
+  }
+  // rewind: grey out with scanlines
+  if (t - room.rewindAt < 200 && !still) {
+    g.globalCompositeOperation = 'saturation'; R(g, '#808080', 0, 0, boardC.width, boardC.height);
+    g.globalCompositeOperation = 'source-over';
+    for (let y = (Math.floor(t / 40) & 1); y < boardC.height; y += 2) R(g, 'rgba(10,30,50,0.28)', 0, y, boardC.width, 1);
+  }
+}
+let pawCache = null;
+function tintedPaw() { return pawCache || (pawCache = tinted(SPR.paw, '#ffffff', 1)); }
+
+function drawHud() {
+  const g = hudG, w = hudC.width, s = room.st, E = ERAS[room.def.era], L = room.L, left = L.loop - s.t;
+  g.clearRect(0, 0, w, hudC.height);
+  // clock dial: the hand sweeps once per loop
+  disc(g, 12, 12, 11, '#120d0a'); disc(g, 12, 12, 10, E.main); disc(g, 12, 12, 8, '#fff6e2');
+  for (let k = 0; k < 12; k++) { const an = k * Math.PI / 6; R(g, '#5a4632', Math.round(12 + Math.sin(an) * 7), Math.round(12 - Math.cos(an) * 7), 1, 1); }
+  const ang = (s.t / L.loop) * Math.PI * 2;
+  pixLine(g, 12, 12, 12 + Math.sin(ang) * 6.5, 12 - Math.cos(ang) * 6.5, '#1c1b26');
+  R(g, E.accent === '#f2d9a0' ? '#c0392b' : E.accent, 11, 11, 3, 3);
+  pixText(g, String(left), 27, 5, 2, left <= 3 ? '#ff6b5c' : '#fff6e2');
+  // lives: nine heads, spent ones turn echo-blue, a notch marks par
+  const n = room.lives.length, x0 = w - 9 * 8 - 1;
+  for (let i = 0; i < 9; i++) {
+    const img = i < n - 1 ? HEADS.spent : i === n - 1 ? HEADS.live : HEADS.left;
+    g.drawImage(img, x0 + i * 8, 7);
+    if (i === n - 1) R(g, E.accent, x0 + i * 8, 15, 7, 1);
+  }
+  R(g, E.accent, x0 + room.def.par * 8 - 1, 3, 1, 3); pixTextTiny(g, 'PAR', x0 + room.def.par * 8 - 7, 18, E.accent, w);
+  if (L.fish >= 0) g.drawImage(s.fish ? SPR.fish : SPR.fishGrey, x0 - 17, 6);
+  pixText(g, `${room.id} ${room.def.name}`.replace(',', ''), Math.floor(w / 2), 26, 1, E.main, 'center');
+}
+function pixTextTiny(g, str, x, y, color, w) { if (x + 12 < w && x > 60) { g.globalAlpha = 0.8; pixText(g, str, x, y, 1, color); g.globalAlpha = 1; } }
+const HEADS = {};
+
+function drawStrip() {
+  const g = stripG, w = stripC.width, L = room.L, s = room.st, E = ERAS[room.def.era];
+  g.clearRect(0, 0, w, stripC.height);
+  const cw = Math.max(2, Math.min(10, Math.floor((w - 12) / L.loop))), x0 = 8 + Math.floor(((w - 12) - cw * L.loop) / 2), n = room.lives.length;
+  for (let i = 0; i < 9; i++) {
+    const y = 1 + i * 3, used = i < n;
+    R(g, used ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)', x0, y, cw * L.loop, 2);
+    if (!used) continue;
+    const str = room.lives[i], col = i === n - 1 ? '#fff6e2' : ECHO;
+    for (let k = 0; k < str.length; k++) { g.globalAlpha = str[k] === 'W' ? 0.35 : 1; R(g, col, x0 + k * cw, y, cw > 2 ? cw - 1 : cw, 2); }
+    g.globalAlpha = 1;
+  }
+  R(g, E.accent, x0 + L.loop * cw, 0, 1, 27);
+  R(g, '#ffffff', x0 + s.t * cw - 1, 0, 1, 27);
+  if (n <= 9) tinyDigit(g, n, x0 - 6, Math.max(0, Math.min(22, (n - 1) * 3 - 1)), '#fff6e2');
+}
+
+function drawRoom(t) {
+  const { W, H } = view, L = room.L, E = ERAS[room.def.era];
+  R(G, E.bg, 0, 0, W, H);
+  const hudH = 68, stripH = 56, availH = H - hudH - stripH - 8, bw0 = L.w * T, bh0 = L.h * T;
+  let k = Math.floor(Math.min(W / bw0, availH / bh0));
+  if (k < 2) k = Math.min(W / bw0, availH / bh0) >= 1.5 ? 1.5 : 1;
+  k = Math.min(k, 5);
+  const bw = bw0 * k, bh = bh0 * k, bx = Math.floor((W - bw) / 2), by = hudH + Math.max(0, Math.floor((availH - bh) / 2)) + 4;
+  const hw = Math.ceil(Math.min(W, Math.max(bw + 8, 340)) / 2), hx = Math.floor((W - hw * 2) / 2);
+  if (hudC.width !== hw) { hudC.width = hw; stripC.width = hw; }
+  drawRoomBoard(t); drawHud(); drawStrip();
+  const sh = !save.settings.reducedMotion && t - room.shakeAt < 90 ? ((Math.floor(t / 30) & 1) ? 2 : -2) : 0;
+  G.drawImage(hudC, hx, 0, hw * 2, 68);
+  R(G, 'rgba(0,0,0,0.35)', bx - 4 + sh, by - 4, bw + 8, bh + 8);
+  G.drawImage(boardC, bx + sh, by, bw, bh);
+  G.drawImage(stripC, hx, Math.min(H - stripH, by + bh + 8), hw * 2, stripH);
+  if (holdRestart) { const u = clamp((t - holdRestart) / 500, 0, 1); R(G, 'rgba(0,0,0,0.6)', bx, by + bh - 10, bw, 10); R(G, E.accent, bx, by + bh - 10, bw * u, 10); }
+}
+
+// ----- title and story scenes -----
+function tri(g, cx, baseY, half, h, color) { g.fillStyle = color; for (let y = 0; y < h; y++) { const w = Math.round(half * (y + 1) / h); g.fillRect(cx - w, baseY - h + y, w * 2, 1); } }
+function dial(g, cx, cy, r, hourAng, minAng, face) {
+  disc(g, cx, cy, r + 2, '#120d0a'); disc(g, cx, cy, r + 1, '#c98f4a'); disc(g, cx, cy, r - 1, face || '#fff6e2');
+  for (let k = 0; k < 12; k++) { const an = k * Math.PI / 6; R(g, '#5a4632', Math.round(cx + Math.sin(an) * (r - 3)), Math.round(cy - Math.cos(an) * (r - 3)), 1, 1); }
+  pixLine(g, cx, cy, cx + Math.sin(hourAng) * r * 0.5, cy - Math.cos(hourAng) * r * 0.5, '#1c1b26');
+  pixLine(g, cx, cy, cx + Math.sin(minAng) * r * 0.8, cy - Math.cos(minAng) * r * 0.8, '#1c1b26');
+  R(g, '#c0392b', cx - 1, cy - 1, 2, 2);
+}
+function fireplace(g, t, x, y) {
+  R(g, '#1a100c', x, y, 60, 46); R(g, '#3d2a1f', x - 4, y - 4, 68, 5); R(g, '#5b4029', x - 6, y - 7, 72, 4);
+  R(g, '#0a0606', x + 8, y + 8, 44, 38);
+  for (let k = 0; k < 7; k++) { const fx = x + 14 + k * 5, fh = 8 + Math.round(6 * Math.abs(Math.sin(t / 220 + k * 1.3))); tri(g, fx + 2, y + 46, 4, fh + 6, '#e07b39'); tri(g, fx + 2, y + 46, 2, fh, '#f2d9a0'); }
+}
+// The intro: the clock is nudged off the mantelpiece, falls and smashes once. Then time starts to loop:
+// the pieces drift back up towards the clock they were, and fall again, over and over.
+const SHARDS = (() => {
+  const out = [], cols = ['#fff6e2', '#fff6e2', '#c98f4a', '#e2aa3f', '#1c1b26'];
+  for (let k = 0; k < 18; k++) out.push({ vx: (hash2(k, 1) - 0.5) * 110, vy: -(45 + hash2(k, 2) * 75), rest: 80 + Math.floor(hash2(k, 3) * 12), c: cols[k % cols.length], s: 1 + (k % 3 === 0 ? 1 : 0) });
+  const parts = [['hour', -70, -95], ['minute', 55, -110], ['second', -40, -125], ['pendulum', 85, -80], ['key', 20, -130]];
+  for (const [kind, vx, vy] of parts) out.push({ kind, vx, vy, rest: 84 + Math.floor(hash2(vx, vy) * 6) });
+  return out;
+})();
+let introCrashed = false;
+function introSmash(g, e, cat) {
+  const G0 = 320, X0 = 124, Y0 = 74;
+  if (e < 1250) {
+    introCrashed = false;
+    let x = 108, y = 26, ang = 0;
+    if (e > 500) x = 108 + Math.min(1, (e - 500) / 300) * 10;
+    if (e > 800) { const u = Math.min(1, (e - 800) / 450); x = 118 + 6 * u; y = 26 + (Y0 - 26) * u * u; ang = u * 5; }
+    cat(SPR.cat.R[e > 450 && e < 850 ? 1 : 0], 84, 20);
+    dial(g, Math.round(x), Math.round(y), 7, 5.9 + ang, 6.2 + ang * 2.3);
+    if (e > 800) for (let k = 1; k < 4; k++) R(g, 'rgba(242,217,160,0.3)', Math.round(x) - 1, Math.round(y) - 6 - k * 5, 1, 3);
+    return;
+  }
+  if (!introCrashed) { introCrashed = true; if (e < 2000) sfx('smash'); }
+  cat(SPR.cat.D[0], 86, 20);
+  const since = (e - 1250) / 1000;
+  // after the pieces settle, the loop: they lift back towards the impact and drop again
+  const looping = since > 1.2 && !save.settings.reducedMotion, ph = looping ? ((since - 1.2) % 1.8) / 1.8 : 0;
+  const lift = looping ? Math.pow(Math.sin(Math.PI * ph), 2) * 0.5 : 0;
+  if (since < 0.2) { g.globalAlpha = 1 - since / 0.2; disc(g, X0, Y0, Math.round(4 + since * 60), '#fff6e2'); g.globalAlpha = 1; }
+  if (lift > 0.05) { g.globalAlpha = lift * 0.55; dial(g, X0, Y0 - 2, 7, 5.9, 6.2); g.globalAlpha = 1; }
+  for (const p of SHARDS) {
+    const land = (-p.vy + Math.sqrt(p.vy * p.vy + 2 * G0 * (p.rest - Y0))) / G0;
+    const tau = Math.min(since, land) * (1 - lift);
+    const x = clamp(Math.round(X0 + p.vx * tau), 2, 157), y = Math.round(Y0 + p.vy * tau + 0.5 * G0 * tau * tau);
+    if (!p.kind) { R(g, p.c, x, y, p.s, p.s); continue; }
+    if (p.kind === 'hour') R(g, '#1c1b26', x - 2, y, 4, 1);
+    else if (p.kind === 'minute') R(g, '#1c1b26', x - 3, y, 6, 1);
+    else if (p.kind === 'second') R(g, '#c0392b', x - 2, y, 5, 1);
+    else if (p.kind === 'pendulum') { R(g, '#c98f4a', x, y - 4, 1, 4); disc(g, x, y + 1, 2, '#e2aa3f'); }
+    else { R(g, '#e2aa3f', x - 2, y - 1, 3, 3); R(g, '#2b1d16', x - 1, y, 1, 1); R(g, '#e2aa3f', x + 1, y, 3, 1); R(g, '#e2aa3f', x + 3, y + 1, 1, 1); }
+  }
+  if (looping) {
+    // a faint anticlockwise sweep, like the wipe that starts every loop in the game
+    g.save(); g.globalAlpha = 0.08; g.fillStyle = '#f2d9a0'; g.beginPath(); g.moveTo(80, 48);
+    g.arc(80, 48, 140, -Math.PI / 2 - Math.PI * 2 * ph, -Math.PI / 2, false); g.closePath(); g.fill(); g.restore();
+  }
+}
+function drawScene(id, t) {
+  const g = lowG, w = 160, h = 96, tt = save.settings.reducedMotion ? 0 : t;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  const cat = (img, x, y, al) => { g.globalAlpha = al === undefined ? 1 : al; g.drawImage(img, x, y); g.globalAlpha = 1; };
+  if (id === 0) {
+    R(g, '#2b1d16', 0, 0, w, h); R(g, '#3a281d', 0, 78, w, 18);
+    fireplace(g, tt, 50, 42);
+    introSmash(g, save.settings.reducedMotion ? 1e6 : t - panelAt, cat);
+    pixText(g, '11:59', 6, 6, 1, '#c98f4a');
+  } else if (id === 1) {
+    R(g, '#2b1d16', 0, 0, w, h); R(g, '#45301f', 0, 70, w, 26); R(g, '#7d5631', 14, 58, 132, 6); R(g, '#5b4029', 20, 64, 4, 20); R(g, '#5b4029', 136, 64, 4, 20);
+    dial(g, 80, 28, 15, -0.5, -0.1);
+    for (let k = 0; k < 10; k++) { const an = -tt / 500 - k * 0.5; R(g, '#f2d9a0', Math.round(80 + Math.sin(an) * 22), Math.round(28 - Math.cos(an) * 22), 2, 2); }
+    cat(SPR.echo.nap, 30, 43, 0.6); cat(SPR.echo.R[0], 52, 42, 0.75); cat(SPR.cat.R[(Math.floor(tt / 300) & 1)], 108, 42);
+  } else if (id === 2) {
+    const bands = ['#16324a', '#1f4a5a', '#2d6a66', '#8a7a4a', '#d99a4a', '#e8b860'];
+    bands.forEach((c, k) => R(g, c, 0, k * 11, w, 11)); disc(g, 118, 52, 13, '#f6e2a0');
+    tri(g, 52, 70, 46, 44, '#8a6a34'); tri(g, 52, 70, 46, 44, '#8a6a34'); tri(g, 110, 70, 30, 28, '#a98a50'); tri(g, 20, 70, 18, 16, '#a98a50');
+    R(g, '#bb9a5c', 0, 70, w, 26); R(g, '#a98a50', 0, 70, w, 2);
+    R(g, '#3a2414', 6, 54, 16, 20); R(g, '#f2d9a0', 9, 58, 10, 16);
+    cat(SPR.cat.R[(Math.floor(tt / 300) & 1)], 26, 60); g.drawImage(SPR.scarab, 96, 74); g.drawImage(SPR.urn, 130, 68);
+  } else if (id === 3) {
+    R(g, '#141820', 0, 0, w, h); disc(g, 124, 20, 10, '#e8ecf0'); disc(g, 120, 17, 9, '#141820');
+    for (let k = 0; k < 24; k++) R(g, '#7b8794', Math.floor(hash2(k, 3) * w), Math.floor(hash2(k, 9) * 50), 1, 1);
+    R(g, '#343a43', 20, 30, 34, 50); R(g, '#343a43', 60, 44, 50, 36); R(g, '#343a43', 112, 26, 28, 54);
+    for (const [bx, by, bw] of [[20, 26, 34], [60, 40, 50], [112, 22, 28]]) for (let x = bx; x < bx + bw; x += 8) R(g, '#343a43', x, by, 5, 5);
+    R(g, '#e07b39', 32, 46, 4, 7); R(g, '#e07b39', 122, 40, 4, 7); R(g, '#e07b39', 82, 56, 4, 7);
+    R(g, '#22262c', 0, 80, w, 16); R(g, '#474f5a', 0, 80, w, 1);
+    cat(SPR.cat.R[0], 40, 66); g.drawImage(SPR.hound.L, 120, 65);
+  } else if (id === 4) {
+    R(g, '#2a1a17', 0, 0, w, h);
+    for (let y = 0; y < 70; y += 6) for (let x = (y / 6) % 2 ? 0 : 6; x < w; x += 12) R(g, '#4a2620', x, y, 11, 5);
+    R(g, '#8c3b2e', 118, 0, 18, 70);
+    for (let k = 0; k < 4; k++) { const yy = 60 - ((tt / 60 + k * 18) % 70); g.globalAlpha = 0.6; disc(g, 127 + Math.round(Math.sin(yy / 9) * 4), Math.round(yy) - 30, 5, '#dfe6e9'); g.globalAlpha = 1; }
+    disc(g, 46, 38, 22, '#3a3f45'); disc(g, 46, 38, 15, '#2a1a17');
+    for (let k = 0; k < 8; k++) { const an = tt / 900 + k * Math.PI / 4; R(g, '#3a3f45', Math.round(46 + Math.cos(an) * 24) - 2, Math.round(38 + Math.sin(an) * 24) - 2, 5, 5); pixLine(g, 46, 38, 46 + Math.cos(an) * 15, 38 + Math.sin(an) * 15, '#3a3f45'); }
+    R(g, '#23232b', 0, 70, w, 8); for (let x = -8 + Math.floor(tt / 80) % 8; x < w; x += 8) R(g, '#c9a23a', x, 73, 3, 2);
+    R(g, '#3f2420', 0, 78, w, 18); cat(SPR.cat.R[(Math.floor(tt / 300) & 1)], 72, 55); g.drawImage(SPR.crate, 96, 55);
+  } else if (id === 5) {
+    R(g, '#0e1430', 0, 0, w, h);
+    for (let k = 0; k < 40; k++) R(g, k % 5 ? '#5ad1e6' : '#ffffff', Math.floor(hash2(k, 1) * w), Math.floor(hash2(k, 7) * 70), 1, 1);
+    disc(g, 30, 130, 60, '#243058'); disc(g, 30, 132, 58, '#2b3763');
+    disc(g, 112, 36, 20, '#33407a'); disc(g, 112, 36, 15, '#0e1430'); R(g, '#33407a', 84, 34, 56, 4); R(g, '#5ad1e6', 110, 34, 4, 4);
+    R(g, 'rgba(255,77,109,0.35)', 0, 61, w, 4); R(g, '#ff4d6d', 0, 62, w, 2);
+    R(g, '#161d42', 0, 76, w, 20); R(g, '#33407a', 0, 76, w, 1);
+    cat(SPR.cat.R[0], 60, 62); cat(SPR.echo.R[0], 40, 62, 0.6);
+  } else {
+    R(g, '#2b1d16', 0, 0, w, h); R(g, '#3a281d', 0, 78, w, 18);
+    fireplace(g, tt, 50, 34); dial(g, 80, 14, 9, 0, 0);
+    const all = totalPaws() === 60, spots = [[18, 74], [34, 80], [116, 74], [132, 80], [8, 82], [124, 62], [26, 62], [142, 68]];
+    spots.forEach(([x, y], k) => { const al = all ? 0.8 : clamp(0.75 - ((tt / 1400 + k * 0.6) % 6) * 0.2, 0, 0.75); if (al > 0.02) cat(SPR.echo.nap, x, y - 10, al); });
+    cat(SPR.cat.nap, 72, 72);
+    pixText(g, '12:00', 6, 6, 1, '#f2d9a0');
+  }
+}
+function drawPanel(t) {
+  const { W, H } = view;
+  R(G, ERAS[panelId >= 1 && panelId <= 5 ? panelId : 1].bg, 0, 0, W, H);
+  drawScene(panelId, t);
+  const sc = Math.max(1, Math.floor(Math.min(W / 160, (H * 0.58) / 96)));
+  const x = Math.floor((W - 160 * sc) / 2), y = Math.max(8, Math.floor(H * 0.06));
+  R(G, 'rgba(0,0,0,0.4)', x - 4, y - 4, 160 * sc + 8, 96 * sc + 8);
+  G.drawImage(lowC, x, y, 160 * sc, 96 * sc);
+}
+function drawTitle(t) {
+  const { W, H } = view, tt = save.settings.reducedMotion ? 0 : t, E = ERAS[1];
+  R(G, E.bg, 0, 0, W, H);
+  // Shrink the art (pixel size, then logo and clock) until the tagline ends above the menu buttons.
+  const menuTop = $('scr-title').querySelector('.row').offsetTop - 8;
+  let u, lw, lh, ls, cr, cy, ly, oneLine;
+  for (u of W >= 520 && H >= 520 ? [3, 2] : [2]) {
+    lw = Math.ceil(W / u); lh = Math.ceil(H / u); oneLine = textW('NINE LIVES. ONE TIMELINE.', 1) <= lw - 8;
+    const ls0 = Math.max(2, Math.min(6, Math.floor((lw * 0.86) / 41))), cr0 = Math.max(14, Math.min(34, Math.floor(lh * 0.13)));
+    for (ls = ls0; ls >= 2; ls--) {
+      cr = Math.max(10, cr0 - (ls0 - ls) * 6); cy = Math.floor(lh * 0.2) + 4; if (ls < ls0) cy = Math.min(cy, cr + 8);
+      ly = cy + cr + 22;
+      if ((ly + ls * 7 + (oneLine ? 15 : 24)) * u <= menuTop) break;
+    }
+    if (ls >= 2) break;
+  }
+  ls = Math.max(2, ls);
+  if (lowTitle.width !== lw || lowTitle.height !== lh) { lowTitle.width = lw; lowTitle.height = lh; }
+  const g = lowTitle.getContext('2d'); g.clearRect(0, 0, lw, lh);
+  for (let k = 0; k < 30; k++) { const yy = (hash2(k, 4) * lh + tt / (60 + k * 3)) % lh; R(g, 'rgba(242,217,160,0.25)', Math.floor(hash2(k, 2) * lw), Math.floor(yy), 1, 1); }
+  const logoW = textW('TIMECAT', ls), lx = Math.floor((lw - logoW) / 2);
+  dial(g, Math.floor(lw / 2), cy, cr, -tt / 4000, -tt / 700);   // the hands run backwards
+  pixText(g, 'TIMECAT', lx + ls, ly + ls, ls, '#120d0a'); pixText(g, 'TIMECAT', lx, ly, ls, E.accent);
+  pixText(g, 'TIME', lx, ly, ls, E.main);
+  g.drawImage(SPR.cat.D[(Math.floor(tt / 2600) % 5 === 0) ? 1 : 0], lx + logoW - 22, ly - 15);
+  g.globalAlpha = 0.5; g.drawImage(SPR.echo.nap, lx + 2, ly - 14); g.globalAlpha = 1;
+  if (oneLine) pixText(g, 'NINE LIVES. ONE TIMELINE.', Math.floor(lw / 2), ly + ls * 7 + 8, 1, '#c98f4a', 'center');
+  else { pixText(g, 'NINE LIVES.', Math.floor(lw / 2), ly + ls * 7 + 7, 1, '#c98f4a', 'center'); pixText(g, 'ONE TIMELINE.', Math.floor(lw / 2), ly + ls * 7 + 17, 1, '#c98f4a', 'center'); }
+  G.drawImage(lowTitle, 0, 0, lw * u, lh * u);
+}
+const lowTitle = mk(16, 16);
+
+function frame(t) {
+  update(t);
+  G.setTransform(view.dpr, 0, 0, view.dpr, 0, 0); G.imageSmoothingEnabled = false; G.globalAlpha = 1;
+  if (inRoom()) drawRoom(t);
+  else if (screen === 'panel') drawPanel(t);
+  else if (screen === 'title') drawTitle(t);
+  else R(G, ERAS[Number(app.dataset.era) || 1].bg, 0, 0, view.W, view.H);
+  requestAnimationFrame(frame);
+}
+
+// ----- built-in tests: open the page with #test (or ?test) -----
+function runTests() {
+  show('test');
+  const out = $('test-out'); out.textContent = 'Checking 20 rooms...\n';
+  let bad = 0, i = 0;
+  const one = () => {
+    if (i >= LEVELS.length) { out.textContent += bad ? `\n${bad} room(s) FAILED` : '\nAll 20 rooms pass.'; return; }
+    const def = LEVELS[i++], L = C.parseLevel(def), r = C.playthrough(L, def.solution);
+    const okSol = r.ok && r.fish && r.lives === def.par && r.ticks <= def.loop;
+    // Search every way to finish with fewer lives. Searches too big for a browser tab fall back to the offline count.
+    let low = 'n/a', states = 0;
+    for (let k = 1; k < def.par; k++) {
+      const s = FAST.solve(L, k, { maxStates: 1.5e6, keepPath: false });
+      states += s.states;
+      if (s.found) { low = 'POSSIBLE with ' + k; bad++; break; }
+      if (!s.complete) { const pf = (def.proof || []).find(p => p.k === k); low = pf ? `none up to ${k} (offline, ${pf.states.toLocaleString('en-GB')} states)` : 'too big to check here'; break; }
+      low = `none (${states.toLocaleString('en-GB')} states)`;
+    }
+    if (!okSol) bad++;
+    out.textContent += `${String(def.id).padStart(2)} ${def.name.padEnd(18)} solution ${okSol ? 'ok ' + String(r.ticks).padStart(2) + '/' + def.loop : 'FAIL'}   par ${def.par}${def.bestKnown ? '*' : ' '}  fewer lives: ${low}\n`;
+    setTimeout(one, 0);
+  };
+  setTimeout(one, 30);
+}
+
+// ----- start -----
+function start(data) {
+  loadSave();
+  buildSprites();
+  HEADS.left = tinted(SPR.head, '#fff6e2', 1); HEADS.live = tinted(SPR.head, '#ffffff', 1); HEADS.spent = tinted(SPR.head, '#3f7fa8', 1);
+  for (const [id, text] of [['pause-head', 'Paused'], ['out-head', 'Out of lives'], ['settings-head', 'Settings'], ['select-head', 'Rooms']]) $(id).append(pixHeading(text, 3, '#fff6e2'));
+  wire(); syncToggles(); resize();
+  $('title-note').hidden = storageOK;
+  if (/[?#&]test\b/.test(location.search + location.hash)) { setEra(1); runTests(); }
+  else if (data && data.roomId && LEVELS[data.roomId - 1]) enterRoom(data.roomId, data);
+  else openTitle();
+  requestAnimationFrame(frame);
+}
+globalThis.TimecatDebug = () => ({ screen, storageOK, room: room && { id: room.id, lives: room.lives.slice(), mode: room.mode, tick: room.st.t, fish: room.st.fish, hint: room.hintLevel, restarts: room.restarts.length } });
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) { try { hot.snapshot(() => (inRoom() ? { roomId: room.id, lives: room.lives, restarts: room.restarts } : {})); } catch (e) { /* no viewer hook */ } }
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+
+})();
+</script>
+</body>
+</html>

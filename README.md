@@ -5,9 +5,10 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 
 ## Structure
 
-For now the site is four standalone pages, served as-is with no theme layout:
+For now the site is a home page and four standalone pages, served as-is with no theme layout:
 
-- `index.html` — the TimeCat game, the home page at `/`
+- `index.html` — the home page at `/`, a shelf of boxed-game covers (inline SVG) linking to the four below
+- `timecat/index.html` — the TimeCat game, at `/timecat/` (open `/timecat/#test` to replay every room's stored solution)
 - `top-banana/index.html` — the Top Banana game, at `/top-banana/`
 - `kings-line/index.html` — The King's Line (monarch ancestry), at `/kings-line/`
 - `brasshaven/index.html` — Brasshaven, a steampunk harbour town builder, at `/brasshaven/`
