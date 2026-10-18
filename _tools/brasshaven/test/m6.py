@@ -49,7 +49,7 @@ with sync_playwright() as p:
     ev("document.getElementById('gear').click()"); ev("document.getElementById('m-marks').click()")
     page.wait_for_timeout(300)
     txt = ev("document.getElementById('m-marks-val').textContent")
-    check(txt == '7 of 7', f'menu count {txt}')
+    check(txt == '7 of 8', f'menu count {txt}')  # the shipyard is not built here; m9boats covers it
     check(ev("document.querySelectorAll('#marks-list button').length") == 7, 'a Show button for each')
     page.screenshot(path=f'{ROOT}/test/m6-menu.png')
     ev("document.getElementById('gear').click()")

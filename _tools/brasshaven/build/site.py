@@ -8,7 +8,7 @@ src = open(SRC).read()
 i = src.index('<style>')
 body = src[i:]
 DESC = ('A steampunk harbour town to build. Tap the water to raise houses in brick, brass, copper, cast iron, glass and timber; '
-        'engine houses power the clockwork, and airships moor at the tallest tower.')
+        'engine houses power the clockwork, boats call at the quays, and airships moor at the tallest tower.')
 head = f'''<!DOCTYPE html>
 <html lang="en-GB">
 <head>
