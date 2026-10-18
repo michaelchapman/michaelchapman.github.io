@@ -1817,8 +1817,9 @@ function buildGasholder(g, v) {
   }
   g.dyn.marks.push({ type: 'gas', p: [x, y0 + 0.2, z], r: R - 0.07, h: Hf - 0.2, v });
 }
-// the market hall: flagstones, stalls with striped awnings, and a glass-and-iron canopy on slender columns
-const AWNINGS = [[0x8a3326, 0xf1e6cc], [0x2f5a4a, 0xf1e6cc], [0x283a5c, 0xe8c547], [0x7a3a5a, 0xf1e6cc]].map((p) => p.map((h) => lin(h)));
+// the market hall: flagstones, a striped canvas roof on iron columns, and a stall of produce under each bay
+const AWNINGS = [[0x8a3326, 0xf1e6cc], [0x2f5a4a, 0xf1e6cc], [0x283a5c, 0xe8c547], [0x7a3a5a, 0xf1e6cc], [0xb5602a, 0xf1e6cc]].map((p) => p.map((h) => lin(h)));
+const PRODUCE = [0xb8322a, 0xe0862a, 0x5f8a2e, 0xe3c23a, 0x6a2f5a, 0xc9a06a].map((h) => lin(h));
 function buildMarket(g, v) {
   const x = X[v], z = Z[v], y0 = GROUND_TOP, Qs = ringQ[v], k = Qs.length, yc = topY(1) + 0.08, ya = yc + 0.42;
   const flag = mul3(C_COPING, 0.92);
@@ -1833,40 +1834,68 @@ function buildMarket(g, v) {
     g.cyl([cx, yc - 0.07, cz], [cx, yc, cz], 0.024, 0.05, 7, C_BRASS, S_BRASS);
     g.cyl([cx, y0 + 0.66, cz], [cx, y0 + 0.69, cz], 0.03, 0.03, 7, C_BRASS, S_BRASS);
   }
-  const apex = [x, ya, z];
-  g.glow = 0.3;
-  for (let i = 0; i < k; i++) { const a = Qs[i], b = Qs[(i + 1) % k]; const pa = [CX[a], yc, CZ[a]], pb = [CX[b], yc, CZ[b]]; let n = nrm3(cross3(sub3(pa, apex), sub3(pb, apex))); if (n[1] < 0) n = neg3(n); g.twoSided(apex, pa, pb, n, C_GREENGLASS, S_GREEN); }
+  // each bay has its own striped canvas, so a market reads as a patchwork of colour from above
+  const aw = AWNINGS[Math.floor(hash4(v, 0, 82, 0) * AWNINGS.length)], apex = [x, ya, z], NS = 4;
+  const lerp = (a, b, t) => add3(a, mul3(sub3(b, a), t));
+  g.glow = 0.04;
+  for (let i = 0; i < k; i++) {
+    const a = Qs[i], b = Qs[(i + 1) % k], pa = [CX[a], yc, CZ[a]], pb = [CX[b], yc, CZ[b]];
+    let n = nrm3(cross3(sub3(pa, apex), sub3(pb, apex))); if (n[1] < 0) n = neg3(n);
+    const out = nrm3([(pa[0] + pb[0]) / 2 - x, 0, (pa[2] + pb[2]) / 2 - z]);
+    for (let s = 0; s < NS; s++) {
+      const e0 = lerp(pa, pb, s / NS), e1 = lerp(pa, pb, (s + 1) / NS), col = aw[s % 2];
+      g.twoSided(apex, e0, e1, n, col, S_PLAIN);
+      // a scalloped valance hangs from the eaves
+      const m = lerp(e0, e1, 0.5);
+      g.twoSided(e0, e1, [m[0], yc - 0.09, m[2]], out, aw[(s + 1) % 2], S_PLAIN);
+    }
+  }
   g.glow = 0;
   for (let i = 0; i < k; i++) {
     const a = Qs[i], b = Qs[(i + 1) % k];
     g.strut(apex, [CX[a], yc, CZ[a]], UP, 0.01, 0.012, C_IRON, S_IRON);
     g.strut([CX[a], yc - 0.01, CZ[a]], [CX[b], yc - 0.01, CZ[b]], UP, 0.014, 0.02, C_IRON, S_IRON);
   }
-  g.cyl([x, ya, z], [x, ya + 0.1, z], 0.03, 0.0, 6, C_BRASS, S_BRASS);
+  // a brass finial with a pennant
+  g.cyl([x, ya - 0.02, z], [x, ya + 0.32, z], 0.012, 0.008, 6, C_BRASS, S_BRASS);
+  g.ball([x, ya + 0.33, z], 0.022, C_BRASS, S_BRASS);
+  const fa = hash4(v, 0, 85, 0) * Math.PI * 2, fd = [Math.cos(fa), 0, Math.sin(fa)];
+  g.twoSided([x, ya + 0.3, z], [x, ya + 0.18, z], [x + fd[0] * 0.2, ya + 0.25, z + fd[2] * 0.2], nrm3(cross3(fd, UP)), aw[0], S_PLAIN);
   g.cyl([x, y0 + 1.05, z], [x, ya, z], 0.006, 0.006, 4, C_IRON, S_IRON, false);
   g.glow = 1.7; g.box([x, y0 + 1.0, z], XA, UP, ZA, 0.045, 0.055, 0.045, C_LAMP, S_GLASS); g.glow = 0;
   g.cyl([x, y0 + 1.055, z], [x, y0 + 1.1, z], 0.06, 0.0, 6, C_BRASS, S_BRASS);
   g.dyn.lamps.push([x, y0 + 1.0, z]);
-  g.dyn.perches.push([x, ya + 0.12, z]);
+  g.dyn.perches.push([x, ya + 0.36, z]);
   // a stall, set off to one side so the walkway stays clear
   const an = hash4(v, 0, 81, 0) * Math.PI * 2, d = [Math.cos(an), 0, Math.sin(an)], sd = [-d[2], 0, d[0]];
-  const o = Math.min(0.2, inRadius(v) - 0.12), c = [x + d[0] * o, y0, z + d[2] * o];
+  const o = Math.min(0.22, inRadius(v) - 0.14), c = [x + d[0] * o, y0, z + d[2] * o];
   const at = (u, w, h) => [c[0] + d[0] * u + sd[0] * w, y0 + h, c[2] + d[2] * u + sd[2] * w];
-  const aw = AWNINGS[Math.floor(hash4(v, 0, 82, 0) * AWNINGS.length)];
-  g.box(at(0, 0, 0.2), d, UP, sd, 0.08, 0.014, 0.15, C_PILE, S_WOOD);
-  g.box(at(0.06, 0, 0.1), d, UP, sd, 0.012, 0.09, 0.14, mul3(C_PILE, 0.8), S_WOOD);
-  for (const u of [-0.06, 0.06]) for (const w of [-0.13, 0.13]) g.strut(at(u, w, 0), at(u, w, 0.19), UP, 0.008, 0.008, C_PILE, S_WOOD);
-  for (let j = 0; j < 6; j++) {
-    const fc = lin(FLOWERS[Math.floor(hash4(v, j, 83, 0) * FLOWERS.length)]);
-    g.blob(at(hash4(v, j, 84, 0) * 0.08 - 0.04, -0.11 + j * 0.044, 0.234), 0.022, fc, S_LEAF, 0.85);
+  // the counter, its front boards and legs
+  g.box(at(0, 0, 0.27), d, UP, sd, 0.1, 0.014, 0.2, C_PILE, S_WOOD);
+  g.box(at(0.09, 0, 0.13), d, UP, sd, 0.012, 0.12, 0.19, mul3(C_PILE, 0.8), S_WOOD);
+  for (const u of [-0.08, 0.08]) for (const w of [-0.18, 0.18]) g.strut(at(u, w, 0), at(u, w, 0.26), UP, 0.009, 0.009, C_PILE, S_WOOD);
+  // three crates of produce, heaped high
+  for (let j = 0; j < 3; j++) {
+    const w = -0.12 + j * 0.12, fc = PRODUCE[Math.floor(hash4(v, j, 83, 0) * PRODUCE.length)];
+    g.box(at(0.01, w, 0.305), d, UP, sd, 0.07, 0.022, 0.05, mul3(C_DECK, 1.15), S_WOOD);
+    for (let m = 0; m < 7; m++) {
+      const u = m < 6 ? (m % 2 ? 0.03 : -0.03) : 0, ww = w + (m < 6 ? (Math.floor(m / 2) - 1) * 0.032 : 0);
+      g.blob(at(u, ww, m < 6 ? 0.335 : 0.365), 0.026, mul3(fc, 0.85 + 0.3 * hash4(v, j, 86, m)), S_LEAF, 0.85);
+    }
   }
-  for (const w of [-0.15, 0.15]) g.strut(at(-0.09, w, 0), at(-0.09, w, 0.5), UP, 0.009, 0.009, C_PILE, S_WOOD);
-  for (let j = 0; j < 6; j++) {
-    const w0 = -0.17 + (j * 0.34) / 6, w1 = w0 + 0.34 / 6, col = aw[j % 2];
-    const a0 = at(-0.1, w0, 0.5), a1 = at(-0.1, w1, 0.5), b1 = at(0.17, w1, 0.39), b0 = at(0.17, w0, 0.39);
+  // a barrel and a sack beside the counter
+  g.cyl(at(-0.02, 0.27, 0), at(-0.02, 0.27, 0.2), 0.06, 0.06, 8, C_DECK, S_WOOD);
+  g.cyl(at(-0.02, 0.27, 0.06), at(-0.02, 0.27, 0.075), 0.064, 0.064, 8, C_IRON, S_IRON, false);
+  g.cyl(at(-0.02, 0.27, 0.14), at(-0.02, 0.27, 0.155), 0.064, 0.064, 8, C_IRON, S_IRON, false);
+  g.blob(at(0.04, -0.28, 0.09), 0.07, lin(0xc9b089), S_PLAIN, 1.3);
+  // the stall's own awning and posts
+  for (const w of [-0.21, 0.21]) g.strut(at(-0.11, w, 0), at(-0.11, w, 0.62), UP, 0.01, 0.01, C_PILE, S_WOOD);
+  for (let j = 0; j < 8; j++) {
+    const w0 = -0.23 + (j * 0.46) / 8, w1 = w0 + 0.46 / 8, col = aw[j % 2];
+    const a0 = at(-0.12, w0, 0.62), a1 = at(-0.12, w1, 0.62), b1 = at(0.2, w1, 0.5), b0 = at(0.2, w0, 0.5);
     const n = nrm3(add3(UP, mul3(d, 0.4)));
     g.twoSided(a0, a1, b1, n, col, S_PLAIN); g.twoSided(a0, b1, b0, n, col, S_PLAIN);
-    g.twoSided(b0, b1, at(0.17, (w0 + w1) / 2, 0.33), d, col, S_PLAIN);
+    g.twoSided(b0, b1, at(0.2, (w0 + w1) / 2, 0.44), d, col, S_PLAIN);
   }
 }
 
@@ -4283,7 +4312,7 @@ const LANDMARKS = [
   { id: 'gate', name: 'Town gate', line: 'The portcullis comes down at night', hint: 'Two towers of the same height, a block bridging the street between them' },
   { id: 'ironworks', name: 'Ironworks', line: 'The blast furnace glows and throws sparks', hint: 'Four cast-iron houses joined together, one with an engine' },
   { id: 'gasworks', name: 'Gasworks', line: 'The gasholder fills by day and empties at night', hint: 'Three copper houses around a single open square' },
-  { id: 'market', name: 'Market hall', line: 'Stalls under glass where the townsfolk gather', hint: 'A walled square of three cells or more, with glasshouses on its sides' },
+  { id: 'market', name: 'Market hall', line: 'Stalls under striped canvas where the townsfolk gather', hint: 'A walled square of three cells or more, with glasshouses on its sides' },
 ];
 const foundSet = new Set((store.get('found', null) || []).filter((id) => LANDMARKS.some((l) => l.id === id)));
 let foundTimer = 0;
