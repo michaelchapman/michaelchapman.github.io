@@ -425,7 +425,8 @@ function buildGrid(seed) {
     for (const [k, c] of ecount) if (c === 1) { edge[Math.floor(k / 100000)] = 1; edge[k % 100000] = 1; }
     return { ecount, edge };
   };
-  const edgeBand = [];
+  const edgeBand = [], made = new Set();
+  const tKey = (t) => t.slice().sort((x, y) => x - y).join(',');
   let sc = 1;
   BANDS.forEach((N, bi) => {
     const N0 = bi ? BANDS[bi - 1] : -1, rnd = mulberry32(bi ? seed * 31 + bi : seed), v0 = pts.length / 2, q0 = quads.length / 4;
@@ -435,7 +436,8 @@ function buildGrid(seed) {
       pts.push((q + r / 2) * L, r * H3 * L);
     }
     const tris = [];
-    const keep = (t) => t.some((i) => band[i] === bi);
+    // every lattice triangle not made yet, including ones an earlier hexagon's edge left out
+    const keep = (t) => { const k = tKey(t); if (made.has(k)) return false; made.add(k); return true; };
     for (let r = -N; r <= N; r++) for (let q = -N; q <= N; q++) {
       const a = get(q, r); if (a === undefined || hexR(q, r) > N) continue;
       const b = get(q + 1, r), c = get(q, r + 1), d = get(q + 1, r + 1);
@@ -578,18 +580,32 @@ const _col = new THREE.Color();
 const lin = (hex, m = 1) => { _col.setHex(hex); return [_col.r * m, _col.g * m, _col.b * m]; };
 const ICO = (() => { const g = new THREE.IcosahedronGeometry(1, 0); return Array.from((g.index ? g.toNonIndexed() : g).attributes.position.array); })();
 
+// small or thin triangles (rivets, railings, glazing bars, trim) can go in a separate layer that far buildings leave out
+const FINE_H = 0.026, FINE_A = 0.0009;
 class Geo {
-  constructor() { this.P = []; this.N = []; this.C = []; this.S = []; this.G = []; this.glow = 0; this.dyn = { gears: [], clocks: [], engines: [], wheels: [], emit: [], lamps: [], mains: [], mast: null, perches: [], marks: [] }; }
-  _v(p, n, c, s) { this.P.push(p[0], p[1], p[2]); this.N.push(n[0], n[1], n[2]); this.C.push(c[0], c[1], c[2]); this.S.push(s); this.G.push(this.glow); }
+  constructor(split = false) {
+    this.P = []; this.N = []; this.C = []; this.S = []; this.G = []; this.glow = 0; this.t = this;
+    this.fine = split ? { P: [], N: [], C: [], S: [], G: [] } : null;
+    this.dyn = { gears: [], clocks: [], engines: [], wheels: [], emit: [], lamps: [], mains: [], mast: null, perches: [], marks: [] };
+  }
+  _v(p, n, c, s) { const t = this.t; t.P.push(p[0], p[1], p[2]); t.N.push(n[0], n[1], n[2]); t.C.push(c[0], c[1], c[2]); t.S.push(s); t.G.push(this.glow); }
+  _pick(a, b, c, cx, cy, cz) {
+    if (!this.fine) return;
+    const area = Math.hypot(cx, cy, cz) / 2;
+    const e = Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Math.hypot(c[0] - b[0], c[1] - b[1], c[2] - b[2]), Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]));
+    this.t = area < FINE_A || (2 * area) / (e || 1) < FINE_H ? this.fine : this;
+  }
   tri(a, b, c, n, col, s, cb, cc) {
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+    this._pick(a, b, c, cx, cy, cz);
     if (cx * n[0] + cy * n[1] + cz * n[2] < 0) { this._v(a, n, col, s); this._v(c, n, cc || col, s); this._v(b, n, cb || col, s); }
     else { this._v(a, n, col, s); this._v(b, n, cb || col, s); this._v(c, n, cc || col, s); }
   }
   triN(a, b, c, na, nb, nc, col, s) {
     const n = add3(add3(na, nb), nc);
     const cr = cross3(sub3(b, a), sub3(c, a));
+    this._pick(a, b, c, cr[0], cr[1], cr[2]);
     if (dot3(cr, n) < 0) { this._v(a, na, col, s); this._v(c, nc, col, s); this._v(b, nb, col, s); }
     else { this._v(a, na, col, s); this._v(b, nb, col, s); this._v(c, nc, col, s); }
   }
@@ -657,13 +673,13 @@ class Geo {
     }
   }
   get count() { return this.P.length / 3; }
-  toGeometry() {
+  toGeometry(t = this) {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(this.P, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(this.N, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(this.C, 3));
-    g.setAttribute('surf', new THREE.Float32BufferAttribute(this.S, 1));
-    g.setAttribute('glow', new THREE.Float32BufferAttribute(this.G, 1));
+    g.setAttribute('position', new THREE.Float32BufferAttribute(t.P, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(t.N, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(t.C, 3));
+    g.setAttribute('surf', new THREE.Float32BufferAttribute(t.S, 1));
+    g.setAttribute('glow', new THREE.Float32BufferAttribute(t.G, 1));
     g.computeBoundingSphere();
     return g;
   }
@@ -3510,7 +3526,7 @@ function tickAmbience(dt) {
    8. Chunked town meshes, detail rules and the pick mesh
    ============================================================ */
 const CHUNK = 6;
-const chunkIndex = new Map(), chunkVerts = [], chunkMesh = [], chunkOf = new Int32Array(V);
+const chunkIndex = new Map(), chunkVerts = [], chunkMesh = [], chunkFine = [], chunkOf = new Int32Array(V);
 for (let v = 0; v < V; v++) {
   const k = Math.floor((X[v] + 100) / CHUNK) * 1000 + Math.floor((Z[v] + 100) / CHUNK);
   let ci = chunkIndex.get(k); if (ci === undefined) { ci = chunkVerts.length; chunkIndex.set(k, ci); chunkVerts.push([]); chunkMesh.push(null); chunkDyn.push(null); }
@@ -3523,14 +3539,28 @@ function markDirty(v) {
   for (const q of ringQ[v]) for (let j = 0; j < 4; j++) dirty.add(chunkOf[quads[4 * q + j]]);
 }
 function rebuildChunk(ci) {
-  const g = new Geo();
+  const g = new Geo(true);
   for (const v of chunkVerts[ci]) if (cols[v]) buildColumn(g, v);
-  if (chunkMesh[ci]) { scene.remove(chunkMesh[ci]); chunkMesh[ci].geometry.dispose(); chunkMesh[ci] = null; }
+  for (const list of [chunkMesh, chunkFine]) if (list[ci]) { scene.remove(list[ci]); list[ci].geometry.dispose(); list[ci] = null; }
   chunkDyn[ci] = g.dyn;
-  if (!g.count) return;
-  const m = new THREE.Mesh(g.toGeometry(), townMat);
-  m.castShadow = true; m.receiveShadow = true; m.matrixAutoUpdate = false;
-  scene.add(m); chunkMesh[ci] = m;
+  if (!g.count && !g.fine.P.length) return;
+  const add = (t, list) => {
+    if (!t.P.length) return;
+    const m = new THREE.Mesh(g.toGeometry(t), townMat);
+    m.castShadow = true; m.receiveShadow = true; m.matrixAutoUpdate = false;
+    scene.add(m); list[ci] = m;
+  };
+  add(g, chunkMesh); add(g.fine, chunkFine);
+  fineDirty = true;
+}
+// distance detail: the fine layer shows on chunks near the camera; how near depends on the quality tier
+const FINE_D = { high: 30, low: 20, lowest: 15 };
+let fineDirty = true, fineAt = new THREE.Vector3(1e9, 0, 0), fineTier = '';
+function updateFine(force) {
+  if (!force && !fineDirty && fineTier === tier && camera.position.distanceToSquared(fineAt) < 0.25) return;
+  fineDirty = false; fineTier = tier; fineAt.copy(camera.position);
+  const d = FINE_D[tier] || 30;
+  for (const m of chunkFine) if (m) { const bs = m.geometry.boundingSphere; m.visible = camera.position.distanceTo(bs.center) - bs.radius < d; }
 }
 // courtyards: open stone ground completely walled in by houses becomes a garden
 let yardRegions = [], bridgeRegions = [];
@@ -4644,7 +4674,10 @@ async function takePostcard() {
   // render once at print resolution: the long side of the photograph near 1600 pixels
   const pr = Math.max(prevPR, Math.min(3, 1600 / Math.max(crop.w, crop.h), Math.sqrt(9e6 / (W * H))));
   renderer.setPixelRatio(pr); updatePointScale(); townUniforms.uBump.value = 1;
+  // a postcard keeps every detail, however far away
+  for (const m of chunkFine) if (m) m.visible = true;
   renderer.render(scene, camera);
+  updateFine(true);
   const k = renderer.getPixelRatio();
   const shot = document.createElement('canvas');
   shot.width = Math.round(crop.w * k); shot.height = Math.round(crop.h * k);
@@ -5053,6 +5086,7 @@ function boot(data) {
     updateLife(dt, now / 1000);
     tickAmbience(dt);
     if (ghostFade > 0) { ghostFade = Math.max(0, ghostFade - dt * ghostRate); ghostMat.opacity = Math.min(1, ghostFade * 1.5); if (!ghostFade) { ghost.visible = false; ghostKey = ''; ghostMat.opacity = 0.95; } }
+    updateFine();
     renderer.render(scene, camera);
     if (thumbWant && now - thumbAt > 15000 && !pcMode) takeThumb();
     if (now - lostCheckT > 400) { lostCheckT = now; checkLost(); }
@@ -5069,7 +5103,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { renderInfo: () => { renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },

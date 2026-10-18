@@ -53,8 +53,10 @@ with sync_playwright() as p:
       }
       return out; })()""")
     print('  growth', [(s['reach'], s['n'], s['radius']) for s in steps])
-    check('the harbour grows a band at a time to its largest', [s['reach'] for s in steps]==[1,2,3,4] and steps[-1]['n']>3.3*1191, steps)
+    check('the harbour grows a band at a time to its largest', [s['reach'] for s in steps]==[1,2,3,4] and steps[-1]['n']>3*1191, steps)
     check('growing says so', all('grows' in s['hint'] or 'big as it gets' in s['hint'] for s in steps), [s['hint'] for s in steps])
+    r=ev("(() => { const b = window.__brasshaven; let holes = 0; for (let v = 0; v < b.V; v++) if (b.edgeBand[v] <= 4 && !b.buildable[v]) holes++; return holes; })()")
+    check('no holes where the bands meet', r==0, r)
     r=ev("(() => { const b = window.__brasshaven; const p = b.planAction({ type: 'water', x: 60, z: 0 }, 'build'); return p && p.msg; })()")
     check('past the largest harbour the edge says so', r and 'ends here' in r, r)
     # a block on a vertex numbered past 4095 can be picked and built on

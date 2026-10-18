@@ -28,10 +28,11 @@
   shot('home', { ...home, dist: 19 });
   shot('wide', { ...home, dist: 40 });
   shot('far', { ...home, dist: 75, pitch: 1.0 });
+  b.applyTier('lowest'); shot('homeNoShadow', { ...home, dist: 19 }); shot('farNoShadow', { ...home, dist: 75, pitch: 1.0 }); b.applyTier('high');
   // a tap: add one storey somewhere in the middle, then take it away
   const v = b.nearestVertex(1, 1), ts = [];
   for (let i = 0; i < 6; i++) { let y = 1; while (b.F(v, y)) y++; const t = performance.now(); b.commit([[v, y, 0]], []); ts.push(performance.now() - t); b.undo(); }
   ts.sort((a, c) => a - c);
   let n = 0; for (let x = 0; x < b.V; x++) n += b.buildable[x];
-  return { size: b.reach(), cells: n, blocks: b.cellCount(), views, tapMs: +ts[3].toFixed(1), shadowR: b.shadowR() };
+  return { fine: b.fineCount(), size: b.reach(), cells: n, blocks: b.cellCount(), views, tapMs: +ts[3].toFixed(1), shadowR: b.shadowR() };
 })()
