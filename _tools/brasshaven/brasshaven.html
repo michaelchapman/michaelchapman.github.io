@@ -133,6 +133,7 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .loading div{display:flex;flex-direction:column;align-items:center;gap:6px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
 .loading b{font-family:var(--font-display);font-weight:400;font-size:40px;letter-spacing:.03em}
 .loading span{font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.7;text-align:center}
+.loading i{font-size:13px;opacity:.6;margin-top:10px;text-align:center}
 .loading.done{opacity:0;pointer-events:none}
 .stats{position:absolute;left:12px;bottom:12px;font:12px/1.3 ui-monospace,monospace;color:#2a1d10;background:rgba(255,240,210,.7);padding:4px 6px;border-radius:4px;pointer-events:none}
 
@@ -343,7 +344,7 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
     </button>
   </nav>
 
-  <div class="loading" id="loading"><div><b>Brasshaven</b><span id="loading-msg">Laying the cobbles</span></div></div>
+  <div class="loading" id="loading"><div><b>Brasshaven</b><span id="loading-msg">Raising the harbour</span><i>After Townscaper by Oskar Stålberg</i></div></div>
 </div>
 
 <script type="module">
@@ -580,7 +581,8 @@ const _col = new THREE.Color();
 const lin = (hex, m = 1) => { _col.setHex(hex); return [_col.r * m, _col.g * m, _col.b * m]; };
 const ICO = (() => { const g = new THREE.IcosahedronGeometry(1, 0); return Array.from((g.index ? g.toNonIndexed() : g).attributes.position.array); })();
 
-// small or thin triangles (rivets, railings, glazing bars, trim) can go in a separate layer that far buildings leave out
+// small or thin triangles (rivets, railings, glazing bars, trim) can go in a separate layer that far buildings leave out;
+// keep holds slender parts that carry a silhouette (the airship mast, upright poles) in the main layer
 const FINE_H = 0.026, FINE_A = 0.0009;
 class Geo {
   constructor(split = false) {
@@ -590,7 +592,7 @@ class Geo {
   }
   _v(p, n, c, s) { const t = this.t; t.P.push(p[0], p[1], p[2]); t.N.push(n[0], n[1], n[2]); t.C.push(c[0], c[1], c[2]); t.S.push(s); t.G.push(this.glow); }
   _pick(a, b, c, cx, cy, cz) {
-    if (!this.fine) return;
+    if (!this.fine || this.keep) { this.t = this; return; }
     const area = Math.hypot(cx, cy, cz) / 2;
     const e = Math.max(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), Math.hypot(c[0] - b[0], c[1] - b[1], c[2] - b[2]), Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]));
     this.t = area < FINE_A || (2 * area) / (e || 1) < FINE_H ? this.fine : this;
@@ -631,6 +633,8 @@ class Geo {
   }
   cyl(a, b, r0, r1, seg, col, s, cap = true) {
     const d = nrm3(sub3(b, a));
+    // an upright pole (lamppost, finial, flagstaff) keeps its silhouette at a distance, or its lamp or ball would float
+    const keep = this.keep; if (Math.abs(d[1]) > 0.7 && Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) >= 0.22) this.keep = true;
     const ref = Math.abs(d[1]) < 0.9 ? UP : XA;
     const e1 = nrm3(cross3(d, ref)), e2 = cross3(d, e1);
     const dir = (t) => [e1[0] * Math.cos(t) + e2[0] * Math.sin(t), e1[1] * Math.cos(t) + e2[1] * Math.sin(t), e1[2] * Math.cos(t) + e2[2] * Math.sin(t)];
@@ -642,6 +646,7 @@ class Geo {
       if (r1 > 0) this.triN(p00, p11, p10, n0, n1, n0, col, s);
       if (cap && r1 > 0) this.tri(b, p10, p11, d, col, s);
     }
+    this.keep = keep;
   }
   ball(c, r, col, s) {
     const P = [[r, 0, 0], [-r, 0, 0], [0, r, 0], [0, -r, 0], [0, 0, r], [0, 0, -r]].map((o) => add3(c, o));
@@ -1720,6 +1725,7 @@ function buildRoof(g, v, y, ctx) {
 // a lattice mooring mast for airships, on the tallest tower in town
 function buildMast(g, x, z, y0) {
   const H = 1.7, b0 = 0.15, b1 = 0.04, levels = 6;
+  g.keep = true;
   const corner = (k, t) => { const hw = (b0 + (b1 - b0) * t) * Math.SQRT2, a = (k * Math.PI) / 2 + Math.PI / 4; return [x + Math.cos(a) * hw, y0 + H * t, z + Math.sin(a) * hw]; };
   for (let k = 0; k < 4; k++) g.strut(corner(k, 0), corner(k, 1), XA, 0.013, 0.013, C_IRON, S_IRON);
   for (let j = 0; j <= levels; j++) for (let k = 0; k < 4; k++) g.strut(corner(k, j / levels), corner((k + 1) % 4, j / levels), UP, 0.008, 0.008, C_IRON, S_IRON);
@@ -1730,6 +1736,7 @@ function buildMast(g, x, z, y0) {
   g.glow = 1.7; g.ball([x, yt + 0.25, z], 0.035, C_LAMP, S_GLASS); g.glow = 0;
   g.dyn.lamps.push([x, yt + 0.25, z]);
   g.dyn.mast = [x, yt + 0.12, z];
+  g.keep = false;
 }
 
 // ---------- landmark buildings ----------
@@ -2220,8 +2227,8 @@ function updateShore() {
   }
   const c2 = shoreSmall.getContext('2d');
   c2.imageSmoothingEnabled = true;
-  c2.clearRect(0, 0, 160, 160);
-  c2.drawImage(shoreBig, 0, 0, 160, 160);
+  c2.clearRect(0, 0, shoreSmall.width, shoreSmall.height);
+  c2.drawImage(shoreBig, 0, 0, shoreSmall.width, shoreSmall.height);
   shoreTex.needsUpdate = true;
 }
 
@@ -4548,8 +4555,8 @@ function renderMarks() {
   }
 }
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -5103,7 +5110,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },

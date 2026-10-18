@@ -77,6 +77,14 @@ with sync_playwright() as p:
     r=ev("""(() => { const b = window.__brasshaven, rm = []; for (let v = 0; v < b.V; v++) if (b.cols[v] && b.reachOf[v] > 0) for (let y = 0; y <= 12; y++) if (b.F(v, y)) rm.push([v, y]);
       b.commit([], rm); return { reach: b.reach(), r: +b.radius().toFixed(1) }; })()""")
     check('clearing the outer blocks shrinks the harbour', r['reach']==0, r)
+    # the shallows follow the quays: under every stone quay, and nowhere far from one
+    r=ev("""(() => { const b = window.__brasshaven, quay = [];
+      for (let v = 0; v < b.V; v++) if ((b.cols[v] & 1) && b.M(v, 0) !== 5) quay.push(v);
+      let missing = 0, stray = 0;
+      for (const v of quay) if (b.shoreAt(b.X[v], b.Z[v]) < 0.4) missing++;
+      for (let v = 0; v < b.V; v++) { if (quay.some((q) => Math.hypot(b.X[q] - b.X[v], b.Z[q] - b.Z[v]) < 4)) continue; if (b.shoreAt(b.X[v], b.Z[v]) > 0.05) stray++; }
+      return { quays: quay.length, missing, stray }; })()""")
+    check('the shallows sit under the quays', r['quays']>5 and r['missing']==0 and r['stray']==0, r)
     check('no page errors', not errs, errs)
     br.close()
 print('ALL PASSED' if not fails else 'FAILED: '+', '.join(fails), len(fails))
