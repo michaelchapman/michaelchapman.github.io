@@ -120,6 +120,14 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .marks li b{display:block;font-size:14.5px;color:var(--cream)}
 .marks li.no b{color:var(--muted);font-style:italic;font-weight:600}
 .box .marks button{flex:none;min-width:58px;min-height:34px;font-size:13px}
+.slots{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.slots li{display:flex;gap:10px;align-items:flex-start}
+.slots img,.slots .blank{flex:none;width:70px;height:46px;border-radius:5px;object-fit:cover;background:#15100c;border:1px solid rgba(198,154,75,.35)}
+.slots li.cur img,.slots li.cur .blank{border-color:var(--brass-hi);box-shadow:0 0 0 1px var(--brass-hi)}
+.slots li>div{flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:var(--muted)}
+.slots b{display:block;font-size:14.5px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slots .row{margin-top:5px}
+.box .slots button{min-height:32px;font-size:13px}
 
 .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--sky);color:#3a2817;transition:opacity .6s ease}
 .loading div{display:flex;flex-direction:column;align-items:center;gap:6px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
@@ -230,6 +238,16 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
   </div>
 
   <div class="menu plate" id="menu" hidden>
+    <button class="item" id="m-slots"><span>Harbours</span><span class="val" id="m-slots-val">1 of 8</span></button>
+    <div class="box" id="slots-box" hidden>
+      <ul class="slots" id="slots-list"></ul>
+      <div class="box warn" id="slot-confirm" hidden>
+        <p id="slot-confirm-msg"></p>
+        <div class="row"><button class="yes" id="slot-del-yes">Delete</button><button class="no" id="slot-del-no">Keep</button></div>
+      </div>
+      <div class="row"><button class="go" id="slot-new">New harbour</button></div>
+      <p class="msg" id="slots-msg" role="status"></p>
+    </div>
     <button class="item" id="m-share"><span>Share this town</span></button>
     <div class="box" id="share-box" hidden>
       <p class="msg" id="share-msg" role="status"></p>
@@ -3770,12 +3788,31 @@ async function decodeTown(text) {
   return { ...unpackBytes(bytes), name };
 }
 
-let saveTimer = 0, saveDirty = false;
+// up to eight harbours side by side; each slot keeps its town, name, last change and a thumbnail
+const SLOT_MAX = 8;
+let slots = store.get('slots', null);
+if (!slots || !Array.isArray(slots.list) || !slots.list.length) {
+  // the harbour from before slots becomes the first one
+  slots = { cur: 1, next: 2, legacy: 1, list: [{ id: 1, name: harbourName, t: Date.now(), thumb: '' }] };
+  store.set('slots', slots);
+}
+if (!slots.list.some((s) => s.id === slots.cur)) slots.cur = slots.list[0].id;
+const curSlot = () => slots.list.find((s) => s.id === slots.cur);
+const saveSlots = () => store.set('slots', slots);
+let saveTimer = 0, saveDirty = false, thumbWant = false, thumbAt = 0;
 function scheduleSave() { saveDirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 350); }
-function saveNow() { clearTimeout(saveTimer); saveDirty = false; store.set('town2', toB64(packBytes())); }
+function saveNow() {
+  clearTimeout(saveTimer); saveDirty = false;
+  store.set('town:' + slots.cur, toB64(packBytes()));
+  const s = curSlot(); s.t = Date.now(); s.name = harbourName; saveSlots();
+  thumbWant = true;
+}
 window.addEventListener('pagehide', () => { if (saveDirty) saveNow(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && saveDirty) saveNow(); });
 function loadSaved() {
+  const t = store.get('town:' + slots.cur, null);
+  if (typeof t === 'string' && t) { try { const { c, mt } = unpackBytes(fromB64(t)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
+  if (slots.legacy !== slots.cur) return false;
   const t2 = store.get('town2', null);
   if (typeof t2 === 'string' && t2) { try { const { c, mt } = unpackBytes(fromB64(t2)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
   const t1 = (store.get('town', null) || {}).c;
@@ -3784,6 +3821,90 @@ function loadSaved() {
     return true;
   }
   return false;
+}
+// a small picture of the view, taken straight after a frame is drawn
+function grabThumb() {
+  const c = document.createElement('canvas'); c.width = 140; c.height = 92;
+  const sw = canvas.width, sh = canvas.height, r = c.width / c.height;
+  let w = sw, h = sw / r; if (h > sh) { h = sh; w = sh * r; }
+  try { c.getContext('2d').drawImage(canvas, (sw - w) / 2, (sh - h) / 2, w, h, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.72); } catch (e) { return ''; }
+}
+function takeThumb() { thumbWant = false; thumbAt = performance.now(); const s = curSlot(); if (!s) return; const t = grabThumb(); if (t) { s.thumb = t; saveSlots(); renderSlots(); } }
+// switch harbours: the town, its name and the view change; undo history starts afresh
+function openSlot(id, keep = true) {
+  if (keep && saveDirty) saveNow();
+  if (keep && curSlot()) { updateCamera(0); renderer.render(scene, camera); takeThumb(); }
+  slots.cur = id; saveSlots();
+  cols.fill(0); mats.fill(0);
+  if (!loadSaved()) starterTown();
+  harbourName = cleanName(curSlot().name); store.set('name', harbourName); renderName();
+  undoStack.length = redoStack.length = 0; updateUndoUI();
+  for (let ci = 0; ci < chunkVerts.length; ci++) dirty.add(ci);
+  groundDirty = true;
+  flush();
+  saveNow();
+  goHome(); Object.assign(view, goal);
+  renderSlots();
+}
+function newSlot(town, name) {
+  if (slots.list.length >= SLOT_MAX) return false;
+  const id = slots.next++;
+  slots.list.push({ id, name: cleanName(name), t: Date.now(), thumb: '' });
+  if (town) store.set('town:' + id, town);
+  saveSlots();
+  openSlot(id);
+  return true;
+}
+function deleteSlot(id) {
+  const i = slots.list.findIndex((s) => s.id === id); if (i < 0) return;
+  slots.list.splice(i, 1);
+  try { localStorage.removeItem('brasshaven:town:' + id); } catch (e) { /* storage unavailable */ }
+  if (slots.legacy === id) delete slots.legacy;
+  saveSlots();
+  if (id !== slots.cur) { renderSlots(); return; }
+  if (slots.list.length) openSlot(slots.list[Math.max(0, i - 1)].id, false);
+  else { const nid = slots.next++; slots.list.push({ id: nid, name: '', t: Date.now(), thumb: '' }); openSlot(nid, false); }
+}
+const copyName = (n) => cleanName((n || 'Harbour No. 1887').slice(0, NAME_MAX - 7) + ' (copy)');
+function whenText(t) {
+  const m = (Date.now() - t) / 60000;
+  if (m < 1) return 'Changed just now';
+  if (m < 60) return `Changed ${Math.floor(m)} min ago`;
+  if (m < 1440) { const h = Math.floor(m / 60); return `Changed ${h} hour${h > 1 ? 's' : ''} ago`; }
+  return 'Changed ' + new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+let slotDel = 0;
+function renderSlots() {
+  $('m-slots-val').textContent = `${slots.list.length} of ${SLOT_MAX}`;
+  if ($('slots-box').hidden) return;
+  const ul = $('slots-list'); ul.textContent = '';
+  for (const s of slots.list) {
+    const cur = s.id === slots.cur, li = document.createElement('li'), div = document.createElement('div'), b = document.createElement('b'), row = document.createElement('div');
+    li.className = cur ? 'cur' : '';
+    let pic;
+    if (s.thumb) { pic = document.createElement('img'); pic.src = s.thumb; pic.alt = ''; } else { pic = document.createElement('span'); pic.className = 'blank'; }
+    b.textContent = (cur ? harbourName : s.name) || 'Harbour No. 1887';
+    row.className = 'row';
+    const btn = (label, cls, aria, fn) => { const e = document.createElement('button'); e.className = cls; e.textContent = label; e.setAttribute('aria-label', aria); e.addEventListener('click', fn); row.append(e); };
+    const nm = b.textContent;
+    if (cur) btn('Copy', 'no', 'Copy ' + nm + ' into a new harbour', () => {
+      if (saveDirty) saveNow();
+      if (!newSlot(toB64(packBytes()), copyName(harbourName))) { $('slots-msg').textContent = 'All eight harbours are in use. Delete one to make room.'; return; }
+      closeMenu(); plink(7); flashHint(shownName(), 'A copy to build on; the original is kept');
+    });
+    else btn('Open', 'go', 'Open ' + nm, () => { openSlot(s.id); closeMenu(); plink(7); flashHint(shownName(), 'Harbour opened'); });
+    btn('Delete', 'no', 'Delete ' + nm, () => { slotDel = s.id; $('slot-confirm-msg').textContent = `Delete “${nm}”? This can’t be undone.`; $('slot-confirm').hidden = false; $('slot-del-no').focus(); });
+    div.append(b, document.createTextNode(cur ? 'Open now' : whenText(s.t)), row);
+    li.append(pic, div); ul.append(li);
+  }
+  $('slot-new').disabled = slots.list.length >= SLOT_MAX;
+  $('slots-msg').textContent = slots.list.length >= SLOT_MAX ? 'All eight harbours are in use. Delete one to make room.' : '';
+}
+// a shared town opens in a harbour of its own; with all eight in use it replaces this one, and undo brings it back
+function openCode(c, mt, name) {
+  if (newSlot(toB64(packBytes(c, mt)), name)) { flashHint('Town opened', 'It has a harbour of its own; yours are under Harbours in the menu'); return; }
+  replaceTown(c, mt, name); recentre();
+  flashHint('Town opened', 'All eight harbours are in use, so it replaced this one. Undo brings it back');
 }
 function replaceTown(c, mt, name) {
   const removes = [], adds = [];
@@ -4680,11 +4801,11 @@ function renderMotion() {
 for (const [id, calm] of [['mo-full', false], ['mo-calm', true]]) $(id).addEventListener('click', () => { REDUCED = calm; store.set('motion', calm ? 'calm' : 'full'); yawVel = 0; renderMotion(); });
 renderMotion();
 $('m-marks').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm', 'name-box']) $(id).hidden = true;
+  for (const id of ['share-box', 'open-box', 'confirm', 'name-box', 'slots-box']) $(id).hidden = true;
   const b = $('marks-box'); b.hidden = !b.hidden; renderMarks();
 });
 $('m-name').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm', 'marks-box']) $(id).hidden = true;
+  for (const id of ['share-box', 'open-box', 'confirm', 'marks-box', 'slots-box']) $(id).hidden = true;
   const b = $('name-box'); b.hidden = !b.hidden;
   if (!b.hidden) { const i = $('name-in'); i.value = harbourName; i.focus(); i.select(); }
 });
@@ -4700,9 +4821,22 @@ $('name-go').addEventListener('click', saveName);
 $('name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } else if (e.key === 'Escape') { e.preventDefault(); $('name-box').hidden = true; } });
 
 
+$('m-slots').addEventListener('click', () => {
+  for (const id of ['share-box', 'open-box', 'confirm', 'name-box', 'marks-box']) $(id).hidden = true;
+  const b = $('slots-box'); b.hidden = !b.hidden; $('slot-confirm').hidden = true;
+  if (!b.hidden) { updateCamera(0); renderer.render(scene, camera); takeThumb(); }
+  renderSlots();
+});
+$('slot-new').addEventListener('click', () => {
+  if (!newSlot(null, '')) return;
+  closeMenu(); plink(7); flashHint('A new harbour', 'Your others are kept under Harbours in the menu');
+});
+$('slot-del-no').addEventListener('click', () => { $('slot-confirm').hidden = true; });
+$('slot-del-yes').addEventListener('click', () => { $('slot-confirm').hidden = true; deleteSlot(slotDel); thunk(); renderSlots(); });
 const menu = $('menu'), gear = $('gear');
-function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box']) $(id).hidden = true; }
-gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box']) $(id).hidden = true; });
+const MENU_BOXES = ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box', 'slots-box'];
+function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of MENU_BOXES) $(id).hidden = true; }
+gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of MENU_BOXES) $(id).hidden = true; });
 $('m-view').addEventListener('click', () => { goHome(); closeMenu(); });
 $('home-pill').addEventListener('click', () => { goHome(); });
 function renderSound() { $('m-sound').setAttribute('aria-pressed', String(soundOn)); $('m-sound-val').textContent = soundOn ? 'On' : 'Off'; }
@@ -4752,8 +4886,7 @@ $('code-go').addEventListener('click', async () => {
   const msg = $('code-msg');
   try {
     const { c, mt, name } = await decodeTown($('code-in').value);
-    replaceTown(c, mt, name); recentre(); closeMenu(); plink(7);
-    flashHint('Town opened', 'Undo brings your previous harbour back');
+    openCode(c, mt, name); closeMenu(); plink(7);
   } catch (e) {
     msg.className = 'msg err';
     msg.textContent = 'That code did not open. Check it was copied in full; it starts with BH.';
@@ -4844,10 +4977,11 @@ function boot(data) {
   noteLandmarks(false);
   applyTier(quality === 'low' ? 'low' : 'high');
   renderName();
+  renderSlots();
   restHint();
   // a town code in the address opens that town (works when hosted on a normal site)
   if (/^#BH[zr]/.test(location.hash)) {
-    decodeTown(location.hash).then(({ c, mt, name }) => { replaceTown(c, mt, name); recentre(); Object.assign(view, goal); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* framed */ } flashHint('Opened a shared town', 'Undo brings your own harbour back'); }).catch(() => flashHint('That town link did not open'));
+    decodeTown(location.hash).then(({ c, mt, name }) => { openCode(c, mt, name); Object.assign(view, goal); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* framed */ } }).catch(() => flashHint('That town link did not open'));
   }
   let last = performance.now(), frame = 0;
   function loop(now) {
@@ -4869,6 +5003,7 @@ function boot(data) {
     tickAmbience(dt);
     if (ghostFade > 0) { ghostFade = Math.max(0, ghostFade - dt * ghostRate); ghostMat.opacity = Math.min(1, ghostFade * 1.5); if (!ghostFade) { ghost.visible = false; ghostKey = ''; ghostMat.opacity = 0.95; } }
     renderer.render(scene, camera);
+    if (thumbWant && now - thumbAt > 15000 && !pcMode) takeThumb();
     if (now - lostCheckT > 400) { lostCheckT = now; checkLost(); }
     if (quality === 'auto' && tier !== 'lowest' && now > perfStart && !document.hidden && !pcMode && !idle) {
       perfSamples.push(dt);
@@ -4883,7 +5018,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
