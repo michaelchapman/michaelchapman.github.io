@@ -1,7 +1,7 @@
 {
   "name": "Brasshaven",
   "short_name": "Brasshaven",
-  "description": "A steampunk harbour town to build. Tap the water to raise houses in brick, brass, copper, cast iron, glass and timber; engine houses power the clockwork, and airships moor at the tallest tower.",
+  "description": "A steampunk harbour town to build. Tap the water to raise houses in brick, brass, copper, cast iron, glass and timber; engine houses power the clockwork, steamers call at the piers and airships moor at the tallest tower.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
