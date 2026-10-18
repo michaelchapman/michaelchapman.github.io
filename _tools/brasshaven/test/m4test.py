@@ -19,7 +19,7 @@ def mk(p, w, h, mobile):
     page.goto('http://bh.test/index.html'); page.wait_for_timeout(2500)
     return ctx, page, errs
 with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx, page, errs = mk(b, 1100, 760, False)
     E = lambda js: page.evaluate(js)
     print('tips at start', E('window.__brasshaven.tips()'))

@@ -6,7 +6,7 @@ html=open(f'{ROOT}/brasshaven.html').read()
 page_html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+html+'</body></html>'
 three=open(f'{ROOT}/node_modules/three/build/three.module.min.js').read()
 with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':1100,'height':760})
     page=ctx.new_page()
     def route(r):

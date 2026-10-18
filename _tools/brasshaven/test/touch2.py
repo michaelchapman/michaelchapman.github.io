@@ -9,7 +9,7 @@ HELP = """window.__t = (() => { const b = window.__brasshaven; const V3 = b.came
   const scr = (x,y,z) => { const p = new V3(x,y,z).project(b.camera); return [(p.x+1)/2*innerWidth, (1-p.y)/2*innerHeight]; };
   return { b, scr }; })();"""
 with sync_playwright() as p:
-    br=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    br=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=br.new_context(viewport={'width':390,'height':844}, device_scale_factor=1, is_mobile=True, has_touch=True)
     page=ctx.new_page(); errs=[]
     page.on('pageerror', lambda e: errs.append(str(e)))

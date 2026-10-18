@@ -5,7 +5,7 @@ html=open(f'{ROOT}/brasshaven.html').read()
 page_html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+html+'</body></html>'
 three=open(f'{ROOT}/node_modules/three/build/three.module.min.js').read()
 with sync_playwright() as p:
-    br=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
+    br=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
     page=br.new_context(viewport={'width':800,'height':600}).new_page(); errs=[]
     page.on('pageerror', lambda e: errs.append(str(e)))
     page.route('**/*', lambda r: r.fulfill(status=200, content_type='application/javascript', body=three) if 'three.module' in r.request.url else (r.fulfill(status=200, content_type='text/html', body=page_html) if r.request.url.startswith('http://bh.test/') else r.abort()))

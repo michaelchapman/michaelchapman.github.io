@@ -6,7 +6,7 @@ html=open(f'{ROOT}/brasshaven.html').read()
 page_html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'+html+'</body></html>'
 three=open(f'{ROOT}/node_modules/three/build/three.module.min.js').read()
 with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     for mobile in (False, True):
         ctx=b.new_context(viewport={'width':390 if mobile else 1100,'height':844 if mobile else 760}, is_mobile=mobile, has_touch=mobile)
         page=ctx.new_page(); errs=[]

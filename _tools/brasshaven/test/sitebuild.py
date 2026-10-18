@@ -18,7 +18,7 @@ def route_files(r):
     return r.abort()
 mode = sys.argv[1]
 with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     if mode == 'icons':
         ctx=b.new_context(viewport={'width':512,'height':512}); page=ctx.new_page(); page.route('**/*', route_files)
         svg = open(f'{SITE}/brasshaven/icon.svg').read()

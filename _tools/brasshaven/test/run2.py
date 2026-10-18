@@ -11,7 +11,7 @@ w=int(sys.argv[1]); h=int(sys.argv[2]); setup=sys.argv[3]
 shots=sys.argv[4:]
 mobile = w < 700
 with sync_playwright() as p:
-    b=p.chromium.launch(args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    b=p.chromium.launch(executable_path=os.environ.get('BH_CHROMIUM') or None, args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
     ctx=b.new_context(viewport={'width':w,'height':h}, device_scale_factor=1, is_mobile=mobile, has_touch=mobile)
     page=ctx.new_page()
     logs=[]

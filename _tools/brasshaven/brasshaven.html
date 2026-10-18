@@ -107,6 +107,19 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 144px);transform:translateX(-50%);max-width:calc(100vw - 32px);width:max-content;padding:9px 16px;text-align:center;font-size:14.5px;line-height:1.35;font-weight:700;color:var(--cream);background:rgba(31,24,19,.88);border:1px solid rgba(198,154,75,.5);border-radius:10px;box-shadow:0 6px 18px var(--shadow);transition:opacity .45s ease,transform .45s ease;pointer-events:none}
 .hint span{display:block;font-weight:500;font-size:13px;color:var(--muted)}
 .hint.gone{opacity:0;transform:translate(-50%,6px);visibility:hidden;transition:opacity .45s ease,transform .45s ease,visibility 0s .45s}
+.found{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translate(-50%,-16px);opacity:0;visibility:hidden;max-width:calc(100vw - 32px);width:max-content;padding:9px 30px 11px;text-align:center;border-radius:5px;background:linear-gradient(180deg,#f6dc98,#d2a656 48%,#a47a36);color:#2a1d10;box-shadow:inset 0 0 0 2px rgba(74,50,18,.6),inset 0 0 0 4px rgba(255,240,200,.35),0 8px 22px var(--shadow);transition:opacity .5s ease,transform .5s ease,visibility 0s .5s;pointer-events:none;z-index:4}
+.found.on{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .5s ease,transform .5s cubic-bezier(.2,1.4,.4,1)}
+.found::before,.found::after{content:"";position:absolute;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff1c4,#8a6326 70%)}
+.found::before{left:10px}.found::after{right:10px}
+.found small{display:block;font:800 10px var(--font-ui);letter-spacing:.2em;text-transform:uppercase;color:#5a3d16}
+.found b{display:block;font-family:var(--font-display);font-weight:400;font-size:27px;line-height:1.1;text-shadow:0 1px 0 rgba(255,240,200,.5)}
+.found span{display:block;font-size:13px;font-weight:600;color:#3a2817}
+.marks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.marks li{display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.35;color:var(--muted)}
+.marks li div{flex:1}
+.marks li b{display:block;font-size:14.5px;color:var(--cream)}
+.marks li.no b{color:var(--muted);font-style:italic;font-weight:600}
+.box .marks button{flex:none;min-width:58px;min-height:34px;font-size:13px}
 
 .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--sky);color:#3a2817;transition:opacity .6s ease}
 .loading div{display:flex;flex-direction:column;align-items:center;gap:6px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
@@ -229,6 +242,8 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
       <div class="row"><button class="go" id="code-go">Open town</button><button class="no" id="code-cancel">Cancel</button></div>
       <p class="msg" id="code-msg" role="status"></p>
     </div>
+    <button class="item" id="m-marks"><span>Landmarks</span><span class="val" id="m-marks-val">0 of 7</span></button>
+    <div class="box" id="marks-box" hidden><ul class="marks" id="marks-list"></ul></div>
     <div class="rule"></div>
     <button class="item" id="m-view"><span>Reset view</span></button>
     <button class="item" id="m-sound" aria-pressed="true"><span>Sound</span><span class="val" id="m-sound-val">On</span></button>
@@ -257,6 +272,7 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
   </div>
 
   <div class="hint" id="hint" role="status"></div>
+  <div class="found" id="found" role="status"><small>Landmark discovered</small><b id="found-name"></b><span id="found-line"></span></div>
 
   <div class="pc-frame" id="pc-frame" hidden aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="flash" id="flash" aria-hidden="true"></div>
@@ -513,7 +529,7 @@ const lin = (hex, m = 1) => { _col.setHex(hex); return [_col.r * m, _col.g * m, 
 const ICO = (() => { const g = new THREE.IcosahedronGeometry(1, 0); return Array.from((g.index ? g.toNonIndexed() : g).attributes.position.array); })();
 
 class Geo {
-  constructor() { this.P = []; this.N = []; this.C = []; this.S = []; this.G = []; this.glow = 0; this.dyn = { gears: [], clocks: [], engines: [], wheels: [], emit: [], lamps: [], mains: [], mast: null, perches: [] }; }
+  constructor() { this.P = []; this.N = []; this.C = []; this.S = []; this.G = []; this.glow = 0; this.dyn = { gears: [], clocks: [], engines: [], wheels: [], emit: [], lamps: [], mains: [], mast: null, perches: [], marks: [] }; }
   _v(p, n, c, s) { this.P.push(p[0], p[1], p[2]); this.N.push(n[0], n[1], n[2]); this.C.push(c[0], c[1], c[2]); this.S.push(s); this.G.push(this.glow); }
   tri(a, b, c, n, col, s, cb, cc) {
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
@@ -624,6 +640,7 @@ const C_COBBLE = lin(0x8b8174), C_COBBLE_DARK = lin(0x8b8174, 0.55);
 const C_IRON = lin(0x2b2e32), C_BRASS = lin(0xb5893a), C_BRONZE = lin(0x7d5a27), C_OXIDE = lin(0x6b2a22), C_GLASS = lin(0x203039), C_TERRA = lin(0xa65b3a);
 const C_UNDER = lin(0x3b2c22), C_RIDGE = lin(0x2e3136), C_GUTTER = lin(0x4a4d52), C_LAMP = lin(0x6f6a4e), C_DIAL = lin(0xf1e6cc);
 const C_PIPE = lin(0xb8693c);
+const JEWELS = [lin(0x9a1e2c), lin(0x1f3f94), lin(0x2c7040), lin(0xc8902a), lin(0x6a2a8a), lin(0x1f7080)];
 const C_GREENGLASS = lin(0x9fc7c2), C_GRASS = lin(0x5d7d3b), C_GRASS_DARK = lin(0x5d7d3b, 0.6), C_DECK = lin(0x7d5a3a), C_DECK_DARK = lin(0x7d5a3a, 0.6), C_PILE = lin(0x4a3524), C_POOL = lin(0x2a4a4c);
 
 const styleCache = new Map();
@@ -663,6 +680,14 @@ function rectPts(sc, ow, tb, oh) { return [[sc - ow / 2, tb], [sc + ow / 2, tb],
 function archPts(sc, ow, tb, sh) {
   const r = ow / 2, p = [[sc - r, tb], [sc + r, tb], [sc + r, tb + sh]];
   for (let j = 1; j < 8; j++) { const a = (Math.PI * j) / 8; p.push([sc + r * Math.cos(a), tb + sh + r * Math.sin(a)]); }
+  p.push([sc - r, tb + sh]);
+  return p;
+}
+// a pointed (equilateral) arch, for church windows
+function pointPts(sc, ow, tb, sh) {
+  const r = ow / 2, p = [[sc - r, tb], [sc + r, tb], [sc + r, tb + sh]];
+  for (let j = 1; j <= 4; j++) { const a = (Math.PI / 3) * (j / 4); p.push([sc - r + ow * Math.cos(a), tb + sh + ow * Math.sin(a)]); }
+  for (let j = 3; j >= 1; j--) { const a = (Math.PI / 3) * (j / 4); p.push([sc + r - ow * Math.cos(a), tb + sh + ow * Math.sin(a)]); }
   p.push([sc - r, tb + sh]);
   return p;
 }
@@ -755,6 +780,9 @@ function buildGround(g, v) {
     }
   }
   if (houseAbove) return;
+  const lr = lmAt(v);
+  if (lr && lr.kind === 'gasworks') { buildGasholder(g, v); return; }
+  if (lr && lr.kind === 'market') { buildMarket(g, v); return; }
   if (courtyard[v]) { buildGarden(g, v); return; }
   for (let i = 0; i < k; i++) {
     if (!water[i] || i === steps || hash4(v, i, 61, 0) > 0.38) continue;
@@ -827,7 +855,7 @@ function buildStorey(g, v, y) {
   const eng = engineSpot(v), whl = wheelSpot(v), tt = towerTop(v);
   let worksWall = -1;
   if (tt >= 6 && y === tt - 1) { let bw = 0; for (let i = 0; i < k; i++) { if (!walls[i]) continue; const W = edgeLen(v, i); if (W >= 0.66 && W > bw) { bw = W; worksWall = i; } } }
-  const ctx = { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall };
+  const ctx = { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall, lm: lmAt(v) };
   for (let i = 0; i < k; i++) if (walls[i]) buildWall(g, v, y, i, ctx, door === i);
   if (ctx.wheelWall >= 0) buildWheelMount(g, v, ctx.wheelWall);
   for (let i = 0; i < k; i++) {
@@ -846,6 +874,7 @@ function buildStorey(g, v, y) {
       buildMains(g, v, nb, y, [CX[q], CZ[q]], [nx / l, nz / l]);
     }
   }
+  if (ctx.lm && ctx.lm.role === 'arch' && y === ctx.lm.y) g.dyn.marks.push({ type: 'gate', p: [X[v], baseY(y), Z[v]], w: inRadius(v) * 2 + 0.04, h: baseY(y) - GROUND_TOP, ax: ctx.lm.ax, v });
   if (!below) {
     buildUnderside(g, v, y, L);
     if (bridgeSet.has(v * 16 + y)) buildGirders(g, v, y);
@@ -969,6 +998,12 @@ function chooseOpening(v, y, i, W, ctx, isDoor, street) {
   if (i === ctx.wheelWall) return 'none';
   if (i === ctx.worksWall) return 'works';
   if (W < 0.46) return 'none';
+  const lr = ctx.lm;
+  if (lr && (lr.role === 'nave' || lr.role === 'arch')) {
+    const f = wallFrame(v, i), d = f.nx * lr.ax[0] + f.nz * lr.ax[1];
+    if (lr.role === 'arch') { if (y === lr.y && Math.abs(d) < 0.55 && W >= 0.56) return 'clock'; }
+    else return lr.end && d > 0.5 && y === lr.h && W >= 0.56 ? 'rose' : 'stained';
+  } else if (lr && lr.role === 'belltower' && y === lr.t && !ctx.tower) return W >= 0.5 ? 'belfry' : 'none';
   if (ctx.tower && W >= 0.56) return 'clock';
   const a = hash4(v, i, 3, 0), b = hash4(v, i, 4, 0), c = hash4(v, i, y, 5);
   switch (ctx.L.m) {
@@ -998,6 +1033,9 @@ function openingsFor(type, sc, W, m) {
     case 'cottage': return [{ pts: rectPts(sc, 0.25, 0.34, 0.34), kind: 'win', cx: sc, ow: 0.25, tb: 0.34, oh: 0.34, bars: 'cross', shutters: true }];
     case 'loft': return [{ pts: rectPts(sc, 0.3, 0.14, 0.58), kind: 'loft', cx: sc, ow: 0.3, tb: 0.14, oh: 0.58 }];
     case 'works': return [{ pts: rectPts(sc, 0.52, 0.32, 0.4), kind: 'works', cx: sc, ow: 0.52, tb: 0.32, oh: 0.4 }];
+    case 'stained': return [{ pts: pointPts(sc, 0.22, 0.16, 0.46), kind: 'win', cx: sc, ow: 0.22, tb: 0.16, oh: 0.46, bars: 'stained' }];
+    case 'rose': return [{ pts: circlePts(sc, 0.5, 0.22, 16), kind: 'rose', cx: sc, r: 0.22, tc: 0.5 }];
+    case 'belfry': return [-0.1, 0.1].map((o) => ({ pts: pointPts(sc + o, 0.15, 0.2, 0.36), kind: 'belfry', cx: sc + o, ow: 0.15, tb: 0.2, oh: 0.36 }));
     case 'door':
       if (m === M_IRON || m === M_TIMBER) return [{ pts: rectPts(sc, 0.34, 0, 0.62), kind: 'door', cx: sc, ow: 0.34, tb: 0, oh: 0.62 }];
       return [{ pts: archPts(sc, 0.3, 0, 0.46), kind: 'door', cx: sc, ow: 0.3, tb: 0, oh: 0.46, arch: true }];
@@ -1046,7 +1084,7 @@ function buildWall(g, v, y, i, ctx, isDoor) {
     for (const h of holes) {
       const pts = h.pts, n = pts.length;
       let cs = 0, ct = 0; for (const p of pts) { cs += p[0]; ct += p[1]; } cs /= n; ct /= n;
-      const D = h.kind === 'door' || h.kind === 'loft' ? 0.1 : h.kind === 'port' ? 0.06 : h.kind === 'works' ? 0.09 : 0.075;
+      const D = h.kind === 'door' || h.kind === 'loft' ? 0.1 : h.kind === 'port' || h.kind === 'rose' ? 0.06 : h.kind === 'works' || h.kind === 'belfry' ? 0.09 : 0.075;
       const brassy = h.kind === 'port' || h.kind === 'works';
       const revCol = brassy ? C_BRASS : L.trim, revS = brassy ? S_BRASS : L.trimS;
       for (let j = 0; j < n; j++) {
@@ -1062,10 +1100,41 @@ function buildWall(g, v, y, i, ctx, isDoor) {
       if (h.kind === 'door') { fillCol = m === M_IRON ? C_IRON : st.door; fillS = m === M_IRON ? S_PLATE_I : S_WOOD; }
       if (h.kind === 'loft') { fillCol = mul3(st.clap, 0.75); fillS = S_WOOD; }
       if (h.kind === 'works') { fillCol = mul3(C_IRON, 0.8); fillS = S_PLATE_I; }
+      if (h.kind === 'belfry') { fillCol = mul3(C_IRON, 0.5); fillS = S_IRON; }
       const hi = holes.indexOf(h);
       g.glow = h.kind === 'works' ? 0.22 : h.kind === 'win' || h.kind === 'port' ? (hash4(v, i, y * 8 + hi, 21) < 0.6 ? (h.bars === 'shop' ? 1.0 : 0.5 + 0.5 * hash4(v, i, y * 8 + hi, 22)) : 0) : 0;
-      for (const fc of THREE.ShapeUtils.triangulateShape(pv, [])) g.tri(P(pv[fc[0]].x, pv[fc[0]].y, -D), P(pv[fc[1]].x, pv[fc[1]].y, -D), P(pv[fc[2]].x, pv[fc[2]].y, -D), N, fillCol, fillS);
+      // the ironworks' windows show the furnace glow day and night
+      if (ctx.lm && ctx.lm.kind === 'ironworks' && h.kind === 'win' && hash4(v, i, y * 8 + hi, 24) < 0.75) g.glow = 10.3 + 0.35 * hash4(v, i, y * 8 + hi, 25);
+      if (h.kind === 'rose') {
+        // a rose window: a gold centre and a ring of red and blue petals
+        g.glow = -0.9;
+        const at = (r, a) => P(h.cx + r * Math.cos(a), h.tc + r * Math.sin(a), -D), c0 = P(h.cx, h.tc, -D), ri = h.r * 0.45;
+        for (let j = 0; j < 16; j++) {
+          const a0 = (j / 16) * Math.PI * 2, a1 = ((j + 1) / 16) * Math.PI * 2, col = JEWELS[j % 2 ? 1 : 0];
+          g.tri(c0, at(ri, a0), at(ri, a1), N, JEWELS[3], S_GLASS);
+          g.quad(at(ri, a0), at(h.r, a0), at(h.r, a1), at(ri, a1), N, col, S_GLASS);
+        }
+      } else {
+        const jewel = h.bars === 'stained';
+        if (jewel) g.glow = -0.85;
+        let ti = 0;
+        for (const fc of THREE.ShapeUtils.triangulateShape(pv, [])) g.tri(P(pv[fc[0]].x, pv[fc[0]].y, -D), P(pv[fc[1]].x, pv[fc[1]].y, -D), P(pv[fc[2]].x, pv[fc[2]].y, -D), N, jewel ? JEWELS[Math.floor(hash4(v, i, y * 8 + hi, 30 + ti++) * JEWELS.length)] : fillCol, fillS);
+      }
       g.glow = 0;
+      if (h.kind === 'rose') {
+        g.ring(P(h.cx, h.tc, 0), U, UP, N, h.r, h.r + 0.05, 0.022, 16, L.trim, L.trimS);
+        for (let j = 0; j < 8; j++) { const a = (j / 8) * Math.PI * 2; g.strut(P(h.cx + 0.03 * Math.cos(a), h.tc + 0.03 * Math.sin(a), -D + 0.012), P(h.cx + h.r * Math.cos(a), h.tc + h.r * Math.sin(a), -D + 0.012), N, 0.008, 0.01, L.trim, L.trimS); }
+        g.ring(P(h.cx, h.tc, -D + 0.012), U, UP, N, h.r * 0.42, h.r * 0.48, 0.01, 16, L.trim, L.trimS);
+        g.ball(P(h.cx, h.tc, -D + 0.02), 0.03, C_BRASS, S_BRASS);
+        continue;
+      }
+      if (h.kind === 'belfry') {
+        // louvred bell openings
+        const ay = nrm3(add3(UP, mul3(N, 0.9))), az = nrm3(cross3(U, ay));
+        for (let t = h.tb + 0.05; t < h.tb + h.oh + 0.06; t += 0.07) g.box(P(h.cx, t, -D + 0.04), U, ay, az, h.ow / 2, 0.006, 0.034, C_PILE, S_WOOD);
+        g.box(P(h.cx, h.tb - 0.02, 0.03), U, UP, N, h.ow / 2 + 0.035, 0.02, 0.04, L.trim, L.trimS, 16);
+        continue;
+      }
       if (h.kind === 'works') {
         for (const t of [h.tb - 0.02, h.tb + h.oh + 0.02]) g.box(P(sc, t, 0.012), U, UP, N, h.ow / 2 + 0.04, 0.022, 0.014, C_BRASS, S_BRASS, 16);
         for (const o of [-1, 1]) g.box(P(sc + o * (h.ow / 2 + 0.02), h.tb + h.oh / 2, 0.012), U, UP, N, 0.022, h.oh / 2, 0.014, C_BRASS, S_BRASS, 16);
@@ -1073,6 +1142,15 @@ function buildWall(g, v, y, i, ctx, isDoor) {
         continue;
       }
 
+      if (h.bars === 'stained') {
+        // lead cames, a stone sill and a pointed hood mould
+        const top = h.tb + h.oh + h.ow * 0.866, dz = -D + 0.015;
+        g.box(P(h.cx, (h.tb + top) / 2, dz), U, UP, N, 0.008, (top - h.tb) / 2, 0.01, C_IRON, S_IRON, 16);
+        for (const fr of [0.3, 0.64]) g.box(P(h.cx, h.tb + h.oh * fr, dz), U, UP, N, h.ow / 2, 0.006, 0.01, C_IRON, S_IRON, 16);
+        g.box(P(h.cx, h.tb - 0.02, 0.03), U, UP, N, h.ow / 2 + 0.04, 0.02, 0.04, L.trim, L.trimS, 16);
+        for (const o of [-1, 1]) g.strut(P(h.cx + o * (h.ow / 2 + 0.03), h.tb + h.oh, 0.016), P(h.cx, top + 0.06, 0.016), N, 0.016, 0.016, L.trim, L.trimS);
+        continue;
+      }
       if (h.kind === 'win') {
         const top = h.tb + h.oh + (h.arch ? h.ow / 2 : 0);
         const dz = -D + 0.017, bc = m === M_BRASS ? C_BRONZE : L.trim, bs = m === M_BRASS ? S_BRASS : L.trimS;
@@ -1172,6 +1250,20 @@ function buildWall(g, v, y, i, ctx, isDoor) {
       case M_IRON: band(Hs - 0.06, Hs + 0.004, 0.035, C_OXIDE, S_IRON); break;
       case M_GLASS: break;
       default: band(Hs - 0.035, Hs + 0.004, 0.022, L.trim, L.trimS);
+    }
+  }
+  // buttresses and pinnacles along a cathedral's nave
+  if (ctx.lm && ctx.lm.role === 'nave' && m !== M_GLASS && W >= 0.5 && Math.abs(f.nx * ctx.lm.ax[0] + f.nz * ctx.lm.ax[1]) < 0.55) {
+    for (const s of [0.075, W - 0.075]) {
+      g.box(P(s, 0.3, 0.075), U, UP, N, 0.04, 0.3, 0.075, L.wall, L.wallS, 16);
+      g.box(P(s, 0.606, 0.08), U, UP, N, 0.046, 0.012, 0.08, C_COPING, S_STONE, 16);
+      g.box(P(s, 0.74, 0.045), U, UP, N, 0.035, 0.13, 0.045, L.wall, L.wallS, 16);
+      g.box(P(s, 0.876, 0.05), U, UP, N, 0.04, 0.012, 0.05, C_COPING, S_STONE, 16);
+      if (roofHere) {
+        g.box(P(s, Hs + 0.02, 0.05), U, UP, N, 0.032, 0.11, 0.032, C_COPING, S_STONE);
+        g.cyl(P(s, Hs + 0.13, 0.05), P(s, Hs + 0.36, 0.05), 0.034, 0, 4, C_COPING, S_STONE);
+        g.ball(P(s, Hs + 0.37, 0.05), 0.014, C_COPING, S_STONE);
+      }
     }
   }
   // iron brackets carrying a neighbour that juts out above this wall
@@ -1375,7 +1467,9 @@ const ONION = [[1, 0], [1.16, 0.14], [1.2, 0.3], [1.08, 0.48], [0.78, 0.66], [0.
 const SPIRE = [[1, 0], [0, 1]];
 
 function buildRoof(g, v, y, ctx) {
-  const { st, L } = ctx;
+  const { st, L } = ctx, lr = ctx.lm;
+  if (lr && lr.t === y && (lr.role === 'lamp' || lr.role === 'dome')) { buildLookout(g, v, y, ctx, lr.role); return; }
+  if (lr && lr.role === 'tower' && lr.t === y && ringW[v].every((w) => !F(w, y))) { buildBattlements(g, v, y, ctx); return; }
   const Wn = ringW[v], Qs = ringQ[v], Xs = ringX[v], k = Wn.length;
   const top = topY(y), vx = X[v], vz = Z[v], m = L.m;
   const Hv = ROOF_HS[m];
@@ -1419,7 +1513,7 @@ function buildRoof(g, v, y, ctx) {
       g.cyl([vx, top + 0.6, vz], [vx, top + 0.76, vz], 0.075, 0.075, 8, C_BRONZE, S_BRASS);
       g.cyl([vx, top + 0.76, vz], [vx, top + 0.86, vz], 0.1, 0.0, 8, C_BRASS, S_BRASS);
       g.cyl([vx, top + 0.84, vz], [vx, top + 1.05, vz], 0.012, 0, 5, C_IRON, S_IRON);
-    } else if (st.onion) {
+    } else if (st.onion && !(lr && lr.role === 'belltower')) {
       lathe(g, apex2, ring.map((p) => [vx + (p[0] - vx) * 0.9, vz + (p[1] - vz) * 0.9]), top + 0.02, 0.82, ONION, L.roof, S_COPPER, true);
       g.cyl([vx, top + 0.9, vz], [vx, top + 1.22, vz], 0.016, 0, 5, C_BRASS, S_BRASS);
       g.ball([vx, top + 1.02, vz], 0.03, C_BRASS, S_BRASS);
@@ -1524,7 +1618,7 @@ function buildRoof(g, v, y, ctx) {
       g.cyl([s.px, y1 - 0.01, s.pz], [s.px, y1 + 0.035, s.pz], 0.02, 0.02, 5, C_IRON, S_IRON);
       g.dyn.emit.push({ p: [s.px, y1 + 0.12, s.pz], kind: 'stove', v });
     }
-  } else if (m === M_IRON && st.stack && hc < 0.75) {
+  } else if (m === M_IRON && st.stack && hc < 0.75 && !(lr && lr.role === 'furnace')) {
     const s = spot(0.3) || { px: vx, pz: vz };
     const y1 = top + 1.9;
     g.cyl([s.px, top - 0.05, s.pz], [s.px, y1, s.pz], 0.15, 0.115, 10, st.brick, S_BRICK, false);
@@ -1552,6 +1646,8 @@ function buildRoof(g, v, y, ctx) {
       g.box([px, yt + 0.02, pz], XA, UP, ZA, 0.032, 0.028, 0.032, C_GUTTER, S_IRON);
     }
   }
+  if (lr && lr.t === y && lr.role === 'furnace') buildFurnace(g, v, y, ctx);
+  else if (lr && lr.t === y && lr.role === 'tower') buildPennant(g, vx, top + Hv - 0.04, vz, v);
 }
 
 
@@ -1568,6 +1664,210 @@ function buildMast(g, x, z, y0) {
   g.glow = 1.7; g.ball([x, yt + 0.25, z], 0.035, C_LAMP, S_GLASS); g.glow = 0;
   g.dyn.lamps.push([x, yt + 0.25, z]);
   g.dyn.mast = [x, yt + 0.12, z];
+}
+
+// ---------- landmark buildings ----------
+// distance from a column's centre to its nearest wall
+function inRadius(v) {
+  const Qs = ringQ[v], k = Qs.length; let r = 9;
+  for (let i = 0; i < k; i++) {
+    const qa = Qs[(i - 1 + k) % k], qb = Qs[i], ex = CX[qb] - CX[qa], ez = CZ[qb] - CZ[qa];
+    r = Math.min(r, Math.abs((X[v] - CX[qa]) * ez - (Z[v] - CZ[qa]) * ex) / (Math.hypot(ex, ez) || 1));
+  }
+  return r;
+}
+// a flat polygonal slab: a deck, cornice or plinth
+function slab(g, c, ring, y0, y1, col, s, under = true) {
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i], b = ring[(i + 1) % n];
+    let nx = b[1] - a[1], nz = a[0] - b[0]; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l;
+    if (nx * ((a[0] + b[0]) / 2 - c[0]) + nz * ((a[1] + b[1]) / 2 - c[1]) < 0) { nx = -nx; nz = -nz; }
+    g.quad([a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y1, b[1]], [a[0], y1, a[1]], [nx, 0, nz], col, s);
+    g.tri([c[0], y1, c[1]], [a[0], y1, a[1]], [b[0], y1, b[1]], UP, col, s);
+    if (under) g.tri([c[0], y0, c[1]], [a[0], y0, a[1]], [b[0], y0, b[1]], DOWN, col, s);
+  }
+}
+const ringAt = (v, k) => ringQ[v].map((q) => [X[v] + (CX[q] - X[v]) * k, Z[v] + (CZ[q] - Z[v]) * k]);
+const circle = (x, z, r, n, a0 = 0) => Array.from({ length: n }, (_, j) => [x + r * Math.cos(a0 + (j / n) * Math.PI * 2), z + r * Math.sin(a0 + (j / n) * Math.PI * 2)]);
+// a railing round a ring of points
+function railing(g, ring, y0, h, col, s) {
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i], b = ring[(i + 1) % n];
+    g.cyl([a[0], y0, a[1]], [a[0], y0 + h, a[1]], 0.009, 0.009, 4, col, s, false);
+    for (const t of [h * 0.5, h]) g.strut([a[0], y0 + t, a[1]], [b[0], y0 + t, b[1]], UP, 0.007, 0.007, col, s);
+  }
+}
+// the top of a lighthouse (a lamp room with a sweeping beam) or an observatory (a turning dome)
+function buildLookout(g, v, y, ctx, role) {
+  const top = topY(y), x = X[v], z = Z[v], c = [x, z], r = inRadius(v), L = ctx.L;
+  if (role === 'lamp') {
+    slab(g, c, ringAt(v, 1.04), top - 0.13, top - 0.05, L.trim, L.trimS);
+    slab(g, c, ringAt(v, 1.13), top - 0.05, top + 0.05, C_COPING, S_STONE);
+    railing(g, ringAt(v, 1.08), top + 0.05, 0.17, C_IRON, S_IRON);
+    const R = Math.min(0.27, r * 0.62), y0 = top + 0.05;
+    g.cyl([x, y0, z], [x, y0 + 0.14, z], R + 0.03, R + 0.03, 10, C_OXIDE, S_IRON);
+    g.glow = 1.5; g.cyl([x, y0 + 0.14, z], [x, y0 + 0.58, z], R, R, 10, C_LAMP, S_GLASS, false); g.glow = 0;
+    for (const p of circle(x, z, R + 0.008, 10, Math.PI / 10)) g.cyl([p[0], y0 + 0.14, p[1]], [p[0], y0 + 0.58, p[1]], 0.008, 0.008, 4, C_IRON, S_IRON, false);
+    for (const t of [0.14, 0.36]) g.cyl([x, y0 + t, z], [x, y0 + t + 0.015, z], R + 0.012, R + 0.012, 10, C_IRON, S_IRON, false);
+    g.cyl([x, y0 + 0.58, z], [x, y0 + 0.62, z], R + 0.05, R + 0.05, 10, C_BRASS, S_BRASS);
+    lathe(g, c, circle(x, z, R + 0.03, 10, Math.PI / 10), y0 + 0.62, R * 0.95, DOME, C_VERDIGRIS, S_COPPER, true);
+    const yt = y0 + 0.62 + R * 0.95;
+    g.ball([x, yt + 0.04, z], 0.05, C_BRASS, S_BRASS);
+    g.cyl([x, yt + 0.06, z], [x, yt + 0.3, z], 0.012, 0, 5, C_IRON, S_IRON);
+    g.dyn.perches.push([x, yt + 0.095, z]);
+    g.dyn.lamps.push([x, y0 + 0.36, z]);
+    g.dyn.marks.push({ type: 'beam', p: [x, y0 + 0.36, z], v });
+  } else {
+    slab(g, c, ringAt(v, 1.06), top - 0.06, top + 0.04, C_BRONZE, S_BRASS);
+    const R = Math.min(0.46, r * 0.92), y0 = top + 0.04;
+    g.cyl([x, y0, z], [x, y0 + 0.17, z], R, R, 20, L.wall, S_PLATE_B);
+    for (const t of [0.0, 0.15]) g.cyl([x, y0 + t, z], [x, y0 + t + 0.025, z], R + 0.012, R + 0.012, 20, C_BRONZE, S_BRASS, false);
+    for (const p of circle(x, z, R + 0.005, 12)) g.ball([p[0], y0 + 0.085, p[1]], 0.012, C_BRASS, S_BRASS);
+    g.dyn.lamps.push([x, y0 + 0.17 + R * 0.35, z]);
+    g.dyn.marks.push({ type: 'dome', p: [x, y0 + 0.17, z], r: R * 0.97, v });
+  }
+}
+// a gate tower with a lone top: a flat roof behind crenellations
+function buildBattlements(g, v, y, ctx) {
+  const { L } = ctx, top = topY(y), k = ringW[v].length;
+  fanAt(g, v, top + 0.02, UP, C_FLAT, S_IRON);
+  for (let i = 0; i < k; i++) {
+    const f = wallFrame(v, i), P = (s, t, d) => [f.ax + f.ux * s + f.nx * d, top + t, f.az + f.uz * s + f.nz * d];
+    g.box(P(f.W / 2, -0.05, 0.02), f.U, UP, f.N, f.W / 2 + 0.05, 0.04, 0.05, L.trim, L.trimS);
+    g.box(P(f.W / 2, 0.08, -0.01), f.U, UP, f.N, f.W / 2 + 0.035, 0.09, 0.05, L.wall, L.wallS);
+    const n = 2 * Math.max(1, Math.round(f.W / 0.32)) + 1;
+    for (let j = 0; j < n; j += 2) g.box(P(((j + 0.5) * f.W) / n, 0.22, -0.01), f.U, UP, f.N, f.W / n / 2 + (j === 0 || j === n - 1 ? 0.035 : 0), 0.05, 0.05, L.wall, L.wallS);
+  }
+  buildPennant(g, X[v], top + 0.02, Z[v], v);
+}
+function buildPennant(g, x, y0, z, v) {
+  const H = 0.75, a = hash4(v, 0, 13, 2) * Math.PI * 2, d = [Math.cos(a), 0, Math.sin(a)];
+  g.cyl([x, y0, z], [x, y0 + H, z], 0.016, 0.011, 6, C_IRON, S_IRON, false);
+  g.ball([x, y0 + H + 0.02, z], 0.026, C_BRASS, S_BRASS);
+  const p0 = [x, y0 + H - 0.02, z], p1 = [x, y0 + H - 0.24, z], tip = add3([x, y0 + H - 0.12, z], mul3(d, 0.42));
+  g.twoSided(p0, p1, add3(tip, [0, 0.02, 0]), [-d[2], 0, d[0]], C_OXIDE, S_PLAIN);
+  g.dyn.perches.push([x, y0 + H + 0.05, z]);
+}
+// the ironworks' blast furnace, with its hot-blast stoves, on a plinth rising through the roof
+function buildFurnace(g, v, y, ctx) {
+  const { st } = ctx, top = topY(y), x = X[v], z = Z[v], Hv = ROOF_HS[M(v, y)];
+  const a = hash4(v, y, 5, 8) * Math.PI * 2, ax = [Math.cos(a), 0, Math.sin(a)], sd = [-ax[2], 0, ax[0]];
+  const at = (u, w, yy) => [x + ax[0] * u + sd[0] * w, yy, z + ax[2] * u + sd[2] * w];
+  const y0 = top + Hv + 0.02;
+  g.box(at(0, 0, (top - 0.05 + y0) / 2), ax, UP, sd, 0.32, (y0 - top + 0.05) / 2, 0.22, C_IRON, S_PLATE_I);
+  g.box(at(0, 0, y0 - 0.02), ax, UP, sd, 0.35, 0.025, 0.25, C_OXIDE, S_IRON);
+  const fc = at(-0.09, 0, 0), F1 = y0 + 1.3;
+  const rad = (t) => (t < 0.32 ? 0.19 + 0.04 * (t / 0.32) : 0.23 - 0.085 * ((t - 0.32) / 0.98));
+  g.cyl([fc[0], y0, fc[2]], [fc[0], y0 + 0.32, fc[2]], rad(0), rad(0.32), 12, st.brick, S_BRICK, false);
+  g.cyl([fc[0], y0 + 0.32, fc[2]], [fc[0], F1, fc[2]], rad(0.32), rad(1.3), 12, st.brick, S_BRICK, false);
+  for (let t = 0.1; t < 1.25; t += 0.16) g.cyl([fc[0], y0 + t, fc[2]], [fc[0], y0 + t + 0.026, fc[2]], rad(t) + 0.012, rad(t + 0.026) + 0.012, 12, C_IRON, S_IRON, false);
+  // the bustle pipe and tuyeres that blow hot air into the hearth
+  const br = 0.3, bp = circle(fc[0], fc[2], br, 10);
+  for (let j = 0; j < 10; j++) {
+    const p = bp[j], q = bp[(j + 1) % 10];
+    g.strut([p[0], y0 + 0.4, p[1]], [q[0], y0 + 0.4, q[1]], UP, 0.022, 0.022, C_PIPE, S_BRASS);
+    if (j % 2 === 0) g.strut([p[0], y0 + 0.4, p[1]], [fc[0] + (p[0] - fc[0]) * 0.66, y0 + 0.2, fc[2] + (p[1] - fc[2]) * 0.66], UP, 0.012, 0.012, C_PIPE, S_BRASS);
+  }
+  // the tap hole, glowing at the foot of the hearth
+  g.glow = 10.9; g.box(at(-0.09, -0.205, y0 + 0.1), sd, UP, ax, 0.02, 0.055, 0.05, lin(0xffb060), S_PLAIN); g.glow = 0;
+  g.box(at(-0.09, -0.29, y0 + 0.03), sd, UP, ax, 0.08, 0.012, 0.03, C_IRON, S_IRON);
+  // the throat: a charging gallery with rails, the glowing mouth and the bell-and-hopper
+  g.ring([fc[0], F1, fc[2]], XA, ZA, UP, 0.08, 0.25, 0.025, 12, C_IRON, S_IRON);
+  railing(g, circle(fc[0], fc[2], 0.24, 10), F1 + 0.025, 0.13, C_IRON, S_IRON);
+  g.glow = 10.8; g.disc([fc[0], F1 + 0.028, fc[2]], XA, ZA, UP, 0.085, 10, lin(0xffa040), S_PLAIN); g.glow = 0;
+  g.cyl([fc[0], F1 + 0.06, fc[2]], [fc[0], F1 + 0.22, fc[2]], 0.045, 0.09, 8, C_IRON, S_IRON, false);
+  for (const o of [-1, 1]) g.strut(at(-0.09 + o * 0.2, 0, F1 + 0.02), at(-0.09, 0, F1 + 0.36), sd, 0.011, 0.011, C_IRON, S_IRON);
+  // two hot-blast stoves with the downcomer from the throat
+  for (const w of [-0.11, 0.11]) {
+    const sc = at(0.22, w, 0), sh = 1.0;
+    g.cyl([sc[0], y0, sc[2]], [sc[0], y0 + sh, sc[2]], 0.08, 0.08, 10, C_OXIDE, S_PLATE_I, false);
+    for (const t of [0.2, 0.5, 0.8]) g.cyl([sc[0], y0 + t, sc[2]], [sc[0], y0 + t + 0.02, sc[2]], 0.088, 0.088, 10, C_IRON, S_IRON, false);
+    lathe(g, [sc[0], sc[2]], circle(sc[0], sc[2], 0.08, 10), y0 + sh, 0.07, DOME, C_OXIDE, S_PLATE_I, true);
+    g.cyl([sc[0], y0 + sh + 0.06, sc[2]], [sc[0], y0 + sh + 0.2, sc[2]], 0.022, 0.022, 6, C_IRON, S_IRON);
+    g.cyl(at(-0.09 + 0.1, w * 0.4, F1 - 0.12), [sc[0], y0 + sh - 0.06, sc[2]], 0.026, 0.026, 7, C_IRON, S_IRON);
+    g.dyn.emit.push({ p: [sc[0], y0 + sh + 0.23, sc[2]], kind: 'vent', v });
+  }
+  g.dyn.emit.push({ p: [fc[0], F1 + 0.25, fc[2]], kind: 'stack', v });
+  g.dyn.lamps.push([fc[0], F1 + 0.12, fc[2]]);
+  g.dyn.marks.push({ type: 'furnace', p: [fc[0], F1 + 0.06, fc[2]], tap: at(-0.09, -0.23, y0 + 0.1), v });
+}
+// the gasworks: a brick tank in the square, an iron guide frame, and a bell that rises and falls with the day
+function buildGasholder(g, v) {
+  const x = X[v], z = Z[v], R = Math.min(0.44, inRadius(v) * 0.9), y0 = GROUND_TOP, st = style(v);
+  fanAt(g, v, y0, UP, C_COBBLE, S_COBBLE, groundDark(v, C_COBBLE_DARK, C_COBBLE));
+  g.cyl([x, y0, z], [x, y0 + 0.24, z], R, R, 20, st.brick, S_BRICK, false);
+  g.ring([x, y0 + 0.24, z], XA, ZA, UP, R - 0.05, R + 0.02, 0.03, 20, C_COPING, S_STONE);
+  g.disc([x, y0 + 0.2, z], XA, ZA, UP, R - 0.04, 20, C_POOL, S_GLASS);
+  const Hf = 2.1, cs = circle(x, z, R + 0.04, 6, 0.3);
+  for (let j = 0; j < 6; j++) {
+    const p = cs[j], q = cs[(j + 1) % 6];
+    g.box([p[0], y0 + 0.3, p[1]], XA, UP, ZA, 0.035, 0.06, 0.035, C_COPING, S_STONE);
+    g.cyl([p[0], y0 + 0.36, p[1]], [p[0], y0 + Hf, p[1]], 0.024, 0.018, 6, C_IRON, S_IRON, false);
+    g.ball([p[0], y0 + Hf + 0.02, p[1]], 0.03, C_BRASS, S_BRASS);
+    g.strut([p[0], y0 + Hf, p[1]], [q[0], y0 + Hf, q[1]], UP, 0.014, 0.018, C_IRON, S_IRON);
+    // two tiers of girders, braced crosswise
+    for (const [t0, t1] of [[0.36, 1.2], [1.2, Hf]]) {
+      g.strut([p[0], y0 + t1, p[1]], [q[0], y0 + t1, q[1]], UP, 0.01, 0.014, C_IRON, S_IRON);
+      g.strut([p[0], y0 + t0, p[1]], [q[0], y0 + t1, q[1]], UP, 0.006, 0.006, C_IRON, S_IRON);
+      g.strut([q[0], y0 + t0, q[1]], [p[0], y0 + t1, p[1]], UP, 0.006, 0.006, C_IRON, S_IRON);
+    }
+    g.dyn.perches.push([p[0], y0 + Hf + 0.05, p[1]]);
+  }
+  g.dyn.marks.push({ type: 'gas', p: [x, y0 + 0.2, z], r: R - 0.07, h: Hf - 0.2, v });
+}
+// the market hall: flagstones, stalls with striped awnings, and a glass-and-iron canopy on slender columns
+const AWNINGS = [[0x8a3326, 0xf1e6cc], [0x2f5a4a, 0xf1e6cc], [0x283a5c, 0xe8c547], [0x7a3a5a, 0xf1e6cc]].map((p) => p.map((h) => lin(h)));
+function buildMarket(g, v) {
+  const x = X[v], z = Z[v], y0 = GROUND_TOP, Qs = ringQ[v], k = Qs.length, yc = topY(1) + 0.08, ya = yc + 0.42;
+  const flag = mul3(C_COPING, 0.92);
+  fanAt(g, v, y0 + 0.003, UP, flag, S_STONE, groundDark(v, mul3(C_COPING, 0.55), flag));
+  for (const q of Qs) {
+    let owner = 1e9;
+    for (let j = 0; j < 4; j++) { const c = quads[4 * q + j], r = lmAt(c); if (r && r.kind === 'market' && c < owner) owner = c; }
+    if (owner !== v) continue;
+    const cx = CX[q], cz = CZ[q];
+    g.box([cx, y0 + 0.04, cz], XA, UP, ZA, 0.04, 0.04, 0.04, C_COPING, S_STONE, 4);
+    g.cyl([cx, y0 + 0.08, cz], [cx, yc, cz], 0.022, 0.017, 7, C_IRON, S_IRON, false);
+    g.cyl([cx, yc - 0.07, cz], [cx, yc, cz], 0.024, 0.05, 7, C_BRASS, S_BRASS);
+    g.cyl([cx, y0 + 0.66, cz], [cx, y0 + 0.69, cz], 0.03, 0.03, 7, C_BRASS, S_BRASS);
+  }
+  const apex = [x, ya, z];
+  g.glow = 0.3;
+  for (let i = 0; i < k; i++) { const a = Qs[i], b = Qs[(i + 1) % k]; const pa = [CX[a], yc, CZ[a]], pb = [CX[b], yc, CZ[b]]; let n = nrm3(cross3(sub3(pa, apex), sub3(pb, apex))); if (n[1] < 0) n = neg3(n); g.twoSided(apex, pa, pb, n, C_GREENGLASS, S_GREEN); }
+  g.glow = 0;
+  for (let i = 0; i < k; i++) {
+    const a = Qs[i], b = Qs[(i + 1) % k];
+    g.strut(apex, [CX[a], yc, CZ[a]], UP, 0.01, 0.012, C_IRON, S_IRON);
+    g.strut([CX[a], yc - 0.01, CZ[a]], [CX[b], yc - 0.01, CZ[b]], UP, 0.014, 0.02, C_IRON, S_IRON);
+  }
+  g.cyl([x, ya, z], [x, ya + 0.1, z], 0.03, 0.0, 6, C_BRASS, S_BRASS);
+  g.cyl([x, y0 + 1.05, z], [x, ya, z], 0.006, 0.006, 4, C_IRON, S_IRON, false);
+  g.glow = 1.7; g.box([x, y0 + 1.0, z], XA, UP, ZA, 0.045, 0.055, 0.045, C_LAMP, S_GLASS); g.glow = 0;
+  g.cyl([x, y0 + 1.055, z], [x, y0 + 1.1, z], 0.06, 0.0, 6, C_BRASS, S_BRASS);
+  g.dyn.lamps.push([x, y0 + 1.0, z]);
+  g.dyn.perches.push([x, ya + 0.12, z]);
+  // a stall, set off to one side so the walkway stays clear
+  const an = hash4(v, 0, 81, 0) * Math.PI * 2, d = [Math.cos(an), 0, Math.sin(an)], sd = [-d[2], 0, d[0]];
+  const o = Math.min(0.2, inRadius(v) - 0.12), c = [x + d[0] * o, y0, z + d[2] * o];
+  const at = (u, w, h) => [c[0] + d[0] * u + sd[0] * w, y0 + h, c[2] + d[2] * u + sd[2] * w];
+  const aw = AWNINGS[Math.floor(hash4(v, 0, 82, 0) * AWNINGS.length)];
+  g.box(at(0, 0, 0.2), d, UP, sd, 0.08, 0.014, 0.15, C_PILE, S_WOOD);
+  g.box(at(0.06, 0, 0.1), d, UP, sd, 0.012, 0.09, 0.14, mul3(C_PILE, 0.8), S_WOOD);
+  for (const u of [-0.06, 0.06]) for (const w of [-0.13, 0.13]) g.strut(at(u, w, 0), at(u, w, 0.19), UP, 0.008, 0.008, C_PILE, S_WOOD);
+  for (let j = 0; j < 6; j++) {
+    const fc = lin(FLOWERS[Math.floor(hash4(v, j, 83, 0) * FLOWERS.length)]);
+    g.blob(at(hash4(v, j, 84, 0) * 0.08 - 0.04, -0.11 + j * 0.044, 0.234), 0.022, fc, S_LEAF, 0.85);
+  }
+  for (const w of [-0.15, 0.15]) g.strut(at(-0.09, w, 0), at(-0.09, w, 0.5), UP, 0.009, 0.009, C_PILE, S_WOOD);
+  for (let j = 0; j < 6; j++) {
+    const w0 = -0.17 + (j * 0.34) / 6, w1 = w0 + 0.34 / 6, col = aw[j % 2];
+    const a0 = at(-0.1, w0, 0.5), a1 = at(-0.1, w1, 0.5), b1 = at(0.17, w1, 0.39), b0 = at(0.17, w0, 0.39);
+    const n = nrm3(add3(UP, mul3(d, 0.4)));
+    g.twoSided(a0, a1, b1, n, col, S_PLAIN); g.twoSided(a0, b1, b0, n, col, S_PLAIN);
+    g.twoSided(b0, b1, at(0.17, (w0 + w1) / 2, 0.33), d, col, S_PLAIN);
+  }
 }
 
 /* ============================================================
@@ -1790,10 +2090,10 @@ diffuseColor.rgb *= mix(1.0, 0.5, wet);
 sRough = mix(sRough, 0.3, wet * 0.8);`)
     .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = sRough;')
     .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = sMetal;')
-    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (vGlow > 0.001) totalEmissiveRadiance += uNight * vGlow * vec3(1.0, 0.52, 0.2) * (0.9 + 0.4 * bhNoise(vWPos.xz * 7.0 + vWPos.y * 5.0));')
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nfloat gfl = 0.9 + 0.4 * bhNoise(vWPos.xz * 7.0 + vWPos.y * 5.0);\nif (vGlow > 9.0) totalEmissiveRadiance += (0.5 + 0.7 * uNight) * (vGlow - 10.0) * vec3(1.0, 0.42, 0.1) * gfl;\nelse if (vGlow > 0.001) totalEmissiveRadiance += uNight * vGlow * vec3(1.0, 0.52, 0.2) * gfl;\nelse if (vGlow < -0.001) totalEmissiveRadiance += uNight * -vGlow * (base * 3.0 + 0.04) * gfl;')
     .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nif (uBump > 0.5) normal = bhPerturb(-vViewPosition, normal, bumpH);');
 };
-townMat.customProgramCacheKey = () => 'brasshaven-town-3';
+townMat.customProgramCacheKey = () => 'brasshaven-town-4';
 
 // shoreline mask: stone quay footprints, blurred, drawn into a small texture
 let minX = 1e9, minZ = 1e9, maxX = -1e9, maxZ = -1e9;
@@ -2106,6 +2406,7 @@ function rebuildDyn() {
     });
   }
   for (const em of emitList) em.acc = Math.random();
+  rebuildMarks();
   rebuildHalos();
   updateDyn(0, performance.now() / 1000);
 }
@@ -2270,6 +2571,133 @@ function rebuildHalos() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('size', new THREE.BufferAttribute(sz, 1)); g.setAttribute('alpha', new THREE.BufferAttribute(a, 1));
   halos.geometry = g;
+}
+
+// ---------- landmark machinery: lighthouse beams, observatory domes, gasholders, portcullises, furnaces ----------
+const BEAM_L = 7;
+const beamGeo = new THREE.ConeGeometry(0.7, BEAM_L, 20, 1, true).rotateZ(Math.PI / 2).translate(BEAM_L / 2, 0, 0);
+const beamMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { uOp: { value: 0 } },
+  vertexShader: `varying float vT; void main(){ vT = position.x / ${BEAM_L}.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uOp; varying float vT; void main(){ float t = clamp(vT, 0.0, 1.0); float a = uOp * 0.42 * pow(1.0 - t, 1.7) * smoothstep(0.0, 0.04, t); gl_FragColor = vec4(1.0, 0.85, 0.58, a); }`,
+});
+const domeMat = new THREE.MeshStandardMaterial({ color: 0xc8984c, metalness: 1, roughness: 0.34, side: THREE.DoubleSide });
+const gasMat = new THREE.MeshStandardMaterial({ color: 0x4f6b59, metalness: 0.5, roughness: 0.52 });
+const GAS_FILL = [0.4, 0.78, 1, 0.25];
+let markList = [], markObjs = [], markGeos = [];
+const gateShut = new Set();
+function rebuildMarks() {
+  const mem = new Map();
+  for (const m of markList) mem.set(m.type + pkey(m.p), m.s);
+  for (const o of markObjs) scene.remove(o);
+  for (const geo of markGeos) geo.dispose();
+  markObjs = []; markGeos = []; markList = []; gateShut.clear();
+  for (const d of chunkDyn) if (d && d.marks) for (const m of d.marks) markList.push(m);
+  const keep = (geo) => { markGeos.push(geo); return geo; };
+  const mesh = (geo, mat, cast = true) => { const o = new THREE.Mesh(keep(geo), mat); o.castShadow = cast; o.receiveShadow = true; return o; };
+  for (const m of markList) {
+    const grp = new THREE.Group(); grp.position.set(m.p[0], m.p[1], m.p[2]);
+    m.s = mem.get(m.type + pkey(m.p)) || { a: hash4(m.v, 1, 2, 3) * 6, k: -1 };
+    if (m.type === 'beam') {
+      for (const r of [0, Math.PI]) { const c = new THREE.Mesh(beamGeo, beamMat); c.rotation.set(0, r, -0.045); c.renderOrder = 7; c.frustumCulled = false; grp.add(c); }
+    } else if (m.type === 'dome') {
+      // a dome with an opening slit, a shutter that rolls back over the top, and a telescope inside
+      const r = m.r, sh = 0.19, spin = new THREE.Group(), piv = new THREE.Group(), tel = new THREE.Group();
+      spin.add(mesh(new THREE.SphereGeometry(r, 28, 10, sh, Math.PI * 2 - 2 * sh, 0, Math.PI / 2), domeMat));
+      spin.add(mesh(new THREE.CylinderGeometry(r * 1.025, r * 1.025, 0.045, 28, 1, true).translate(0, 0.022, 0), handMat, false));
+      for (let j = 1; j < 6; j++) { const a = (j / 6) * Math.PI * 2; spin.add(mesh(new THREE.TorusGeometry(r * 1.005, 0.008, 4, 20, Math.PI / 2).rotateY(Math.PI / 2).rotateY(a), handMat, false)); }
+      piv.add(mesh(new THREE.SphereGeometry(r * 1.02, 4, 10, -sh - 0.05, 2 * sh + 0.1, 0.02, Math.PI / 2 - 0.02), brassMat));
+      const Lt = r * 1.3;
+      tel.add(mesh(new THREE.CylinderGeometry(0.04, 0.055, Lt, 12).translate(0, Lt * 0.25, 0), handMat));
+      for (const t of [-0.2, 0.7]) tel.add(mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.03, 12).translate(0, Lt * t, 0), brassMat, false));
+      tel.position.y = r * 0.32;
+      spin.add(piv, tel, mesh(new THREE.CylinderGeometry(0.05, 0.08, r * 0.32, 10).translate(0, r * 0.16, 0), brassMat));
+      grp.add(spin); Object.assign(m, { spin, piv, tel });
+    } else if (m.type === 'gas') {
+      const R = m.r, Hb = m.h * 0.82, parts = [new THREE.CylinderGeometry(R, R, Hb, 24, 1, true).translate(0, Hb / 2, 0), new THREE.SphereGeometry(R, 24, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.16, 1).translate(0, Hb, 0)];
+      for (const t of [0.2, 0.45, 0.7, 0.96]) parts.push(new THREE.CylinderGeometry(R + 0.012, R + 0.012, 0.028, 24, 1, true).translate(0, Hb * t, 0));
+      for (let j = 0; j < 12; j++) { const a = (j / 12) * Math.PI * 2; parts.push(new THREE.BoxGeometry(0.018, Hb, 0.012).translate(Math.cos(a) * (R + 0.005), Hb / 2, Math.sin(a) * (R + 0.005))); }
+      const o = mesh(mergeParts(parts), gasMat); grp.add(o); Object.assign(m, { mesh: o, Hb });
+    } else if (m.type === 'gate') {
+      const parts = [], nb = Math.max(4, Math.round(m.w / 0.075)), H = m.h;
+      for (let j = 0; j <= nb; j++) {
+        const x = -m.w / 2 + (j * m.w) / nb;
+        parts.push(new THREE.BoxGeometry(0.02, H, 0.024).translate(x, -H / 2, 0), new THREE.ConeGeometry(0.016, 0.06, 4).rotateX(Math.PI).translate(x, -H - 0.03, 0));
+      }
+      for (let t = 0.08; t < H - 0.02; t += 0.13) parts.push(new THREE.BoxGeometry(m.w + 0.02, 0.018, 0.03).translate(0, -t, 0));
+      const o = mesh(mergeParts(parts), handMat); grp.add(o);
+      grp.rotation.y = Math.atan2(-m.ax[1], m.ax[0]);
+      Object.assign(m, { mesh: o, raise: Math.min(H - 0.16, FLOOR_H - 0.12) });
+    }
+    scene.add(grp); markObjs.push(grp); m.g = grp;
+  }
+  updateMarks(0);
+}
+// sparks from the furnace mouth and the tap hole, and the flare over the throat
+const SPK_MAX = 220, FLARE_MAX = 6;
+const skPos = new Float32Array((SPK_MAX + FLARE_MAX) * 3), skSize = new Float32Array(SPK_MAX + FLARE_MAX), skAlpha = new Float32Array(SPK_MAX + FLARE_MAX);
+const skVel = new Float32Array(SPK_MAX * 3), skAge = new Float32Array(SPK_MAX), skLife = new Float32Array(SPK_MAX);
+let skN = 0;
+const sparkGeo = new THREE.BufferGeometry();
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(skPos, 3).setUsage(THREE.DynamicDrawUsage));
+sparkGeo.setAttribute('size', new THREE.BufferAttribute(skSize, 1).setUsage(THREE.DynamicDrawUsage));
+sparkGeo.setAttribute('alpha', new THREE.BufferAttribute(skAlpha, 1).setUsage(THREE.DynamicDrawUsage));
+sparkGeo.setDrawRange(0, 0);
+const sparkMat = pointsMat(true); sparkMat.uniforms.uCol.value.setRGB(1.0, 0.55, 0.16);
+const sparks = new THREE.Points(sparkGeo, sparkMat); sparks.frustumCulled = false; sparks.renderOrder = 6; scene.add(sparks);
+function spark(p, vx, vy, vz, life) {
+  if (skN >= SPK_MAX) return;
+  const i = FLARE_MAX + skN, j = skN * 3; skN++;
+  skPos[i * 3] = p[0]; skPos[i * 3 + 1] = p[1]; skPos[i * 3 + 2] = p[2];
+  skVel[j] = vx; skVel[j + 1] = vy; skVel[j + 2] = vz; skAge[skN - 1] = 0; skLife[skN - 1] = life; skSize[i] = rr(0.03, 0.055);
+}
+function updateMarks(dt) {
+  const night = nightNow(), sp = REDUCED ? 0.4 : 1, now = performance.now() / 1000;
+  beamMat.uniforms.uOp.value = Math.max(0, (night - 0.1) / 0.9);
+  const ease = (s, to, rate) => { if (s.k < 0) s.k = to; s.k += Math.sign(to - s.k) * Math.min(Math.abs(to - s.k), dt * rate); };
+  let nf = 0;
+  for (const m of markList) {
+    const s = m.s;
+    if (m.type === 'beam') { s.a += dt * 0.75 * sp; m.g.rotation.y = s.a; m.g.visible = night > 0.1; }
+    else if (m.type === 'dome') {
+      ease(s, night > 0.5 ? 1 : 0, 0.3);
+      if (s.k > 0.5) s.a += dt * 0.06 * sp;
+      m.piv.rotation.z = -1.3 * s.k;
+      m.spin.rotation.y = s.a;
+      m.tel.rotation.z = 0.3 + 0.55 * s.k + 0.05 * Math.sin(s.a * 4);
+    } else if (m.type === 'gas') {
+      const to = GAS_FILL[todIndex]; if (s.k < 0) s.k = to;
+      s.k += (to - s.k) * Math.min(1, dt * 0.2);
+      m.mesh.position.y = -m.Hb + 0.06 + s.k * m.Hb * 0.9;
+    } else if (m.type === 'gate') {
+      ease(s, night > 0.5 ? 1 : 0, 0.35);
+      m.mesh.position.y = m.raise * (1 - s.k);
+      if (s.k > 0.5) gateShut.add(m.v); else gateShut.delete(m.v);
+    } else if (m.type === 'furnace' && nf < FLARE_MAX) {
+      const i = nf++, fl = 0.75 + 0.25 * Math.sin(now * 7.3 + m.v) * Math.sin(now * 3.1 + m.v * 0.7);
+      skPos[i * 3] = m.p[0]; skPos[i * 3 + 1] = m.p[1] + 0.12 + 0.03 * fl; skPos[i * 3 + 2] = m.p[2]; skSize[i] = (0.55 + 0.45 * night) * fl; skAlpha[i] = 0.45 + 0.45 * night;
+      s.a += dt * (tier === 'high' ? 16 : 8) * sp;
+      while (s.a >= 1) {
+        s.a -= 1;
+        if (Math.random() < 0.8) spark([m.p[0] + rr(-0.06, 0.06), m.p[1] + 0.04, m.p[2] + rr(-0.06, 0.06)], rr(-0.35, 0.35), rr(1.1, 2.1), rr(-0.35, 0.35), rr(0.7, 1.3));
+        else spark(m.tap, rr(-0.25, 0.25), rr(0.2, 0.7), rr(-0.25, 0.25), rr(0.3, 0.6));
+      }
+    }
+  }
+  for (let n = 0; n < skN; n++) {
+    const a = skAge[n] + dt, j = n * 3, i = (FLARE_MAX + n) * 3;
+    if (a >= skLife[n]) {
+      const last = --skN, lj = last * 3, li = (FLARE_MAX + last) * 3;
+      for (let c = 0; c < 3; c++) { skVel[j + c] = skVel[lj + c]; skPos[i + c] = skPos[li + c]; }
+      skAge[n] = skAge[last]; skLife[n] = skLife[last]; skSize[FLARE_MAX + n] = skSize[FLARE_MAX + last]; n--; continue;
+    }
+    skAge[n] = a; skVel[j + 1] -= 2.6 * dt;
+    skPos[i] += skVel[j] * dt; skPos[i + 1] += skVel[j + 1] * dt; skPos[i + 2] += skVel[j + 2] * dt;
+    skAlpha[FLARE_MAX + n] = 0.9 * (1 - a / skLife[n]);
+  }
+  for (let i = nf; i < FLARE_MAX; i++) skAlpha[i] = 0;
+  sparkGeo.setDrawRange(0, FLARE_MAX + skN);
+  for (const k of ['position', 'size', 'alpha']) sparkGeo.attributes[k].needsUpdate = true;
 }
 
 // ---------- time of day ----------
@@ -2541,6 +2969,8 @@ const BOXG = (w, h, d, x, y, z) => new THREE.BoxGeometry(w, h, d).translate(x, y
 
 // ---------- clockwork townsfolk ----------
 const WALK_MAX = 48;
+// townsfolk are modelled small; PERSON brings them up to the height of a doorway
+const PERSON = 1.65;
 const BRASSY = 0xc8a050, DARK = 0x231f1c;
 function automatonHead(kind) {
   const parts = [[SPH(0.03, 0, 0.225, 0), BRASSY], [SPH(0.006, 0.027, 0.232, 0.011), DARK], [SPH(0.006, 0.027, 0.232, -0.011), DARK]];
@@ -2575,7 +3005,7 @@ const COATS = [0x7b2a22, 0x2f4a3a, 0x283a5c, 0x8a6a2a, 0x5a3550, 0x4a4f57], DRES
 
 let walkable = new Uint8Array(V), stopAt = new Uint8Array(V), occ = new Uint8Array(V), walkNodes = [], doors = [], spawnT = 0;
 const walkers = [];
-function isFountain(v) { if (!courtyard[v]) return false; const h = hash4(v, 0, 66, 0); return h >= 0.5 && h < 0.72; }
+function isFountain(v) { if (!courtyard[v]) return false; const r = lmAt(v); if (r) return r.kind === 'gasworks'; const h = hash4(v, 0, 66, 0); return h >= 0.5 && h < 0.72; }
 function computeWalk() {
   walkable.fill(0); walkNodes = []; doors = [];
   for (let v = 0; v < V; v++) if (F(v, 0) && !F(v, 1) && !isFountain(v)) { walkable[v] = 1; walkNodes.push(v); }
@@ -2590,12 +3020,14 @@ function computeWalk() {
   stopAt.fill(0);
   for (const l of lampList) { if (l[1] > GROUND_TOP + 1.2) continue; const v = nearestVertex(l[0], l[2]); if (v >= 0 && walkable[v]) stopAt[v] = 1; }
   for (const d of doors) stopAt[d.w] = 1;
+  for (let v = 0; v < V; v++) if (walkable[v] && isMarket(v)) stopAt[v] = 1;
 }
+const isMarket = (v) => { const r = lmAt(v); return !!r && r.kind === 'market'; };
 function makeWalker(x, z, node) {
   const kind = Math.random() < 0.5 ? 0 : Math.random() < 0.65 ? 1 : 2;
   return {
     x, z, node, prev: -1, gx: x, gz: z, heading: Math.random() * 6.283, kind, color: new THREE.Color(kind === 0 ? anyOf(COATS) : anyOf(DRESSES)),
-    lane: (Math.random() < 0.5 ? -1 : 1) * rr(0.1, 0.17), speed: rr(0.15, 0.22), phase: Math.random() * 6.283,
+    lane: (Math.random() < 0.5 ? -1 : 1) * rr(0.13, 0.2), speed: rr(0.19, 0.27), phase: Math.random() * 6.283,
     steps: 5 + Math.floor(Math.random() * 16), scale: 0, state: 'walk', pause: 0, lantern: Math.random() < 0.75, moving: 0,
   };
 }
@@ -2632,12 +3064,14 @@ function arrive(w) {
     if (d) { w.state = 'enter'; w.gx = d.x; w.gz = d.z; return; }
     if (w.steps < -14 || !doors.length) { w.state = 'fade'; return; }
   }
-  if (Math.random() < (stopAt[u] && occ[u] <= 1 ? 0.35 : 0.08)) w.pause = rr(0.8, 2.6);
+  // the market is where townsfolk linger longest
+  if (isMarket(u) && occ[u] <= 1 && Math.random() < 0.6) w.pause = rr(1.6, 4.5);
+  else if (Math.random() < (stopAt[u] && occ[u] <= 1 ? 0.35 : 0.08)) w.pause = rr(0.8, 2.6);
   // mostly straight on, now and then round a corner, rarely back the way it came, and away from crowds
   const hx = Math.cos(w.heading), hz = -Math.sin(w.heading);
   let best = -1, bs = -1e9;
   for (const n of ringW[u]) {
-    if (!walkable[n] || occ[n] >= 2) continue;
+    if (!walkable[n] || occ[n] >= 2 || gateShut.has(n)) continue;
     const dx = X[n] - X[u], dz = Z[n] - Z[u], l = Math.hypot(dx, dz) || 1;
     const s = (dx * hx + dz * hz) / l + Math.random() * 1.3 - (n === w.prev ? 2.5 : 0) - crowd(n) * 0.9;
     if (s > bs) { bs = s; best = n; }
@@ -2668,7 +3102,7 @@ function updateWalkers(dt) {
     w.x += (dx / d) * step; w.z += (dz / d) * step;
     w.heading += angDiff(w.heading, Math.atan2(-dz, dx)) * Math.min(1, dt * 10);
     w.moving = Math.min(1, w.moving + dt * 4);
-    w.phase += dt * w.speed * hurry * 55;
+    w.phase += dt * w.speed * hurry * 55 / PERSON;
   }
 }
 const LH_MAX = WALK_MAX + 8;
@@ -2683,8 +3117,8 @@ function addLight(x, y, z, size) { if (nLights >= LH_MAX) return; lhPos[nLights 
 function drawWalkers(night) {
   let nA = 0, nB = 0, hA = 0, hB = 0, hC = 0, nl = 0, nLan = 0;
   for (const w of walkers) {
-    const s = w.scale; if (s <= 0.01) continue;
-    const bob = Math.abs(Math.sin(w.phase)) * 0.008 * w.moving;
+    if (w.scale <= 0.01) continue;
+    const s = w.scale * PERSON, bob = Math.abs(Math.sin(w.phase)) * 0.008 * w.moving * PERSON;
     _o3.position.set(w.x, GROUND_TOP + bob, w.z); _o3.rotation.set(0, w.heading, 0); _o3.scale.setScalar(s); _o3.updateMatrix();
     const body = w.kind === 0 ? walkIM.bodyA : walkIM.bodyB, bi = w.kind === 0 ? nA++ : nB++;
     body.setMatrixAt(bi, _o3.matrix); body.setColorAt(bi, w.color);
@@ -2900,15 +3334,38 @@ function creak(vol) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0004, t + 0.42);
   o.connect(f); f.connect(g); g.connect(amb.out); o.start(t); o.stop(t + 0.45);
 }
-function bell(t0, vol) {
+function bell(t0, vol, f0 = 196) {
   const out = actx.createGain(); out.gain.value = vol; out.connect(amb.out);
   for (const [m, a, d] of [[0.5, 0.35, 4.5], [1, 1, 3.6], [2, 0.55, 2.4], [2.4, 0.4, 2], [3, 0.3, 1.6], [4.2, 0.18, 1.1], [5.4, 0.12, 0.8]]) {
     const o = actx.createOscillator(), g = actx.createGain();
-    o.type = 'sine'; o.frequency.value = 196 * m;
+    o.type = 'sine'; o.frequency.value = f0 * m;
     g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(a, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0005, t0 + d);
     o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + d + 0.05);
   }
 }
+// the cathedral rings rounds on eight bells before the hour
+const PEAL = [587, 554, 494, 440, 392, 370, 330, 294];
+function peal(t0, vol) { for (let r = 0; r < 2; r++) PEAL.forEach((f, i) => bell(t0 + (r * 8 + i) * 0.34, vol * (0.8 + 0.2 * Math.random()), f)); return 16 * 0.34 + 1.2; }
+// the lighthouse's foghorn: a long, low, reedy note
+function foghorn(vol) {
+  const t = actx.currentTime, out = actx.createGain(), f = actx.createBiquadFilter();
+  f.type = 'lowpass'; f.frequency.value = 380; f.Q.value = 1.5;
+  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + 0.4); out.gain.setValueAtTime(vol, t + 1.8); out.gain.exponentialRampToValueAtTime(0.0004, t + 2.8);
+  for (const fr of [98, 98.6, 147.2]) { const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.connect(f); o.start(t); o.stop(t + 2.9); }
+  f.connect(out); out.connect(amb.out);
+}
+// a hammer on iron at the ironworks
+function clang(vol) {
+  const t = actx.currentTime, out = actx.createGain(), f0 = rr(380, 640); out.gain.value = vol; out.connect(amb.out);
+  for (const [m, a, d] of [[1, 1, 0.7], [2.76, 0.5, 0.4], [5.4, 0.3, 0.22], [8.9, 0.14, 0.12]]) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = f0 * m;
+    g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(0.0004, t + d);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.02);
+  }
+  envNoise(0.05, 'highpass', 2600, 0.7, vol * 0.5);
+}
+let fogT = 2;
 // an engine's exhaust beat, part of the town's ambience
 function chuff(vol) {
   if (!amb) { noise(0.13, 420, vol, 'lowpass'); return; }
@@ -2941,11 +3398,21 @@ function tickAmbience(dt) {
   }
   // mill wheels creak as they turn
   for (const w of wheelList) { const n = nearness(w.c[0], w.c[2], 5); if (n > 0 && Math.random() < 0.06 * (1 + tension)) creak(0.035 * n * near); }
-  // tower clocks strike the real hour together
-  const h = new Date().getHours();
-  if (lastHour !== null && h !== lastHour && clockList.length) {
+  // landmarks: the foghorn after dark, hammers at the ironworks, chatter in the market, the gasworks' hiss
+  for (const l of landmarks) {
+    const n = nearness(X[l.v], Z[l.v], l.id === 'lighthouse' ? 18 : 7); if (n <= 0) continue;
+    if (l.id === 'lighthouse') { if (night > 0.5 && (fogT -= 0.25) <= 0) { foghorn(0.07 * n * near); fogT = rr(16, 26); } }
+    else if (l.id === 'ironworks') { if (Math.random() < 0.1 * (1 + tension)) clang(0.028 * n * near); if (Math.random() < 0.3) envNoise(rr(0.5, 0.9), 'lowpass', 140, 0.7, 0.05 * n * near); }
+    else if (l.id === 'market') { if (night < 0.5 && Math.random() < 0.5) envNoise(rr(0.3, 0.7), 'bandpass', rr(380, 950), 1.4, 0.03 * n * near); }
+    else if (l.id === 'gasworks' && Math.random() < 0.04) envNoise(rr(0.6, 1.1), 'highpass', 3200, 0.6, 0.012 * n * near);
+  }
+  // tower clocks strike the real hour together, after the cathedral's peal
+  const h = new Date().getHours(), cath = landmarks.find((l) => l.id === 'cathedral');
+  if (lastHour !== null && h !== lastHour && (clockList.length || cath)) {
     let cn = 0; for (const c of clockList) cn = Math.max(cn, nearness(c.p[0], c.p[2], 14));
-    const n = h % 12 || 12, t0 = now + 0.2;
+    let t0 = now + 0.2;
+    if (cath) { const pn = nearness(X[cath.v], Z[cath.v], 16); t0 += peal(t0, 0.055 * (0.4 + 0.6 * pn)); cn = Math.max(cn, pn); }
+    const n = h % 12 || 12;
     for (let i = 0; i < n; i++) bell(t0 + i * 2, 0.07 * (0.4 + 0.6 * cn));
   }
   lastHour = h;
@@ -2978,8 +3445,10 @@ function rebuildChunk(ci) {
   scene.add(m); chunkMesh[ci] = m;
 }
 // courtyards: open stone ground completely walled in by houses becomes a garden
+let yardRegions = [], bridgeRegions = [];
 function computeCourtyards() {
   const next = new Uint8Array(V), seen = new Uint8Array(V);
+  yardRegions = [];
   const isYard = (u) => F(u, 0) && !F(u, 1) && M(u, 0) !== M_TIMBER;
   for (let v = 0; v < V; v++) {
     if (seen[v] || !isYard(v)) continue;
@@ -2990,7 +3459,7 @@ function computeCourtyards() {
         else if (!F(w, 1)) enclosed = false;
       }
     }
-    if (enclosed && region.length <= 40) for (const u of region) next[u] = 1;
+    if (enclosed && region.length <= 40) { for (const u of region) next[u] = 1; yardRegions.push(region); }
   }
   for (let v = 0; v < V; v++) if (next[v] !== courtyard[v]) markDirty(v);
   courtyard = next;
@@ -2999,6 +3468,7 @@ function computeCourtyards() {
 function computeBridges() {
   const next = new Set(), seen = new Set();
   const over = (u, y) => F(u, y) && !F(u, y - 1);
+  bridgeRegions = [];
   for (let v = 0; v < V; v++) {
     if (!cols[v]) continue;
     for (let y = 2; y <= MAXL; y++) {
@@ -3017,12 +3487,114 @@ function computeBridges() {
         const s = [...sup];
         for (let a = 0; a < s.length && !ok; a++) for (let b = a + 1; b < s.length && !ok; b++) if (!ringW[s[a]].includes(s[b])) ok = true;
       }
-      if (ok) for (const u of region) next.add(u * 16 + y);
+      if (ok) { for (const u of region) next.add(u * 16 + y); bridgeRegions.push({ y, region, sup: [...sup] }); }
     }
   }
   for (const k of next) if (!bridgeSet.has(k)) markDirty(Math.floor(k / 16));
   for (const k of bridgeSet) if (!next.has(k)) markDirty(Math.floor(k / 16));
   bridgeSet = next;
+}
+
+// ---------- landmarks: certain arrangements of blocks become a named building ----------
+// lmAt(v) says what part a column plays in a landmark; a column whose part changes is rebuilt
+let lmMap = new Map(), lmSig = new Map(), landmarks = [];
+const lmAt = (v) => lmMap.get(v);
+const noMast = (v) => { const r = lmMap.get(v); return !!r && (r.role === 'lamp' || r.role === 'dome' || r.role === 'furnace' || r.role === 'belltower'); };
+const topLevel = (v) => 31 - Math.clz32(cols[v]);
+const soleTop = (v, t) => ringW[v].every((w) => !F(w, t));
+const nrm2 = (x, z) => { const l = Math.hypot(x, z) || 1; return [x / l, z / l]; };
+function allMat(v, t, m) { for (let y = 1; y <= t; y++) if (M(v, y) !== m) return false; return true; }
+function computeLandmarks() {
+  const next = new Map(), list = [];
+  const claim = (v, r) => { if (!next.has(v)) next.set(v, r); };
+  // observatory: a brass top on a lone tower of six storeys; lighthouse: a lone tower of five at the water's edge
+  for (let v = 0; v < V; v++) {
+    if (!(cols[v] >> 5)) continue;
+    const t = towerTop(v); if (t < 5 || topLevel(v) !== t || !soleTop(v, t)) continue;
+    if (t >= 6 && M(v, t) === M_BRASS) { claim(v, { kind: 'observatory', role: 'dome', t }); list.push({ id: 'observatory', v }); continue; }
+    if (!F(v, 0) || M(v, 0) === M_TIMBER) continue;
+    let water = 0, ok = true;
+    for (const w of ringW[v]) { if (cols[w] >> 2) { ok = false; break; } if (!F(w, 0)) water++; }
+    if (ok && water * 2 >= ringW[v].length) { claim(v, { kind: 'lighthouse', role: 'lamp', t }); list.push({ id: 'lighthouse', v }); }
+  }
+  // cathedral: a copper tower of four storeys or more at the end of a straight row of four low brick blocks
+  const naveOk = (u) => { if (next.has(u) || !(cols[u] & 2)) return false; const h = towerTop(u); return h <= 3 && topLevel(u) === h && allMat(u, h, M_BRICK); };
+  for (let v = 0; v < V; v++) {
+    if (!(cols[v] >> 4) || next.has(v)) continue;
+    const t = towerTop(v); if (t < 4 || topLevel(v) !== t || M(v, t) !== M_COPPER) continue;
+    let best = null;
+    for (const n0 of ringW[v]) {
+      if (!naveOk(n0)) continue;
+      const chain = [n0]; let dx = X[n0] - X[v], dz = Z[n0] - Z[v];
+      while (chain.length < 10) {
+        const cur = chain[chain.length - 1], l0 = Math.hypot(dx, dz);
+        let nb = -1, bd = 0.6;
+        for (const w of ringW[cur]) {
+          if (w === v || chain.includes(w) || !naveOk(w)) continue;
+          const ex = X[w] - X[cur], ez = Z[w] - Z[cur], d = (ex * dx + ez * dz) / (l0 * Math.hypot(ex, ez));
+          if (d > bd) { bd = d; nb = w; }
+        }
+        if (nb < 0) break;
+        dx = X[nb] - X[chain[chain.length - 1]]; dz = Z[nb] - Z[chain[chain.length - 1]]; chain.push(nb);
+      }
+      if (chain.length >= 4 && (!best || chain.length > best.length)) best = chain;
+    }
+    if (!best) continue;
+    const e = best[best.length - 1], ax = nrm2(X[e] - X[v], Z[e] - Z[v]);
+    claim(v, { kind: 'cathedral', role: 'belltower', t });
+    best.forEach((u, i) => claim(u, { kind: 'cathedral', role: 'nave', ax, end: i === best.length - 1, h: towerTop(u) }));
+    list.push({ id: 'cathedral', v });
+  }
+  // town gate: one block bridging the street between two towers of the same height
+  for (const b of bridgeRegions) {
+    if (b.region.length !== 1) continue;
+    const u = b.region[0], y = b.y;
+    if (next.has(u) || !F(u, 0) || M(u, 0) === M_TIMBER || (cols[u] & ((1 << y) - 2))) continue;
+    let pair = null;
+    for (let i = 0; i < b.sup.length && !pair; i++) for (let j = i + 1; j < b.sup.length && !pair; j++) {
+      const a = b.sup[i], c = b.sup[j];
+      if (ringW[a].includes(c) || next.has(a) || next.has(c)) continue;
+      const ta = towerTop(a);
+      if (ta >= y && ta === towerTop(c) && topLevel(a) === ta && topLevel(c) === ta) pair = [a, c];
+    }
+    if (!pair) continue;
+    const [a, c] = pair;
+    claim(u, { kind: 'gate', role: 'arch', y, ax: nrm2(X[c] - X[a], Z[c] - Z[a]) });
+    claim(a, { kind: 'gate', role: 'tower', t: towerTop(a) }); claim(c, { kind: 'gate', role: 'tower', t: towerTop(c) });
+    list.push({ id: 'gate', v: u });
+  }
+  // ironworks: four or more cast-iron houses joined together, one of them an engine house
+  const iron1 = (u) => F(u, 1) && M(u, 1) === M_IRON, seenI = new Uint8Array(V);
+  for (let v = 0; v < V; v++) {
+    if (seenI[v] || !iron1(v)) continue;
+    const cl = [v]; seenI[v] = 1;
+    for (let h = 0; h < cl.length; h++) for (const w of ringW[cl[h]]) if (!seenI[w] && iron1(w)) { seenI[w] = 1; cl.push(w); }
+    if (cl.length < 4 || !cl.some((u) => engineSpot(u))) continue;
+    let fv = -1, fs = -1;
+    for (const u of cl) {
+      if (next.has(u)) continue;
+      const t = towerTop(u); if (topLevel(u) !== t) continue;
+      const sc = t * 2 + (soleTop(u, t) ? 1 : 0) + hash4(u, 0, 7, 7) * 0.5;
+      if (sc > fs) { fs = sc; fv = u; }
+    }
+    if (fv < 0) continue;
+    claim(fv, { kind: 'ironworks', role: 'furnace', t: towerTop(fv) });
+    for (const u of cl) claim(u, { kind: 'ironworks', role: 'works' });
+    list.push({ id: 'ironworks', v: fv });
+  }
+  // gasworks: copper houses around a single open square; market hall: glasshouses around a larger one
+  for (const r of yardRegions) {
+    if (r.some((u) => next.has(u))) continue;
+    const walls = new Set(); for (const u of r) for (const w of ringW[u]) if (F(w, 1)) walls.add(w);
+    let cu = 0, gl = 0; for (const w of walls) { const m = M(w, 1); if (m === M_COPPER) cu++; else if (m === M_GLASS) gl++; }
+    if (r.length === 1 && cu >= 3) { claim(r[0], { kind: 'gasworks', role: 'holder' }); list.push({ id: 'gasworks', v: r[0] }); }
+    else if (r.length >= 3 && r.length <= 12 && gl >= 2) { for (const u of r) claim(u, { kind: 'market', role: 'stall' }); list.push({ id: 'market', v: r[Math.floor(r.length / 2)] }); }
+  }
+  const sig = new Map();
+  for (const [v, r] of next) sig.set(v, JSON.stringify(r));
+  for (const [v, k] of sig) if (lmSig.get(v) !== k) markDirty(v);
+  for (const v of lmSig.keys()) if (!sig.has(v)) markDirty(v);
+  lmMap = next; lmSig = sig; landmarks = list;
 }
 
 const KIND_TOP = 0, KIND_SIDE = 1, KIND_BOTTOM = 2;
@@ -3060,6 +3632,7 @@ function rebuildPick() {
 function flush() {
   computeCourtyards();
   computeBridges();
+  computeLandmarks();
   computeMast();
   for (const ci of dirty) rebuildChunk(ci);
   dirty.clear();
@@ -3070,13 +3643,15 @@ function flush() {
   syncShips();
   syncLife();
   if (booted && userEdit) announceMachines(before, gearsBefore);
+  if (booted) noteLandmarks(userEdit);
   if (groundDirty) { updateShore(); groundDirty = false; }
 }
 // the mooring mast goes on the tallest tower of five storeys or more; ties keep the mast where it is
 function computeMast() {
   let best = -1, bt = 4;
   if (mastV >= 0 && cols[mastV]) { const t = 31 - Math.clz32(cols[mastV]); if (t >= 5) { best = mastV; bt = t; } }
-  for (let v = 0; v < V; v++) { if (!(cols[v] >> 1)) continue; const t = 31 - Math.clz32(cols[v]); if (t > bt) { bt = t; best = v; } }
+  if (best >= 0 && noMast(best)) { best = -1; bt = 4; }
+  for (let v = 0; v < V; v++) { if (!(cols[v] >> 1) || noMast(v)) continue; const t = 31 - Math.clz32(cols[v]); if (t > bt) { bt = t; best = v; } }
   if (best !== mastV) { if (mastV >= 0) markDirty(mastV); if (best >= 0) markDirty(best); mastV = best; }
 }
 
@@ -3700,9 +4275,50 @@ function flashHint(msg, sub, ms) { clearTimeout(hintTimer); hintFlashing = true;
 const SEEN_BEFORE = ['mat0', 'mat1', 'mat2', 'mat3', 'mat4', 'mat5', 'engine', 'wheel', 'unpowered', 'wound', 'time0', 'time1', 'time2', 'time3'];
 const seen = new Set(store.get('seen', null) || (hinted ? SEEN_BEFORE : []));
 function firstTime(key) { if (seen.has(key)) return false; seen.add(key); store.set('seen', [...seen]); return true; }
+// landmarks: the first time a player makes one, a brass plate names it; the menu lists those found and hints at the rest
+const LANDMARKS = [
+  { id: 'lighthouse', name: 'Lighthouse', line: 'Its beam sweeps the harbour after dark', hint: 'A lone tower of five storeys, with the sea on most sides' },
+  { id: 'observatory', name: 'Observatory', line: 'The dome opens and turns to the stars at night', hint: 'A brass top on a lone tower of six storeys or more' },
+  { id: 'cathedral', name: 'Cathedral', line: 'Stained glass, buttresses, and bells on the hour', hint: 'A straight row of four low brick blocks, a tall copper tower at one end' },
+  { id: 'gate', name: 'Town gate', line: 'The portcullis comes down at night', hint: 'Two towers of the same height, a block bridging the street between them' },
+  { id: 'ironworks', name: 'Ironworks', line: 'The blast furnace glows and throws sparks', hint: 'Four cast-iron houses joined together, one with an engine' },
+  { id: 'gasworks', name: 'Gasworks', line: 'The gasholder fills by day and empties at night', hint: 'Three copper houses around a single open square' },
+  { id: 'market', name: 'Market hall', line: 'Stalls under glass where the townsfolk gather', hint: 'A walled square of three cells or more, with glasshouses on its sides' },
+];
+const foundSet = new Set((store.get('found', null) || []).filter((id) => LANDMARKS.some((l) => l.id === id)));
+let foundTimer = 0;
+function showFound(l) {
+  $('found-name').textContent = l.name; $('found-line').textContent = l.line;
+  const el = $('found'); el.classList.add('on');
+  clearTimeout(foundTimer); foundTimer = setTimeout(() => el.classList.remove('on'), 4600);
+  if (soundOn && actx) [5, 7, 9, 10, 12].forEach((n, i) => setTimeout(() => plink(n, i === 4 ? 0.9 : 0.6), i * 95));
+}
+function noteLandmarks(announce) {
+  const fresh = [];
+  for (const l of landmarks) if (!foundSet.has(l.id)) { foundSet.add(l.id); fresh.push(LANDMARKS.find((d) => d.id === l.id)); }
+  if (fresh.length) { store.set('found', [...foundSet]); if (announce) showFound(fresh[0]); }
+  renderMarks();
+}
+function renderMarks() {
+  $('m-marks-val').textContent = `${foundSet.size} of ${LANDMARKS.length}`;
+  const ul = $('marks-list'); if ($('marks-box').hidden) return;
+  ul.textContent = '';
+  for (const d of LANDMARKS) {
+    const li = document.createElement('li'), div = document.createElement('div'), b = document.createElement('b'), got = foundSet.has(d.id);
+    li.className = got ? 'yes' : 'no'; b.textContent = got ? d.name : 'Not yet found';
+    div.append(b, document.createTextNode(got ? d.line : d.hint)); li.append(div);
+    const here = got && landmarks.find((l) => l.id === d.id);
+    if (here) {
+      const btn = document.createElement('button'); btn.className = 'go'; btn.textContent = 'Show'; btn.setAttribute('aria-label', 'Show the ' + d.name);
+      btn.addEventListener('click', () => { glideV.x = glideV.z = 0; Object.assign(goal, { tx: X[here.v], tz: Z[here.v], ty: 2.4, dist: Math.min(goal.dist, 13) }); closeMenu(); });
+      li.append(btn);
+    }
+    ul.append(li);
+  }
+}
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -4034,8 +4650,12 @@ function renderMotion() {
 }
 for (const [id, calm] of [['mo-full', false], ['mo-calm', true]]) $(id).addEventListener('click', () => { REDUCED = calm; store.set('motion', calm ? 'calm' : 'full'); yawVel = 0; renderMotion(); });
 renderMotion();
+$('m-marks').addEventListener('click', () => {
+  for (const id of ['share-box', 'open-box', 'confirm', 'name-box']) $(id).hidden = true;
+  const b = $('marks-box'); b.hidden = !b.hidden; renderMarks();
+});
 $('m-name').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm']) $(id).hidden = true;
+  for (const id of ['share-box', 'open-box', 'confirm', 'marks-box']) $(id).hidden = true;
   const b = $('name-box'); b.hidden = !b.hidden;
   if (!b.hidden) { const i = $('name-in'); i.value = harbourName; i.focus(); i.select(); }
 });
@@ -4052,8 +4672,8 @@ $('name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pre
 
 
 const menu = $('menu'), gear = $('gear');
-function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of ['confirm', 'share-box', 'open-box', 'name-box']) $(id).hidden = true; }
-gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of ['confirm', 'share-box', 'open-box', 'name-box']) $(id).hidden = true; });
+function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box']) $(id).hidden = true; }
+gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box']) $(id).hidden = true; });
 $('m-view').addEventListener('click', () => { goHome(); closeMenu(); });
 $('home-pill').addEventListener('click', () => { goHome(); });
 function renderSound() { $('m-sound').setAttribute('aria-pressed', String(soundOn)); $('m-sound-val').textContent = soundOn ? 'On' : 'Off'; }
@@ -4192,6 +4812,7 @@ function boot(data) {
   setTime(todIndex, true);
   flush();
   booted = true;
+  noteLandmarks(false);
   applyTier(quality === 'low' ? 'low' : 'high');
   renderName();
   restHint();
@@ -4212,6 +4833,7 @@ function boot(data) {
     tickKey(dt);
     tickTod(dt);
     updateDyn(dt, now / 1000);
+    updateMarks(dt);
     updateSteam(dt);
     updateShips(dt, now / 1000);
     updateLife(dt, now / 1000);
@@ -4232,7 +4854,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
