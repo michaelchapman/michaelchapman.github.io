@@ -29,10 +29,12 @@
   shot('wide', { ...home, dist: 40 });
   shot('far', { ...home, dist: 75, pitch: 1.0 });
   b.applyTier('lowest'); shot('homeNoShadow', { ...home, dist: 19 }); shot('farNoShadow', { ...home, dist: 75, pitch: 1.0 }); b.applyTier('high');
+  // the moving town: every update a frame runs, averaged over two seconds of frames
+  b.sim(1, 1 / 60); const s0 = performance.now(); b.sim(2, 1 / 60); const frameMs = +((performance.now() - s0) / 120).toFixed(2);
   // a tap: add one storey somewhere in the middle, then take it away
   const v = b.nearestVertex(1, 1), ts = [];
   for (let i = 0; i < 6; i++) { let y = 1; while (b.F(v, y)) y++; const t = performance.now(); b.commit([[v, y, 0]], []); ts.push(performance.now() - t); b.undo(); }
   ts.sort((a, c) => a - c);
   let n = 0; for (let x = 0; x < b.V; x++) n += b.buildable[x];
-  return { fine: b.fineCount(), size: b.reach(), cells: n, blocks: b.cellCount(), views, tapMs: +ts[3].toFixed(1), shadowR: b.shadowR() };
+  return { frameMs, dyn: { gears: b.gears(), clocks: b.clocks(), engines: b.engines(), wheels: b.wheels(), walkers: b.walkers().length }, fine: b.fineCount(), size: b.reach(), cells: n, blocks: b.cellCount(), views, tapMs: +ts[3].toFixed(1), shadowR: b.shadowR() };
 })()
