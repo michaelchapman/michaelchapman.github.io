@@ -1104,19 +1104,23 @@ function buildLand(g, v) {
   } else if (h < 0.3) g.blob([x + 0.1, LAND_TOP + 0.05, z - 0.08], 0.12, leaf(3), S_LEAF, 0.7);
 }
 // ---------- storeys ----------
-function buildStorey(g, v, y) {
-  const Wn = ringW[v], Xs = ringX[v], Qs = ringQ[v], k = Wn.length;
+function storeyCtx(v, y) {
+  const Wn = ringW[v], k = Wn.length;
   const st = style(v), L = look(v, y);
   const walls = Wn.map((w) => !F(w, y));
   const roofHere = !F(v, y + 1);
   const below = F(v, y - 1);
-  const door = y === 1 ? doorEdge(v) : -1;
   let tower = roofHere && y >= 6;
   if (tower) for (let l = 1; l < y; l++) if (!F(v, l)) { tower = false; break; }
   const eng = engineSpot(v), whl = wheelSpot(v), tt = towerTop(v);
   let worksWall = -1;
-  if (tt >= 6 && y === tt - 1) { let bw = 0; for (let i = 0; i < k; i++) { if (!walls[i]) continue; const W = edgeLen(v, i); if (W >= 0.66 && W > bw) { bw = W; worksWall = i; } } }
-  const ctx = { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall, lm: lmAt(v) };
+  if (tt >= 6 && y === tt - 1) { let bw = 0; for (let i = 0; i < k; i++) { if (!walls[i] || roofBelow(v, y, Wn[i]) > 0) continue; const W = edgeLen(v, i); if (W >= 0.66 && W > bw) { bw = W; worksWall = i; } } }
+  return { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall, lm: lmAt(v) };
+}
+function buildStorey(g, v, y) {
+  const Wn = ringW[v], Xs = ringX[v], Qs = ringQ[v], k = Wn.length;
+  const ctx = storeyCtx(v, y), { L, walls, roofHere, below } = ctx;
+  const door = y === 1 ? doorEdge(v) : -1;
   for (let i = 0; i < k; i++) if (walls[i]) buildWall(g, v, y, i, ctx, door === i);
   if (ctx.wheelWall >= 0) buildWheelMount(g, v, ctx.wheelWall);
   for (let i = 0; i < k; i++) {
@@ -1154,7 +1158,7 @@ function engineSpot(v) {
     if (!F(v, y) || M(v, y) !== M_IRON) continue;
     let best = -1, bh = -1;
     for (let i = 0; i < Wn.length; i++) {
-      if (F(Wn[i], y) || (y === 1 && i === door) || edgeLen(v, i) < 0.62) continue;
+      if (F(Wn[i], y) || (y === 1 && i === door) || edgeLen(v, i) < 0.62 || roofBelow(v, y, Wn[i]) > 0) continue;
       const h = hash4(v, i, 41, 0); if (h > bh) { bh = h; best = i; }
     }
     if (best >= 0) return { y, i: best };
@@ -1288,6 +1292,7 @@ function openingsFor(type, sc, W, m) {
     case 'arch': return [{ pts: archPts(sc, 0.27, 0.28, 0.32), kind: 'win', cx: sc, ow: 0.27, tb: 0.28, oh: 0.32, arch: true, bars: 'cross' }];
     case 'double': return [-0.165, 0.165].map((o) => ({ pts: rectPts(sc + o, 0.21, 0.3, 0.42), kind: 'win', cx: sc + o, ow: 0.21, tb: 0.3, oh: 0.42, bars: 'cross' }));
     case 'port': return [{ pts: circlePts(sc, 0.52, 0.13, 14), kind: 'port', cx: sc, r: 0.13, tc: 0.52 }];
+    case 'oculus': return [{ pts: circlePts(sc, 0.52, 0.085, 12), kind: 'port', cx: sc, r: 0.085, tc: 0.52 }];
     case 'shop': return [{ pts: archPts(sc, 0.48, 0.2, 0.3), kind: 'win', cx: sc, ow: 0.48, tb: 0.2, oh: 0.3, arch: true, bars: 'shop' }];
     case 'lancet': return [{ pts: archPts(sc, 0.19, 0.24, 0.42), kind: 'win', cx: sc, ow: 0.19, tb: 0.24, oh: 0.42, arch: true, bars: 'vert' }];
     case 'factory': { const ow = Math.min(W - 0.18, 0.6); return [{ pts: rectPts(sc, ow, 0.2, 0.56), kind: 'win', cx: sc, ow, tb: 0.2, oh: 0.56, bars: 'grid' }]; }
@@ -1321,11 +1326,10 @@ function buildWall(g, v, y, i, ctx, isDoor) {
   };
   const onGround = y === 1 && F(v, 0);
 
-  if (m === M_GLASS) buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround);
+  if (m === M_GLASS) buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround, w);
   else {
     const street = y === 1 && F(w, 0) && !F(w, 1);
-    const type = chooseOpening(v, y, i, W, ctx, isDoor, street);
-    const holes = openingsFor(type, sc, W, m);
+    const { type, holes } = wallOpenings(v, y, i, W, ctx, isDoor, street, w);
     const doorHole = holes.find((h) => h.kind === 'door');
     // wall face, with openings cut out
     const contour = []; let holeV = [];
@@ -1535,15 +1539,40 @@ function buildWall(g, v, y, i, ctx, isDoor) {
     }
   }
 }
+// what to cut in a wall: its windows or door, kept clear of a lower neighbour's roof leaning on it
+function wallOpenings(v, y, i, W, ctx, isDoor, street, w) {
+  const sc = W / 2, m = ctx.L.m, Hs = FLOOR_H;
+  let type = chooseOpening(v, y, i, W, ctx, isDoor, street);
+  let holes = openingsFor(type, sc, W, m);
+  // the house next door is lower and its roof leans on this wall: openings sit above its ridge, or there are none
+  const rh = roofBelow(v, y, w);
+  if (rh > 0 && !isDoor) {
+    // room up to the cornice (or the string course between storeys), leaving space for a window's hood
+    const lim = Hs - (ctx.roofHere ? [0.175, 0.14, 0.11, 0.16, 0.11, 0.11][m] : 0.07);
+    const fit = (hs) => { let lo = 9, hi = -9; for (const h of hs) for (const q of h.pts) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1] + (h.kind === 'win' ? 0.085 : 0.045)); } return hs.length && hi + rh - lo + 0.02 <= lim ? rh + 0.02 - lo : null; };
+    if (type === 'blank' || type === 'gauge' || type === 'clock') type = 'none';
+    let dy = type === 'none' ? null : fit(holes);
+    for (const t of ['port', 'oculus']) if (dy === null && type !== 'none') { type = t; holes = openingsFor(type, sc, W, m); dy = fit(holes); }
+    if (dy === null) { type = 'none'; holes = []; }
+    else if (dy > 0) for (const h of holes) { h.pts = h.pts.map((q) => [q[0], q[1] + dy]); if (h.tb !== undefined) h.tb += dy; if (h.tc !== undefined) h.tc += dy; }
+  }
+  return { type, holes };
+}
+// how high the roof of a lower neighbour w rises against this house's wall at storey y (0 if it doesn't)
+function roofBelow(v, y, w) {
+  if (y < 2 || F(w, y) || !F(w, y - 1) || !F(v, y - 1)) return 0;
+  return (ROOF_HS[M(w, y - 1)] + ROOF_HS[M(v, y - 1)]) / 2 + 0.05;
+}
 function holes0(isDoor, m, sc) { if (!isDoor) return 0; return m === M_IRON || m === M_TIMBER ? 0.17 : 0.15; }
 
-function buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround) {
+function buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround, w) {
   const { st, L, roofHere } = ctx;
   const W = f.W, U = f.U, N = f.N, Hs = FLOOR_H, fr = L.trim;
   let t0 = 0.02;
   const dw = isDoor ? 0.18 : 0;
-  if (onGround) {
-    t0 = 0.24;
+  const rh = roofBelow(v, y, w);
+  if (onGround || rh > 0) {
+    t0 = onGround ? 0.24 : Math.min(Hs - 0.3, rh + 0.03);
     const seg = isDoor ? [[0, W / 2 - dw], [W / 2 + dw, W]] : [[0, W]];
     for (const [a, b] of seg) {
       g.quad(P(a, 0, 0), P(b, 0, 0), P(b, t0, 0), P(a, t0, 0), N, st.brick, S_BRICK);
@@ -5889,7 +5918,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, roofBelow, openings: (v, y, i) => wallOpenings(v, y, i, edgeLen(v, i), storeyCtx(v, y), false, false, ringW[v][i]), yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
