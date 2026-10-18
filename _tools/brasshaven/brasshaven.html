@@ -403,92 +403,111 @@ const UP = [0, 1, 0], DOWN = [0, -1, 0], XA = [1, 0, 0], ZA = [0, 0, 1];
 
 /* ============================================================
    1. The organic grid
-   hexagon of triangles -> random pairs -> all quads -> relaxed
+   hexagon of triangles -> random pairs -> all quads -> relaxed.
+   The harbour can grow: bands of cells around the first hexagon are made
+   the same way, after it, so the cells of a smaller harbour never move
+   and its vertex numbers stay the same in saves and town codes.
    ============================================================ */
+const BANDS = [10, 12, 14, 16, 18];      // hexagon rings: the first harbour, then each band it can grow by
 function buildGrid(seed) {
-  const rnd = mulberry32(seed);
-  const N = 10, L = 2, H3 = Math.sqrt(3) / 2;
-  const pts = [];
+  const L = 2, H3 = Math.sqrt(3) / 2, NMAX = BANDS[BANDS.length - 1];
+  const pts = [], band = [];
   const pid = new Map();
   const key = (q, r) => (q + 64) * 256 + (r + 64);
-  for (let r = -N; r <= N; r++) for (let q = -N; q <= N; q++) {
-    if (Math.abs(q + r) > N) continue;
-    pid.set(key(q, r), pts.length / 2);
-    pts.push((q + r / 2) * L, r * H3 * L);
-  }
+  const hexR = (q, r) => Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
   const get = (q, r) => pid.get(key(q, r));
-  const tris = [];
-  for (let r = -N; r <= N; r++) for (let q = -N; q <= N; q++) {
-    const a = get(q, r); if (a === undefined) continue;
-    const b = get(q + 1, r), c = get(q, r + 1), d = get(q + 1, r + 1);
-    if (b !== undefined && c !== undefined) tris.push([a, b, c]);
-    if (b !== undefined && c !== undefined && d !== undefined) tris.push([b, d, c]);
-  }
   const eKey = (a, b) => (a < b ? a * 100000 + b : b * 100000 + a);
-  const edgeTris = new Map();
-  tris.forEach((t, ti) => { for (let j = 0; j < 3; j++) { const k = eKey(t[j], t[(j + 1) % 3]); let arr = edgeTris.get(k); if (!arr) { arr = []; edgeTris.set(k, arr); } arr.push(ti); } });
-  const order = tris.map((_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-  const mate = new Int32Array(tris.length).fill(-1);
-  for (const ti of order) {
-    if (mate[ti] >= 0) continue;
-    const t = tris[ti]; const cands = [];
-    for (let j = 0; j < 3; j++) for (const o of edgeTris.get(eKey(t[j], t[(j + 1) % 3]))) if (o !== ti && mate[o] < 0) cands.push(o);
-    if (cands.length) { const o = cands[Math.floor(rnd() * cands.length)]; mate[ti] = o; mate[o] = ti; }
-  }
-  const polys = [];
-  for (let ti = 0; ti < tris.length; ti++) {
-    const o = mate[ti];
-    if (o < 0) { polys.push(tris[ti].slice()); continue; }
-    if (o < ti) continue;
-    const t = tris[ti], u = tris[o];
-    for (let j = 0; j < 3; j++) {
-      const a = t[j], b = t[(j + 1) % 3];
-      if (u.includes(a) && u.includes(b)) { polys.push([a, u.find((x) => x !== a && x !== b), b, t[(j + 2) % 3]]); break; }
+  const midMap = new Map(), quads = [];
+  const mid = (a, b, bi) => { const k = eKey(a, b); let m = midMap.get(k); if (m === undefined) { m = pts.length / 2; pts.push((pts[2 * a] + pts[2 * b]) / 2, (pts[2 * a + 1] + pts[2 * b + 1]) / 2); band.push(bi); midMap.set(k, m); } return m; };
+  const outline = () => {
+    const ecount = new Map(), V = pts.length / 2, edge = new Uint8Array(V);
+    for (let q = 0; q < quads.length / 4; q++) for (let j = 0; j < 4; j++) { const k = eKey(quads[4 * q + j], quads[4 * q + ((j + 1) & 3)]); ecount.set(k, (ecount.get(k) || 0) + 1); }
+    for (const [k, c] of ecount) if (c === 1) { edge[Math.floor(k / 100000)] = 1; edge[k % 100000] = 1; }
+    return { ecount, edge };
+  };
+  const edgeBand = [];
+  let sc = 1;
+  BANDS.forEach((N, bi) => {
+    const N0 = bi ? BANDS[bi - 1] : -1, rnd = mulberry32(bi ? seed * 31 + bi : seed), v0 = pts.length / 2, q0 = quads.length / 4;
+    for (let r = -N; r <= N; r++) for (let q = -N; q <= N; q++) {
+      const d = hexR(q, r); if (d > N || d <= N0) continue;
+      pid.set(key(q, r), pts.length / 2); band.push(bi);
+      pts.push((q + r / 2) * L, r * H3 * L);
     }
-  }
-  const midMap = new Map();
-  const mid = (a, b) => { const k = eKey(a, b); let m = midMap.get(k); if (m === undefined) { m = pts.length / 2; pts.push((pts[2 * a] + pts[2 * b]) / 2, (pts[2 * a + 1] + pts[2 * b + 1]) / 2); midMap.set(k, m); } return m; };
-  const quads = [];
-  for (const poly of polys) {
-    const n = poly.length; let cx = 0, cy = 0;
-    for (const p of poly) { cx += pts[2 * p]; cy += pts[2 * p + 1]; }
-    const c = pts.length / 2; pts.push(cx / n, cy / n);
-    for (let j = 0; j < n; j++) { const a = poly[j], b = poly[(j + 1) % n], z = poly[(j - 1 + n) % n]; quads.push(a, mid(a, b), c, mid(z, a)); }
-  }
-  const V = pts.length / 2, Q = quads.length / 4;
-  const ecount = new Map();
-  for (let q = 0; q < Q; q++) for (let j = 0; j < 4; j++) { const k = eKey(quads[4 * q + j], quads[4 * q + ((j + 1) & 3)]); ecount.set(k, (ecount.get(k) || 0) + 1); }
-  const boundary = new Uint8Array(V);
-  for (const [k, c] of ecount) if (c === 1) { boundary[Math.floor(k / 100000)] = 1; boundary[k % 100000] = 1; }
+    const tris = [];
+    const keep = (t) => t.some((i) => band[i] === bi);
+    for (let r = -N; r <= N; r++) for (let q = -N; q <= N; q++) {
+      const a = get(q, r); if (a === undefined || hexR(q, r) > N) continue;
+      const b = get(q + 1, r), c = get(q, r + 1), d = get(q + 1, r + 1);
+      const ok = (x) => x !== undefined && band[x] <= bi;
+      if (ok(b) && ok(c) && keep([a, b, c])) tris.push([a, b, c]);
+      if (ok(b) && ok(c) && ok(d) && keep([b, d, c])) tris.push([b, d, c]);
+    }
+    const edgeTris = new Map();
+    tris.forEach((t, ti) => { for (let j = 0; j < 3; j++) { const k = eKey(t[j], t[(j + 1) % 3]); let arr = edgeTris.get(k); if (!arr) { arr = []; edgeTris.set(k, arr); } arr.push(ti); } });
+    const order = tris.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    const mate = new Int32Array(tris.length).fill(-1);
+    for (const ti of order) {
+      if (mate[ti] >= 0) continue;
+      const t = tris[ti]; const cands = [];
+      for (let j = 0; j < 3; j++) for (const o of edgeTris.get(eKey(t[j], t[(j + 1) % 3]))) if (o !== ti && mate[o] < 0) cands.push(o);
+      if (cands.length) { const o = cands[Math.floor(rnd() * cands.length)]; mate[ti] = o; mate[o] = ti; }
+    }
+    const polys = [];
+    for (let ti = 0; ti < tris.length; ti++) {
+      const o = mate[ti];
+      if (o < 0) { polys.push(tris[ti].slice()); continue; }
+      if (o < ti) continue;
+      const t = tris[ti], u = tris[o];
+      for (let j = 0; j < 3; j++) {
+        const a = t[j], b = t[(j + 1) % 3];
+        if (u.includes(a) && u.includes(b)) { polys.push([a, u.find((x) => x !== a && x !== b), b, t[(j + 2) % 3]]); break; }
+      }
+    }
+    for (const poly of polys) {
+      const n = poly.length; let cx = 0, cy = 0;
+      for (const p of poly) { cx += pts[2 * p]; cy += pts[2 * p + 1]; }
+      const c = pts.length / 2; pts.push(cx / n, cy / n); band.push(bi);
+      for (let j = 0; j < n; j++) { const a = poly[j], b = poly[(j + 1) % n], z = poly[(j - 1 + n) % n]; quads.push(a, mid(a, b, bi), c, mid(z, a, bi)); }
+    }
+    // relax only this band's own vertices; everything made before stays where it is
+    const { ecount, edge } = outline(), V = pts.length / 2, Q = quads.length / 4;
+    const FX = new Float64Array(V), FY = new Float64Array(V);
+    for (let it = 0; it < 90; it++) {
+      FX.fill(0); FY.fill(0);
+      for (let q = q0; q < Q; q++) {
+        const a = quads[4 * q], b = quads[4 * q + 1], c = quads[4 * q + 2], d = quads[4 * q + 3];
+        const ax = pts[2 * a], ay = pts[2 * a + 1], bx = pts[2 * b], by = pts[2 * b + 1], cx_ = pts[2 * c], cy_ = pts[2 * c + 1], dx = pts[2 * d], dy = pts[2 * d + 1];
+        const cx = (ax + bx + cx_ + dx) / 4, cy = (ay + by + cy_ + dy) / 4;
+        const o0x = ax - cx, o0y = ay - cy, o1x = bx - cx, o1y = by - cy, o2x = cx_ - cx, o2y = cy_ - cy, o3x = dx - cx, o3y = dy - cy;
+        let sx = o0x + o1y - o2x - o3y, sy = o0y - o1x - o2y + o3x;
+        const rm = (Math.hypot(o0x, o0y) + Math.hypot(o1x, o1y) + Math.hypot(o2x, o2y) + Math.hypot(o3x, o3y)) / 4;
+        const sl = Math.hypot(sx, sy) || 1; sx *= rm / sl; sy *= rm / sl;
+        FX[a] += cx + sx - ax; FY[a] += cy + sy - ay;
+        FX[b] += cx - sy - bx; FY[b] += cy + sx - by;
+        FX[c] += cx - sx - cx_; FY[c] += cy - sy - cy_;
+        FX[d] += cx + sy - dx; FY[d] += cy - sx - dy;
+      }
+      for (let i = v0; i < V; i++) if (!edge[i]) { pts[2 * i] += FX[i] * 0.1; pts[2 * i + 1] += FY[i] * 0.1; }
+    }
+    // a vertex is buildable once the band past it exists; the first harbour sets the scale
+    for (let i = edgeBand.length; i < V; i++) edgeBand.push(edge[i] ? bi + 1 : bi);
+    for (let i = 0; i < v0; i++) if (edgeBand[i] > bi && !edge[i]) edgeBand[i] = bi;
+    if (!bi) {
+      let sum = 0, cnt = 0;
+      for (const k of ecount.keys()) { const a = Math.floor(k / 100000), b = k % 100000; sum += Math.hypot(pts[2 * a] - pts[2 * b], pts[2 * a + 1] - pts[2 * b + 1]); cnt++; }
+      sc = 1.02 / (sum / cnt);
+    }
+  });
+  const V = pts.length / 2, Q = quads.length / 4, { edge } = outline();
   const X = new Float64Array(V), Y = new Float64Array(V);
-  for (let i = 0; i < V; i++) { X[i] = pts[2 * i]; Y[i] = pts[2 * i + 1]; }
-  const FX = new Float64Array(V), FY = new Float64Array(V);
-  for (let it = 0; it < 90; it++) {
-    FX.fill(0); FY.fill(0);
-    for (let q = 0; q < Q; q++) {
-      const a = quads[4 * q], b = quads[4 * q + 1], c = quads[4 * q + 2], d = quads[4 * q + 3];
-      const cx = (X[a] + X[b] + X[c] + X[d]) / 4, cy = (Y[a] + Y[b] + Y[c] + Y[d]) / 4;
-      const o0x = X[a] - cx, o0y = Y[a] - cy, o1x = X[b] - cx, o1y = Y[b] - cy, o2x = X[c] - cx, o2y = Y[c] - cy, o3x = X[d] - cx, o3y = Y[d] - cy;
-      let sx = o0x + o1y - o2x - o3y, sy = o0y - o1x - o2y + o3x;
-      const rm = (Math.hypot(o0x, o0y) + Math.hypot(o1x, o1y) + Math.hypot(o2x, o2y) + Math.hypot(o3x, o3y)) / 4;
-      const sl = Math.hypot(sx, sy) || 1; sx *= rm / sl; sy *= rm / sl;
-      FX[a] += cx + sx - X[a]; FY[a] += cy + sy - Y[a];
-      FX[b] += cx - sy - X[b]; FY[b] += cy + sx - Y[b];
-      FX[c] += cx - sx - X[c]; FY[c] += cy - sy - Y[c];
-      FX[d] += cx + sy - X[d]; FY[d] += cy - sx - Y[d];
-    }
-    for (let i = 0; i < V; i++) if (!boundary[i]) { X[i] += FX[i] * 0.1; Y[i] += FY[i] * 0.1; }
-  }
-  let sum = 0, cnt = 0;
-  for (const k of ecount.keys()) { const a = Math.floor(k / 100000), b = k % 100000; sum += Math.hypot(X[a] - X[b], Y[a] - Y[b]); cnt++; }
-  const sc = 1.02 / (sum / cnt);
-  for (let i = 0; i < V; i++) { X[i] *= sc; Y[i] *= sc; }
-  return { V, Q, X, Z: Y, quads: Int32Array.from(quads), boundary };
+  for (let i = 0; i < V; i++) { X[i] = pts[2 * i] * sc; Y[i] = pts[2 * i + 1] * sc; }
+  return { V, Q, X, Z: Y, quads: Int32Array.from(quads), boundary: edge, band: Uint8Array.from(band), edgeBand: Uint8Array.from(edgeBand) };
 }
 
 const G = buildGrid(SEED);
-const { V, Q, X, Z, quads, boundary } = G;
+const { V, Q, X, Z, quads, boundary, band, edgeBand } = G;
 const CX = new Float64Array(Q), CZ = new Float64Array(Q);
 for (let q = 0; q < Q; q++) {
   let x = 0, z = 0; for (let j = 0; j < 4; j++) { x += X[quads[4 * q + j]]; z += Z[quads[4 * q + j]]; }
@@ -496,7 +515,8 @@ for (let q = 0; q < Q; q++) {
 }
 // rings: neighbours w_i and quads q_i (q_i lies between w_i and w_{i+1}), opposite corners x_i
 const ringW = new Array(V), ringQ = new Array(V), ringX = new Array(V);
-const buildable = new Uint8Array(V);
+// canBuild: a whole ring of cells on the largest grid; buildable: inside the harbour as it has grown so far
+const canBuild = new Uint8Array(V), buildable = new Uint8Array(V);
 {
   const inc = Array.from({ length: V }, () => []);
   for (let q = 0; q < Q; q++) for (let j = 0; j < 4; j++) inc[quads[4 * q + j]].push(q * 4 + j);
@@ -508,11 +528,23 @@ const buildable = new Uint8Array(V);
     const f = inc[v][0]; let cur = quads[4 * (f >> 2) + (((f & 3) + 1) & 3)];
     for (let s = 0; s < inc[v].length; s++) { const e = byNext.get(cur); if (!e) break; W.push(cur); Qs.push(e[0]); Xs.push(e[2]); cur = e[1]; }
     ringW[v] = W; ringQ[v] = Qs; ringX[v] = Xs;
-    buildable[v] = W.length === inc[v].length && W.length >= 3 ? 1 : 0;
+    canBuild[v] = W.length === inc[v].length && W.length >= 3 ? 1 : 0;
   }
 }
-let RADIUS = 0;
-for (let v = 0; v < V; v++) RADIUS = Math.max(RADIUS, Math.hypot(X[v], Z[v]));
+// the harbour grows a band at a time: building on a cell beside one that is not open yet opens its band
+const REACH_MAX = BANDS.length - 1, reachOf = new Uint8Array(V);
+for (let v = 0; v < V; v++) { let r = edgeBand[v]; for (const w of ringW[v]) r = Math.max(r, edgeBand[w]); reachOf[v] = Math.min(REACH_MAX, r); }
+let reach = -1, RADIUS = 0;
+function setReach(r) {
+  if (r === reach) return false;
+  reach = r; RADIUS = 0;
+  for (let v = 0; v < V; v++) {
+    buildable[v] = canBuild[v] && edgeBand[v] <= r ? 1 : 0;
+    if (band[v] <= r) RADIUS = Math.max(RADIUS, Math.hypot(X[v], Z[v]));
+  }
+  return true;
+}
+setReach(0);
 
 const BIN = 1.5, bins = new Map();
 for (let v = 0; v < V; v++) { const k = Math.floor(X[v] / BIN) * 4096 + Math.floor(Z[v] / BIN); let a = bins.get(k); if (!a) bins.set(k, (a = [])); a.push(v); }
@@ -1949,8 +1981,14 @@ const sunDir = new THREE.Vector3(0, 1, 0);
 const sun = new THREE.DirectionalLight(0xffdfb2, 2.75);
 sun.position.copy(sunDir).multiplyScalar(70);
 sun.castShadow = true;
-const SH = RADIUS + 3;
-Object.assign(sun.shadow.camera, { left: -SH, right: SH, top: SH, bottom: -SH, near: 10, far: 160 });
+Object.assign(sun.shadow.camera, { left: -RADIUS - 3, right: RADIUS + 3, top: RADIUS + 3, bottom: -RADIUS - 3, near: 10, far: 160 });
+// the shadow map covers the built town, not the whole grid, so shadows stay sharp as the harbour grows
+function fitShadow(cx, cz, rad, top) {
+  const r = Math.ceil(Math.max(12, Math.hypot(rad, top) + 5)), c = sun.shadow.camera;
+  sun.target.position.set(cx, 0, cz); sun.target.updateMatrixWorld();
+  sun.position.copy(sunDir).multiplyScalar(70).add(sun.target.position);
+  if (c.right !== r) { c.left = c.bottom = -r; c.right = c.top = r; c.updateProjectionMatrix(); }
+}
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.025;
 sun.shadow.mapSize.set(2048, 2048);
@@ -2147,8 +2185,10 @@ let minX = 1e9, minZ = 1e9, maxX = -1e9, maxZ = -1e9;
 for (let v = 0; v < V; v++) { minX = Math.min(minX, X[v]); maxX = Math.max(maxX, X[v]); minZ = Math.min(minZ, Z[v]); maxZ = Math.max(maxZ, Z[v]); }
 const SHORE_SIZE = Math.max(maxX - minX, maxZ - minZ) + 8;
 const SHORE_X = (minX + maxX) / 2 - SHORE_SIZE / 2, SHORE_Z = (minZ + maxZ) / 2 - SHORE_SIZE / 2;
-const shoreBig = document.createElement('canvas'); shoreBig.width = shoreBig.height = 384;
-const shoreSmall = document.createElement('canvas'); shoreSmall.width = shoreSmall.height = 160;
+// the mask covers the largest harbour at the same sharpness the first one had
+const SHORE_K = SHORE_SIZE / (2 * Math.max(...Array.from(X).filter((_, v) => !band[v]).map(Math.abs)) + 8);
+const shoreBig = document.createElement('canvas'); shoreBig.width = shoreBig.height = Math.round(384 * SHORE_K);
+const shoreSmall = document.createElement('canvas'); shoreSmall.width = shoreSmall.height = Math.round(160 * SHORE_K);
 const shoreTex = new THREE.CanvasTexture(shoreSmall);
 shoreTex.colorSpace = THREE.NoColorSpace; shoreTex.flipY = false; shoreTex.minFilter = THREE.LinearFilter; shoreTex.magFilter = THREE.LinearFilter; shoreTex.generateMipmaps = false;
 function updateShore() {
@@ -2763,7 +2803,7 @@ function mixState(a, b, k) {
   return o;
 }
 function applyTod(S) {
-  sunDir.copy(S.dir); sun.position.copy(sunDir).multiplyScalar(70);
+  sunDir.copy(S.dir); sun.position.copy(sunDir).multiplyScalar(70).add(sun.target.position);
   sun.color.copy(S.sun); sun.intensity = S.si;
   hemi.color.copy(S.hs); hemi.groundColor.copy(S.hg); hemi.intensity = S.hi;
   renderer.toneMappingExposure = S.exp;
@@ -2892,6 +2932,7 @@ function syncShips() {
   for (let v = 0; v < V; v++) if (cols[v]) { rad = Math.max(rad, Math.hypot(X[v] - townCX, Z[v] - townCZ)); townBox.expandByPoint(_v3.set(X[v], 0, Z[v])); }
   if (!townBox.isEmpty()) { townBox.min.x -= 0.6; townBox.min.z -= 0.6; townBox.max.x += 0.6; townBox.max.z += 0.6; townBox.max.y = top + 0.8; }
   townRad = rad;
+  fitShadow(townCX, townCZ, rad, top + 3);
   mastPos = null; for (const d of chunkDyn) if (d && d.mast) mastPos = new THREE.Vector3(...d.mast);
   shipHeights.clear();
   const put = (x, z, h) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const k = hkey(x + dx, z + dz); if ((shipHeights.get(k) || 0) < h) shipHeights.set(k, h); } };
@@ -3660,7 +3701,7 @@ function rebuildPick() {
       cellCount++;
       const b = y === 0 ? -0.3 : baseY(y);
       const t = topY(y) + (y > 0 && !F(v, y + 1) ? ROOF_HS[M(v, y)] * 0.55 : 0);
-      const pack = (kind, i) => v | (y << 12) | (kind << 16) | (i << 18);
+      const pack = (kind, i) => v | (y << 13) | (kind << 17) | (i << 19);
       for (let i = 0; i < k; i++) {
         if (F(Wn[i], y)) continue;
         const qa = Qs[(i - 1 + k) % k], qb = Qs[i];
@@ -3677,6 +3718,15 @@ function rebuildPick() {
   pickMesh.geometry = g; pickTags = Uint32Array.from(tags);
 }
 function flush() {
+  let r = 0; for (let v = 0; v < V; v++) if (cols[v] && reachOf[v] > r) r = reachOf[v];
+  const was = reach;
+  if (setReach(r)) {
+    EDGE_MSG = reach < REACH_MAX ? 'Build out to the edge of the harbour and it grows' : EDGE_FULL;
+    if (booted && userEdit && reach > was) {
+      flashHint(reach < REACH_MAX ? 'The harbour grows' : 'The harbour is as big as it gets', 'New water opens around the edge for building', 3200);
+      if (soundOn && actx) [0, 3, 5, 8].forEach((n, i) => setTimeout(() => plink(n, 0.7), i * 120));
+    }
+  }
   computeCourtyards();
   computeBridges();
   computeLandmarks();
@@ -3761,7 +3811,7 @@ function unpackBytes(bytes) {
       mt[v * 16 + levels[j]] = Math.min(5, byte & 15);
       if (j + 1 < levels.length) mt[v * 16 + levels[j + 1]] = Math.min(5, byte >> 4);
     }
-    if (buildable[v]) c[v] = m & ((1 << (MAXL + 1)) - 1);
+    if (canBuild[v]) c[v] = m & ((1 << (MAXL + 1)) - 1);
   }
   return { c, mt };
 }
@@ -3817,7 +3867,7 @@ function loadSaved() {
   if (typeof t2 === 'string' && t2) { try { const { c, mt } = unpackBytes(fromB64(t2)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
   const t1 = (store.get('town', null) || {}).c;
   if (Array.isArray(t1) && t1.length) {
-    for (let i = 0; i + 1 < t1.length; i += 2) { const v = t1[i] | 0; if (v >= 0 && v < V && buildable[v]) cols[v] = t1[i + 1] & ((1 << (MAXL + 1)) - 1); }
+    for (let i = 0; i + 1 < t1.length; i += 2) { const v = t1[i] | 0; if (v >= 0 && v < V && canBuild[v]) cols[v] = t1[i + 1] & ((1 << (MAXL + 1)) - 1); }
     return true;
   }
   return false;
@@ -4027,8 +4077,9 @@ function ringPick(sx, sy) {
   }
   return null;
 }
-const unpackTag = (tag) => ({ v: tag & 4095, y: (tag >> 12) & 15, kind: (tag >> 16) & 3, i: (tag >> 18) & 15 });
-const EDGE_MSG = 'The harbour ends here. Build nearer the town.';
+const unpackTag = (tag) => ({ v: tag & 8191, y: (tag >> 13) & 15, kind: (tag >> 17) & 3, i: (tag >> 19) & 15 });
+let EDGE_MSG = 'Build out to the edge of the harbour and it grows';
+const EDGE_FULL = 'The harbour ends here. Build nearer the town.';
 function planAction(hit, useTool) {
   if (!hit) return null;
   if (hit.type === 'water') {
@@ -4352,7 +4403,7 @@ function doHover() {
   const gu = gridLines.material.uniforms;
   if (hit) {
     if (hit.type === 'water') { gu.uFocus.value.set(hit.x, 0, hit.z); gu.uOn.value = 1; }
-    else { const v = hit.tag & 4095; gu.uFocus.value.set(X[v], 0, Z[v]); gu.uOn.value = 0.6; }
+    else { const v = hit.tag & 8191; gu.uFocus.value.set(X[v], 0, Z[v]); gu.uOn.value = 0.6; }
   } else gu.uOn.value = 0;
   if (ghostFade > 0) return;
   const plan = planAction(hit, tool);
@@ -5018,7 +5069,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { renderInfo: () => { renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
