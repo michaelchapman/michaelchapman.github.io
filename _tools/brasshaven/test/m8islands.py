@@ -77,6 +77,16 @@ with sync_playwright() as p:
         r=ev(SNAP)
         check(f'{name} keeps every block', r['islands']==isles and r['sky']==sky and r['hash']==isl['hash'] and (r['land']>0)==isles, r)
         page.screenshot(path=f'{ROOT}/test/m8-{name}.png')
+        if name=='open-sky':
+            r=ev("""(() => { const b = window.__brasshaven, d = b.dyn(), k = {}; for (const s of d.spins) k[s.kind] = (k[s.kind] || 0) + 1;
+              return { wheels: d.wheels.length, kinds: k }; })()""")
+            turb=r['kinds'].get('turbine',0); check('in the sky there are no mill wheels', r['wheels']==0 and turb>0, r)
+            check('the hull carries lift fans and propellers', r['kinds'].get('fan',0)>3 and r['kinds'].get('prop',0)>0, r)
+            # nothing hangs down to the clouds: no pole or root reaches below the hull's deepest plates
+            r=ev("(() => window.__brasshaven.fineNear(0, 0, 999, -99, -4.2, true) + window.__brasshaven.fineNear(0, 0, 999, -99, -4.2))()")
+            check('nothing dangles below the hull', r==0, r)
+    r=ev("(() => window.__brasshaven.dyn().wheels.length)()")
+    check('on the sea every wind wheel is a mill wheel again', r==turb, {'wheels': r, 'turbines': turb})
     # undo walks the settings back, islands and all
     ev("() => window.__brasshaven.undo()"); r=ev(SNAP)
     check('undo brings back the sky', not r['islands'] and r['sky'], r)
