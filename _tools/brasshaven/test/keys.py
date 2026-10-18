@@ -1,5 +1,6 @@
+# the time-of-day dial by click, tap and the T key; the wind-up key is gone
 import os
-import json, os
+import json
 from playwright.sync_api import sync_playwright
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 html=open(f'{ROOT}/brasshaven.html').read()
@@ -18,36 +19,16 @@ with sync_playwright() as p:
             else: r.abort()
         page.route('**/*', route)
         page.goto('http://bh.test/index.html'); page.wait_for_timeout(2500)
-        T = lambda: page.evaluate('window.__brasshaven.tension()')
-        kb = page.locator('#key-btn').bounding_box(); tb = page.locator('#time-btn').bounding_box()
-        kx, ky = kb['x'] + kb['width']/2, kb['y'] + kb['height']/2
-        res = {}
+        tb = page.locator('#time-btn').bounding_box()
+        res = {'keyGone': page.locator('#key-btn').count() == 0}
         if mobile:
-            page.touchscreen.tap(kx, ky); page.wait_for_timeout(300)
-            res['tap'] = round(T(), 3)
-            # long hold via CDP touch events
-            cdp = ctx.new_cdp_session(page)
-            cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': kx, 'y': ky}]})
-            page.wait_for_timeout(2500)
-            res['holding'] = round(T(), 3)
-            cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
-            page.wait_for_timeout(200)
-            res['released'] = round(T(), 3)
             page.touchscreen.tap(tb['x'] + 25, tb['y'] + 25); page.wait_for_timeout(400)
         else:
-            page.mouse.click(kx, ky); page.wait_for_timeout(300)
-            res['tap'] = round(T(), 3)
-            page.mouse.move(kx, ky); page.mouse.down(); page.wait_for_timeout(2500)
-            res['holding'] = round(T(), 3)
-            page.mouse.up(); page.wait_for_timeout(200)
-            res['released'] = round(T(), 3)
             page.keyboard.press('t'); page.wait_for_timeout(300)
             page.locator('#time-btn').click(); page.wait_for_timeout(300)
             page.keyboard.press('k'); page.wait_for_timeout(100)
-            res['afterK'] = round(T(), 3)
         res['time'] = page.evaluate('window.__brasshaven.time()')
         res['hint'] = page.locator('#hint').text_content()
-        res['label'] = page.locator('#key-btn').get_attribute('aria-label')
         res['timeLabel'] = page.locator('#time-btn').get_attribute('aria-label')
         res['stored'] = page.evaluate("localStorage.getItem('brasshaven:time')")
         print('mobile' if mobile else 'desktop', json.dumps(res), 'errors', errs)

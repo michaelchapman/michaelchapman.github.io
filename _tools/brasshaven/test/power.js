@@ -1,3 +1,4 @@
+// machines need no power: a lone clockwork house turns, engines and mill wheels run, driven gears keep tooth contact
 (() => {
   const b = window.__brasshaven, out = {};
   const cx = b.goal.tx, cz = b.goal.tz;
@@ -10,12 +11,10 @@
     b.commit([[c, 0, 0], [c, 1, 1]], []);
     if (b.gears() > g0) v = c; else b.undo();
   }
-  out.brass = v; out.gears = b.gears(); out.hint1 = document.getElementById('hint').textContent;
-  out.powered0 = b.powered(v);
+  out.brass = v; out.gears = b.gears();
   const drv = b.dyn().gears.find((g) => g.v === v && !g.parent);
-  const a0 = drv.ang; b.sim(2); out.turnedUnpowered = +(drv.ang - a0).toFixed(3); const tu = drv.ang - a0;
-  b.tension(0.8); const a1 = drv.ang; b.sim(1); out.turnedWound = +(drv.ang - a1).toFixed(3); const tw = drv.ang - a1; b.tension(0);
-  // join an engine house
+  const a0 = drv.ang; b.sim(2); const d0 = drv.ang - a0; out.loneTurns = d0 > 0.1;
+  // an engine house beside it
   let eng = -1;
   for (const w of b.ringW[v]) {
     if (b.cols[w] || !b.buildable[w]) continue;
@@ -23,12 +22,14 @@
     b.commit([[w, 0, 0], [w, 1, 3]], []);
     if (b.engines() > e0) { eng = w; break; } else b.undo();
   }
-  out.engine = eng; out.hint2 = document.getElementById('hint').textContent;
-  out.powered1 = b.powered(v);
+  out.engine = eng;
+  const e = b.dyn().engines[0], t0 = e && e.th; b.sim(1); out.engineRuns = !!e && e.th - t0 > 1;
+  // the clockwork keeps the same speed with or without the engine
   const drv2 = b.dyn().gears.find((g) => g.v === v && !g.parent);
-  const a2 = drv2.ang; b.sim(2); out.turnedPowered = +(drv2.ang - a2).toFixed(3);
-  out.angleKept = Math.abs(a2 - (a0 + tu + tw)) < 1e-6; out.angleGap = a2 - (a0 + tu + tw);
-  // mesh check: driven gears keep tooth contact (angle relation)
+  const a2 = drv2.ang; b.sim(2); out.sameSpeed = Math.abs(drv2.ang - a2 - d0) < 1e-6;
+  out.hint = document.getElementById('hint').textContent;
+  out.noKey = !document.getElementById('key-btn');
+  // driven gears keep tooth contact (angle relation)
   const kids = b.dyn().gears.filter((g) => g.v === v && g.parent);
   out.kids = kids.map((g) => ({ n: g.teeth, pn: g.parent.teeth, phi: +g.phi.toFixed(2) }));
   b.goal.tx = b.X[v]; b.goal.tz = b.Z[v]; b.goal.ty = 0.9; b.goal.dist = 4; b.goal.pitch = 0.3; Object.assign(b.view, b.goal);

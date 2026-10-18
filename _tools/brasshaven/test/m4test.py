@@ -38,8 +38,7 @@ with sync_playwright() as p:
     print('beckon on iron coin?', E("document.querySelector('.coin.m3').classList.contains('beckon') || document.getElementById('palette').classList.contains('beckon')"))
     page.mouse.click(proj2[0], proj2[1] - 60); page.wait_for_timeout(1800)
     print('after iron', E('window.__brasshaven.tips()'))
-    page.keyboard.press('k'); page.wait_for_timeout(1700)
-    print('after key', E('window.__brasshaven.tips()'), 'beckon time', E("document.getElementById('time-btn').classList.contains('beckon')"))
+    print('beckon time', E("document.getElementById('time-btn').classList.contains('beckon')"))
     page.keyboard.press('t'); page.wait_for_timeout(1700)
     print('after time', E('window.__brasshaven.tips()'), 'hint', page.locator('#hint').text_content())
     # postcard

@@ -9,7 +9,6 @@
   b.goal.yaw = Math.atan2(n[0], n[2]) + (args.yaw || 0); b.goal.pitch = args.pitch ?? 0.25; b.goal.dist = args.dist || 3;
   Object.assign(b.view, b.goal);
   if (args.time !== undefined) b.setTime(args.time, true);
-  if (args.tension !== undefined) b.tension(args.tension);
   const parts = b.sim(args.sim || 3);
   return { parts, view: b.goal, emitters: b.emitters(), ships: b.ships() };
 }
