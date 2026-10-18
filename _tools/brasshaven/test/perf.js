@@ -4,7 +4,7 @@
   const a = await times(6);
   const g = b.goal; g.yaw += 2.2; Object.assign(b.view, g);
   const c = await times(6);
-  b.tension(1); b.sim(4);
+  b.sim(4);
   const d = await times(6);
   return { a, c, d, p: b.particles() };
 })()

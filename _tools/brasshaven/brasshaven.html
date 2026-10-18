@@ -49,8 +49,6 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .round svg{width:26px;height:26px;position:relative}
 .round:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
 .round:active{transform:translateY(1px)}
-.tension{position:absolute;inset:3px;border-radius:50%;background:conic-gradient(var(--brass-hi) calc(var(--t,0) * 1turn),rgba(0,0,0,.42) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px));pointer-events:none}
-#key-btn.winding{background:linear-gradient(180deg,#3a2d20,#241b14)}
 .menu{position:absolute;top:calc(env(safe-area-inset-top,0px) + 70px);right:max(16px,calc(env(safe-area-inset-right,0px) + 12px));width:min(310px,calc(100vw - 32px));max-height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 90px);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px;z-index:5}
 .menu button.item{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:46px;padding:0 12px;border-radius:8px;font-weight:700;font-size:15px;color:var(--cream);cursor:pointer}
 .menu button.item:hover{background:rgba(239,207,134,.08)}
@@ -229,10 +227,6 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
     <button class="round plate" id="time-btn" aria-label="Time of day: Golden hour">
       <svg id="time-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
     </button>
-    <button class="round plate" id="key-btn" aria-label="Wind the key">
-      <span class="tension" id="tension" aria-hidden="true"></span>
-      <svg id="key-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12.6v8.4M12 20.6h2.6M12 17.8h2.2"/><path d="M12 12.6c-1.6 0-3.3-.7-4.5-2C6.2 9.2 6 7 7.2 5.8s3.4-1 4.8.6c1.4-1.6 3.6-1.8 4.8-.6s1 3.4-.3 4.8c-1.2 1.3-2.9 2-4.5 2z"/><circle cx="12" cy="9.2" r="1.1"/></svg>
-    </button>
     <button class="round plate" id="pc-btn" aria-label="Take a postcard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 8h3.4l1.7-2.4h6.2L16.8 8h3.4v10.6H3.8z"/><circle cx="12" cy="13" r="3.3"/><path d="M17.4 10.4h.01"/></svg>
     </button>
@@ -376,7 +370,7 @@ const MATS = [
   { name: 'Brick', line: 'terraces, arched windows, slate roofs' },
   { name: 'Brass', line: 'riveted plate, portholes and clockwork' },
   { name: 'Copper', line: 'verdigris sheeting, spires and onion domes' },
-  { name: 'Cast iron', line: 'engine houses that power everything joined to them' },
+  { name: 'Cast iron', line: 'engine houses with flywheels and pistons' },
   { name: 'Glass', line: 'conservatories full of green' },
   { name: 'Timber', line: 'clapboard and piers; by the water it turns a mill wheel' },
 ];
@@ -2331,7 +2325,7 @@ function flashGhost(cells, mode, rate = 1.6) { ghostKey = ''; setGhost(cells, mo
 
 /* ============================================================
    7. The working town: engines, mill wheels, clockwork trains, clocks,
-      power districts, steam, gaslight, time of day and airships
+      steam, gaslight, time of day and airships
    ============================================================ */
 const chunkDyn = [];
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v3 = new THREE.Vector3(), _s3 = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1);
@@ -2414,38 +2408,7 @@ const crossGeo = new THREE.BoxGeometry(0.05, 0.048, 0.032);
 const hourGeo = new THREE.BoxGeometry(0.034, 0.15, 0.012).translate(0, 0.055, 0);
 const minGeo = new THREE.BoxGeometry(0.022, 0.21, 0.012).translate(0, 0.085, 0.012);
 
-// ---------- power: buildings that touch form a district; an engine or mill wheel powers it ----------
-let clusterOf = new Int32Array(V).fill(-1), clusterPowered = [], tension = 0, booted = false, userEdit = false;
-const srcCount = { e: 0, w: 0 };
-const isPowered = (v) => { const c = clusterOf[v]; return c >= 0 && clusterPowered[c]; };
-const runFactor = (v) => (isPowered(v) ? 1 + tension * 2.5 : tension * 1.6);
-function computePower() {
-  clusterOf.fill(-1); clusterPowered = [];
-  let ne = 0, nw = 0;
-  for (let v = 0; v < V; v++) {
-    if (clusterOf[v] >= 0 || !(cols[v] & ~1)) continue;
-    const id = clusterPowered.length; let powered = false;
-    const stack = [v]; clusterOf[v] = id;
-    while (stack.length) {
-      const u = stack.pop();
-      if (engineSpot(u)) { powered = true; ne++; }
-      if (wheelSpot(u)) { powered = true; nw++; }
-      const cu = cols[u] & ~1;
-      for (const w of ringW[u]) if (clusterOf[w] < 0 && (cols[w] & cu)) { clusterOf[w] = id; stack.push(w); }
-    }
-    clusterPowered.push(powered);
-  }
-  srcCount.e = ne; srcCount.w = nw;
-}
-// the first engine, mill wheel and stalled clockwork a player builds are explained, once
-function announceMachines(before, gearsBefore) {
-  if (srcCount.e > before.e) { if (firstTime('engine')) flashHint('Steam up', 'This engine house powers every building joined to it'); }
-  else if (srcCount.w > before.w) { if (firstTime('wheel')) flashHint('The mill wheel turns', 'It powers every building joined to this house'); }
-  else if (gearList.length > gearsBefore && tension < 0.05 && !seen.has('unpowered') && gearList.some((g) => !g.parent && !isPowered(g.v))) {
-    firstTime('unpowered');
-    flashHint('This clockwork has no power', 'Join it to a cast-iron engine house, or wind the key');
-  }
-}
+let booted = false, userEdit = false;
 
 // ---------- instanced moving parts ----------
 let dynMeshes = [];
@@ -2523,15 +2486,15 @@ function rebuildDyn() {
 let chuffClock = 0;
 function updateDyn(dt, t) {
   const sp = REDUCED ? 0.3 : 1;
-  // clockwork: each driver turns by its district's power; driven gears follow by tooth ratio
+  // clockwork: each driver turns steadily; driven gears follow by tooth ratio
   for (const gr of gearList) {
-    if (!gr.parent) gr.ang += dt * gr.drive * runFactor(gr.v) * sp;
+    if (!gr.parent) gr.ang += dt * gr.drive * sp;
     else { const pa = gr.parent; gr.ang = gr.phi + Math.PI + Math.PI / gr.teeth - (pa.teeth / gr.teeth) * (pa.ang - gr.phi); }
     _q.copy(gr.q0).multiply(_q2.setFromAxisAngle(ZV, gr.ang));
     gr.im.setMatrixAt(gr.idx, _m4.compose(gr.pos, _q, _one));
   }
   // engines: crank, connecting rod and crosshead solved exactly, a puff of exhaust each stroke
-  const espd = 2.3 * (1 + tension * 1.5) * sp;
+  const espd = 2.3 * sp;
   chuffClock = Math.max(0, chuffClock - dt);
   for (const e of engineList) {
     const prev = e.th; e.th += dt * espd;
@@ -2555,7 +2518,7 @@ function updateDyn(dt, t) {
     e.pis.setMatrixAt(e.idx, _m4.compose(_v3, _q, _s3.set(e.lp, 1, 1)));
   }
   // mill wheels, with spray where the paddles meet the harbour
-  const wspd = 0.9 * (1 + tension) * sp, spray = tier === 'high' ? 16 : 7;
+  const wspd = 0.9 * sp, spray = tier === 'high' ? 16 : 7;
   for (const w of wheelList) {
     w.ang += dt * wspd;
     _q.copy(w.q0).multiply(_q2.setFromAxisAngle(ZV, w.ang));
@@ -2585,13 +2548,11 @@ function updateDyn(dt, t) {
       c.minIM.setMatrixAt(c.idx, _m4.compose(c.pos, _q, _one));
     }
   }
-  // chimneys, stacks and vents; vents and leaking mains only breathe where there is power
+  // chimneys, stacks, vents and leaking mains
   const rmul = tier === 'high' ? 1 : 0.55;
   for (const em of emitList) {
     const k = EMIT[em.kind]; if (!k) continue;
     let rate = k.rate * rmul;
-    if (k.powered) { if (!isPowered(em.v)) continue; rate *= 1 + tension; }
-    if (em.kind === 'stack') rate *= 1 + 1.5 * tension;
     em.acc += dt * rate;
     while (em.acc >= 1) { em.acc -= 1; emitPuff(k, em.p, em.n); }
   }
@@ -2623,8 +2584,8 @@ const EMIT = {
   chimney: { rate: 0.45, life: [4, 5], s: [0.12, 0.55], a: 0.3, vy: 0.28, spread: 0.04 },
   stove: { rate: 0.5, life: [3, 4], s: [0.08, 0.42], a: 0.28, vy: 0.25, spread: 0.03 },
   stack: { rate: 2.2, life: [5.5, 6.5], s: [0.22, 1.1], a: 0.42, vy: 0.55, spread: 0.06 },
-  vent: { rate: 0.9, life: [2, 3], s: [0.07, 0.35], a: 0.35, vy: 0.32, spread: 0.03, powered: true },
-  leak: { rate: 0.5, life: [1.2, 1.8], s: [0.04, 0.24], a: 0.4, vy: 0.12, spread: 0.02, powered: true, out: 0.25 },
+  vent: { rate: 0.9, life: [2, 3], s: [0.07, 0.35], a: 0.35, vy: 0.32, spread: 0.03 },
+  leak: { rate: 0.5, life: [1.2, 1.8], s: [0.04, 0.24], a: 0.4, vy: 0.12, spread: 0.02, out: 0.25 },
   exhaust: { life: [1.8, 2.4], s: [0.07, 0.48], a: 0.5, vy: 0.55, spread: 0.02 },
 };
 const PMAX = 1400;
@@ -3200,7 +3161,7 @@ function updateWalkers(dt) {
   spawnT -= dt;
   if (walkers.length < want && spawnT <= 0 && walkNodes.length) { spawnWalker(); spawnT = rr(0.4, 1.2); }
   if (walkers.length > want + 2) for (const w of walkers) if (w.state === 'walk' && w.steps > 1) { w.steps = 1; break; }
-  const hurry = (1 + tension * 1.4) * (REDUCED ? 0.6 : 1);
+  const hurry = REDUCED ? 0.6 : 1;
   for (let i = walkers.length - 1; i >= 0; i--) {
     const w = walkers[i];
     if (w.state === 'gone') { walkers.splice(i, 1); continue; }
@@ -3508,12 +3469,12 @@ function tickAmbience(dt) {
     if (Math.random() < 0.05 * Math.min(1, flying / 2)) { const v = 0.045 * near; gullCry(v); if (Math.random() < 0.5) gullCry(v * 0.8, rr(0.32, 0.45)); }
   }
   // mill wheels creak as they turn
-  for (const w of wheelList) { const n = nearness(w.c[0], w.c[2], 5); if (n > 0 && Math.random() < 0.06 * (1 + tension)) creak(0.035 * n * near); }
+  for (const w of wheelList) { const n = nearness(w.c[0], w.c[2], 5); if (n > 0 && Math.random() < 0.06) creak(0.035 * n * near); }
   // landmarks: the foghorn after dark, hammers at the ironworks, chatter in the market, the gasworks' hiss
   for (const l of landmarks) {
     const n = nearness(X[l.v], Z[l.v], l.id === 'lighthouse' ? 18 : 7); if (n <= 0) continue;
     if (l.id === 'lighthouse') { if (night > 0.5 && (fogT -= 0.25) <= 0) { foghorn(0.07 * n * near); fogT = rr(16, 26); } }
-    else if (l.id === 'ironworks') { if (Math.random() < 0.1 * (1 + tension)) clang(0.028 * n * near); if (Math.random() < 0.3) envNoise(rr(0.5, 0.9), 'lowpass', 140, 0.7, 0.05 * n * near); }
+    else if (l.id === 'ironworks') { if (Math.random() < 0.1) clang(0.028 * n * near); if (Math.random() < 0.3) envNoise(rr(0.5, 0.9), 'lowpass', 140, 0.7, 0.05 * n * near); }
     else if (l.id === 'market') { if (night < 0.5 && Math.random() < 0.5) envNoise(rr(0.3, 0.7), 'bandpass', rr(380, 950), 1.4, 0.03 * n * near); }
     else if (l.id === 'gasworks' && Math.random() < 0.04) envNoise(rr(0.6, 1.1), 'highpass', 3200, 0.6, 0.012 * n * near);
   }
@@ -3771,12 +3732,9 @@ function flush() {
   for (const ci of dirty) rebuildChunk(ci);
   dirty.clear();
   rebuildPick();
-  const before = { ...srcCount }, gearsBefore = gearList.length;
-  computePower();
   rebuildDyn();
   syncShips();
   syncLife();
-  if (booted && userEdit) announceMachines(before, gearsBefore);
   if (booted) noteLandmarks(userEdit);
   if (groundDirty) { updateShore(); groundDirty = false; }
 }
@@ -4467,7 +4425,6 @@ window.addEventListener('keydown', (e) => {
   else if (k === 'w') pan(0, 60); else if (k === 's') pan(0, -60); else if (k === 'a') pan(60, 0); else if (k === 'd') pan(-60, 0);
   else if (k === '+' || k === '=') goal.dist *= 0.85; else if (k === '-' || k === '_') goal.dist /= 0.85;
   else if (k === 't') cycleTime();
-  else if (k === 'k') addTension(0.2);
   else if (k === 'c') { if (!pcMode) enterPostcard(); }
   else if (k === 'escape') { if (!pcSheet.hidden) hideSheet(); else if (pcMode) exitPostcard(); else closeMenu(); }
 });
@@ -4510,7 +4467,7 @@ function hideHint() { hintEl.classList.add('gone'); }
 let hintFlashing = false;
 function flashHint(msg, sub, ms) { clearTimeout(hintTimer); hintFlashing = true; showHint(msg, sub); hintTimer = setTimeout(() => { hintFlashing = false; restHint(); }, ms || (sub ? 2600 : 2200)); }
 // each explanation is shown once per player; after that the game simply does the thing
-const SEEN_BEFORE = ['mat0', 'mat1', 'mat2', 'mat3', 'mat4', 'mat5', 'engine', 'wheel', 'unpowered', 'wound', 'time0', 'time1', 'time2', 'time3'];
+const SEEN_BEFORE = ['mat0', 'mat1', 'mat2', 'mat3', 'mat4', 'mat5', 'time0', 'time1', 'time2', 'time3'];
 const seen = new Set(store.get('seen', null) || (hinted ? SEEN_BEFORE : []));
 function firstTime(key) { if (seen.has(key)) return false; seen.add(key); store.set('seen', [...seen]); return true; }
 // landmarks: the first time a player makes one, a brass plate names it; the menu lists those found and hints at the rest
@@ -4555,8 +4512,8 @@ function renderMarks() {
   }
 }
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key to wind every machine faster; the dial above it changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses hold steam engines that power every building joined to them, and timber houses on the water turn mill wheels. Hold the key (K) to wind every machine faster; the dial above it (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -4579,57 +4536,6 @@ function cycleTime() {
 timeBtn.addEventListener('click', () => { ensureAudio(); noteInput(); cycleTime(); });
 renderTime();
 
-// the wind-up key: hold to wind every machine faster; a tap gives a quarter turn
-const keyBtn = $('key-btn'), keyIco = $('key-ico'), tensionEl = $('tension');
-let winding = false, windStart = 0, keyAng = 0, keyShown = -1, keyLabel = '', windHinted = false;
-function ratchet() { noise(0.022, 3600, 0.08, 'bandpass'); }
-function addTension(x) {
-  ensureAudio(); noteInput();
-  const before = tension;
-  tension = Math.min(1, tension + x); keyAng += 1.7;
-  ratchet(); setTimeout(ratchet, 70); setTimeout(ratchet, 140);
-  if (tension >= 1 && before < 1) plink(10, 0.3);
-  hintWind(); tipEvent('key');
-}
-function hintWind() {
-  if (windHinted) return; windHinted = true;
-  if (currentTip() && currentTip().id === 'key') { firstTime('wound'); return; }
-  if (!firstTime('wound')) return;
-  flashHint('Wound up', 'Every machine runs faster, and clockwork turns even without an engine');
-}
-keyBtn.addEventListener('pointerdown', (e) => {
-  ensureAudio(); noteInput();
-  winding = true; windStart = performance.now(); keyBtn.classList.add('winding');
-  try { keyBtn.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
-  e.preventDefault();
-});
-function stopWind(tap) {
-  if (!winding) return;
-  winding = false; keyBtn.classList.remove('winding');
-  if (tap && performance.now() - windStart < 220) addTension(0.2);
-}
-keyBtn.addEventListener('pointerup', () => stopWind(true));
-keyBtn.addEventListener('pointercancel', () => stopWind(false));
-keyBtn.addEventListener('lostpointercapture', () => stopWind(false));
-// keyboard: Enter or Space gives a quarter turn; holding the key down repeats, which winds it
-keyBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addTension(e.repeat ? 0.06 : 0.2); } });
-keyBtn.addEventListener('contextmenu', (e) => e.preventDefault());
-function tickKey(dt) {
-  if (winding && performance.now() - windStart > 220) {
-    noteInput();
-    const before = tension;
-    tension = Math.min(1, tension + dt * 0.55);
-    if (tension < 1) keyAng += dt * 7;
-    if (Math.floor(tension / 0.05) > Math.floor(before / 0.05)) ratchet();
-    if (tension >= 1 && before < 1) plink(10, 0.3);
-    if (tension > 0.1) { hintWind(); tipEvent('key'); }
-  } else tension = Math.max(0, tension - dt / 45);
-  const shown = Math.round(tension * 200);
-  if (shown !== keyShown) { keyShown = shown; tensionEl.style.setProperty('--t', (shown / 200).toFixed(3)); }
-  keyIco.style.transform = `scaleX(${Math.max(0.18, Math.abs(Math.cos(keyAng))).toFixed(3)})`;
-  const label = tension > 0.02 ? `Wind the key (wound ${Math.round(tension * 10) * 10}%)` : 'Wind the key';
-  if (label !== keyLabel) { keyLabel = label; keyBtn.setAttribute('aria-label', label); }
-}
 
 // ---------- postcard mode: frame the harbour, take a captioned picture, save or share it ----------
 const appEl = $('app'), pcFrame = $('pc-frame'), pcBar = $('pc-bar'), pcSheet = $('pc-sheet'), flashEl = $('flash');
@@ -4830,8 +4736,7 @@ const TIPS = [
   { id: 'build', main: COARSE ? 'Tap the water to build a house' : 'Click the water to build a house', sub: 'Choose a material from the coins below' },
   { id: 'storey', main: COARSE ? 'Tap a roof to add a storey' : 'Click a roof to add a storey', sub: COARSE ? 'Tap a wall to build beside it; hold to remove' : 'Click a wall to build beside it; right-click removes' },
   { id: 'material', main: 'Try another material', sub: 'Each coin builds a different kind of house', beckon: () => $('palette') },
-  { id: 'iron', main: 'Build in cast iron', sub: 'An iron house holds a steam engine that powers its neighbours', beckon: () => coins[M_IRON] },
-  { id: 'key', main: 'Hold the key', sub: 'Winding it speeds up every machine in town', beckon: () => $('key-btn') },
+  { id: 'iron', main: 'Build in cast iron', sub: 'An iron house carries a steam engine on an open wall', beckon: () => coins[M_IRON] },
   { id: 'time', main: 'Turn the dial to dusk', sub: 'Gaslight comes on after sundown', beckon: () => $('time-btn') },
   { id: 'postcard', main: 'Take a postcard', sub: 'Frame your harbour and keep the picture', beckon: () => $('pc-btn') },
 ];
@@ -5084,7 +4989,6 @@ function boot(data) {
     doHover();
     updateCamera(dt);
     waterUniforms.uTime.value = now / 1000;
-    tickKey(dt);
     tickTod(dt);
     updateDyn(dt, now / 1000);
     updateMarks(dt);
@@ -5110,7 +5014,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, tension: (x) => { if (x !== undefined) tension = x; return tension; }, winding: () => winding, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, powered: (v) => isPowered(v), clusters: () => clusterPowered.slice(), engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickKey(step); tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
