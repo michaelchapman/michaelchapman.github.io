@@ -260,6 +260,12 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
         <p id="slot-confirm-msg"></p>
         <div class="row"><button class="yes" id="slot-del-yes">Delete</button><button class="no" id="slot-del-no">Keep</button></div>
       </div>
+      <div class="seg"><span>Layout</span><div role="group" aria-label="Open layout or islands">
+        <button id="w-open" aria-pressed="true">Open</button><button id="w-isles" aria-pressed="false">Islands</button>
+      </div></div>
+      <div class="seg"><span>Setting</span><div role="group" aria-label="On the sea or in the sky">
+        <button id="w-ground" aria-pressed="true">Sea</button><button id="w-sky" aria-pressed="false">Sky</button>
+      </div></div>
       <div class="row"><button class="go" id="slot-new">New harbour</button></div>
       <p class="msg" id="slots-msg" role="status"></p>
     </div>
@@ -583,6 +589,68 @@ const cols = new Uint16Array(V);
 const mats = new Uint8Array(V * 16);
 const F = (v, y) => y >= 0 && y <= MAXL && v >= 0 && ((cols[v] >> y) & 1) === 1;
 const M = (v, y) => mats[v * 16 + y];
+// the harbour's ground: open water or islands, on the sea or in the sky; land marks the island cells
+const world = { islands: false, sky: false };
+const land = new Uint8Array(V);
+const solid = (w) => F(w, 0) || land[w] === 1;
+function vnoise(x, z, s) {
+  const xi = Math.floor(x), zi = Math.floor(z), fx = x - xi, fz = z - zi, h = (a, b) => hash4(a, b, s, 7);
+  const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
+  return (h(xi, zi) * (1 - sx) + h(xi + 1, zi) * sx) * (1 - sz) + (h(xi, zi + 1) * (1 - sx) + h(xi + 1, zi + 1) * sx) * sz;
+}
+// an archipelago: a home island in the middle and others scattered with open channels between them
+function genIslands(seed) {
+  const out = new Uint8Array(V), rnd = mulberry32(seed * 7919 + 13);
+  let R = 0; for (let v = 0; v < V; v++) if (canBuild[v]) R = Math.max(R, Math.hypot(X[v], Z[v]));
+  const isles = [[0, 0, 3.4]];
+  for (let t = 0; t < 600 && isles.length < 48; t++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * R, x = Math.cos(a) * d, z = Math.sin(a) * d, r = 1.3 + rnd() * 2.4;
+    if (isles.every(([ix, iz, ir]) => Math.hypot(ix - x, iz - z) > ir + r + 1.8)) isles.push([x, z, r]);
+  }
+  for (let v = 0; v < V; v++) {
+    if (!canBuild[v]) continue;
+    const wob = 0.62 + 0.7 * vnoise(X[v] * 0.55, Z[v] * 0.55, seed & 1023);
+    for (const [ix, iz, ir] of isles) if (Math.hypot(X[v] - ix, Z[v] - iz) < ir * wob) { out[v] = 1; break; }
+  }
+  return out;
+}
+// islands fitted to a town: every group of joined buildings stands on land reaching a ring or two past it;
+// timber decks that reach out from stone stay over the water as jetties
+function fitIslands(seed) {
+  const out = genIslands(seed), core = new Uint8Array(V), pier = new Uint8Array(V);
+  for (let v = 0; v < V; v++) if (F(v, 0) && M(v, 0) !== M_TIMBER) core[v] = 1;
+  for (let v = 0; v < V; v++) if (F(v, 0) && M(v, 0) === M_TIMBER) { if (ringW[v].some((w) => core[w])) pier[v] = 1; else core[v] = 1; }
+  // floating blocks with nothing under them keep their water too
+  const nearPier = (u) => pier[u] || ringW[u].some((w) => pier[w]);
+  for (let v = 0; v < V; v++) {
+    if (!core[v]) continue;
+    out[v] = 1;
+    for (const w of ringW[v]) {
+      if (!canBuild[w] || nearPier(w) && !core[w]) continue;
+      out[w] = 1;
+      for (const u of ringW[w]) if (canBuild[u] && !core[u] && !nearPier(u) && hash4(u, seed, 93, 0) < 0.5) out[u] = 1;
+    }
+  }
+  for (let v = 0; v < V; v++) if (pier[v] || (cols[v] && !F(v, 0))) out[v] = 0;
+  return out;
+}
+// on islands, building needs land: stone quays reach one cell from the shore, timber jetties three
+function canGround(v, m) {
+  if (!world.islands || land[v] || ringW[v].some((w) => land[w])) return true;
+  if (m !== M_TIMBER) return false;
+  const seen = new Set([v]); let edge = [v];
+  for (let d = 0; d < 2; d++) {
+    const next = [];
+    for (const u of edge) for (const w of ringW[u]) {
+      if (seen.has(w) || !F(w, 0) || M(w, 0) !== M_TIMBER) continue;
+      if (ringW[w].some((x) => land[x])) return true;
+      seen.add(w); next.push(w);
+    }
+    edge = next;
+  }
+  return false;
+}
+const ISLE_MSG = 'Build on the islands. Stone quays reach one cell from the shore, timber jetties three.';
 let cellCount = 0;
 let courtyard = new Uint8Array(V);
 let bridgeSet = new Set();
@@ -835,8 +903,8 @@ function buildLamp(g, lx, lz, y0) {
 function buildGround(g, v) {
   if (M(v, 0) === M_TIMBER) { buildPier(g, v); return; }
   const Wn = ringW[v], k = Wn.length;
-  const water = Wn.map((w) => !F(w, 0));
-  const open = Wn.map((w) => !F(w, 0) || M(w, 0) === M_TIMBER);
+  const water = Wn.map((w) => !solid(w));
+  const open = Wn.map((w) => !solid(w) || (F(w, 0) && M(w, 0) === M_TIMBER));
   const tint = 0.9 + hash4(v, 0, 5, 5) * 0.2;
   const stone = mul3(C_STONE, tint);
   const houseAbove = F(v, 1);
@@ -882,7 +950,7 @@ function buildGround(g, v) {
 function buildPier(g, v) {
   const Wn = ringW[v], Qs = ringQ[v], k = Wn.length;
   const dk = GROUND_TOP;
-  const pile = (x, z) => g.cyl([x, -0.7, z], [x, dk - 0.02, z], 0.052, 0.048, 7, C_PILE, S_WOOD, false);
+  const pile = (x, z) => (world.sky ? g.cyl([x, -1.9, z], [x, dk - 0.02, z], 0.04, 0.036, 6, C_IRON, S_IRON, false) : g.cyl([x, -0.7, z], [x, dk - 0.02, z], 0.052, 0.048, 7, C_PILE, S_WOOD, false));
   pile(X[v], Z[v]);
   for (const q of Qs) {
     let owner = 1e9;
@@ -890,7 +958,7 @@ function buildPier(g, v) {
     if (owner === v) pile(CX[q], CZ[q]);
   }
   for (let i = 0; i < k; i++) {
-    if (F(Wn[i], 0)) continue;
+    if (solid(Wn[i])) continue;
     const f = wallFrame(v, i);
     const P = (s, yy, d) => [f.ax + f.ux * s + f.nx * d, yy, f.az + f.uz * s + f.nz * d];
     g.box(P(f.W / 2, dk - 0.07, 0.0), f.U, UP, f.N, f.W / 2 + 0.03, 0.07, 0.035, C_PILE, S_WOOD);
@@ -924,6 +992,74 @@ function buildGarden(g, v) {
       const fc = lin(FLOWERS[Math.floor(hash4(v, j, 71, 0) * FLOWERS.length)]);
       g.blob([x + Math.cos(a) * r, y0 + 0.05, z + Math.sin(a) * r], 0.045, j % 3 ? fc : leaf(j), S_LEAF, 0.8);
     }
+  }
+}
+
+// ---------- islands: turf on top, sandy beaches and rocky shores at the water, rock roots in the sky ----------
+const LAND_TOP = GROUND_TOP - 0.06, BEACH_Y = WATER_Y - 0.08;
+const C_TURF = lin(0x627f3e), C_TURF_DRY = lin(0x7f8a4c), C_SAND = lin(0xc9b386), C_SAND_WET = lin(0x8a7550), C_ROCK = lin(0x7a7267), C_ROCK_DARK = lin(0x4a453f);
+const beachAt = (x, z) => vnoise(x * 0.3 + 50, z * 0.3, 77) > 0.56;
+// shore points are shared by neighbouring cells, so their height depends only on where they are
+function quadLow(q) {
+  let wet = false;
+  for (let j = 0; j < 4; j++) { const c = quads[4 * q + j]; if (F(c, 0)) return false; if (!land[c]) wet = true; }
+  return wet && beachAt(CX[q], CZ[q]);
+}
+function buildLand(g, v) {
+  const Wn = ringW[v], Qs = ringQ[v], k = Wn.length, bot = world.sky ? QUAY_BOTTOM : -0.7;
+  const pts = [], cs = [];
+  let beachy = false;
+  for (let i = 0; i < k; i++) {
+    const qa = Qs[(i - 1 + k) % k], qb = Qs[i], w = Wn[i];
+    const mx = (CX[qa] + CX[qb]) / 2, mz = (CZ[qa] + CZ[qb]) / 2, wet = !solid(w), mLow = wet && beachAt(mx, mz), cLow = quadLow(qb);
+    const cWet = cLow || [0, 1, 2, 3].some((j) => !solid(quads[4 * qb + j]));
+    if (mLow || cLow) beachy = true;
+    pts.push([mx, mLow ? BEACH_Y : LAND_TOP, mz]); cs.push(mLow ? C_SAND_WET : wet ? C_ROCK : null);
+    pts.push([CX[qb], cLow ? BEACH_Y : LAND_TOP, CZ[qb]]); cs.push(cLow ? C_SAND_WET : cWet ? C_ROCK : null);
+  }
+  const turf = mul3(hash4(v, 0, 91, 0) < 0.5 ? C_TURF : C_TURF_DRY, 0.9 + hash4(v, 0, 92, 0) * 0.18);
+  const top = beachy ? C_SAND : turf;
+  const c0 = [X[v], beachy ? LAND_TOP - 0.1 : LAND_TOP, Z[v]];
+  for (let j = 0; j < pts.length; j++) { const j1 = (j + 1) % pts.length; g.tri(c0, pts[j], pts[j1], UP, top, beachy ? S_PLAIN : S_GRASS, cs[j] || (beachy ? C_SAND : turf), cs[j1] || (beachy ? C_SAND : turf)); }
+  // rock faces down to the water wherever the shore stands above it
+  for (let i = 0; i < k; i++) {
+    if (solid(Wn[i])) continue;
+    const f = wallFrame(v, i);
+    const segs = [[pts[(2 * i - 1 + 2 * k) % (2 * k)], pts[2 * i]], [pts[2 * i], pts[2 * i + 1]]];
+    for (const [a, b] of segs) {
+      if (a[1] < 0 && b[1] < 0) continue;
+      const out = 0.05 + hash4(v, i, 95, a[0] * 100 | 0) * 0.12;
+      const a1 = [a[0] + f.nx * out, bot, a[2] + f.nz * out], b1 = [b[0] + f.nx * out, bot, b[2] + f.nz * out];
+      g.tri(a, a1, b1, f.N, C_ROCK, S_STONE, C_ROCK_DARK, C_ROCK_DARK); g.tri(a, b1, b, f.N, C_ROCK, S_STONE, C_ROCK_DARK, C_ROCK);
+    }
+    // boulders along a rocky shore
+    const m = pts[2 * i];
+    if (m[1] > 0 && hash4(v, i, 96, 0) < 0.45) {
+      const r = 0.07 + hash4(v, i, 97, 0) * 0.1, o = 0.08 + r;
+      g.blob([m[0] + f.nx * o, WATER_Y + r * 0.3, m[2] + f.nz * o], r, mul3(C_ROCK, 0.85 + hash4(v, i, 98, 0) * 0.3), S_STONE, 0.7);
+    }
+  }
+  // a tree or a shrub here and there, away from the houses
+  if (beachy || F(v, 1) || Wn.some((w) => F(w, 1))) return;
+  const h = hash4(v, 0, 94, 0), x = X[v], z = Z[v];
+  const leaf = (n) => lin(LEAVES[Math.floor(hash4(v, n, 67, 0) * LEAVES.length)]);
+  if (h < 0.16) {
+    const sc = 0.8 + hash4(v, 1, 68, 0) * 0.45;
+    g.cyl([x, LAND_TOP, z], [x, LAND_TOP + 0.42 * sc, z], 0.035, 0.025, 6, C_PILE, S_WOOD, false);
+    g.blob([x, LAND_TOP + 0.58 * sc, z], 0.24 * sc, leaf(1), S_LEAF, 0.85);
+    g.blob([x + 0.09, LAND_TOP + 0.7 * sc, z - 0.05], 0.17 * sc, leaf(2), S_LEAF, 0.9);
+  } else if (h < 0.3) g.blob([x + 0.1, LAND_TOP + 0.05, z - 0.08], 0.12, leaf(3), S_LEAF, 0.7);
+}
+// in the sky, stone ground and islands trail rocky roots into the clouds
+function buildRoots(g, v) {
+  const Qs = ringQ[v], k = Qs.length;
+  const inner = ringW[v].filter((w) => solid(w)).length / k;
+  const tip = [X[v] + (hash4(v, 0, 99, 0) - 0.5) * 0.3, QUAY_BOTTOM - 0.5 - (1.1 + 2.2 * hash4(v, 1, 99, 0)) * (0.35 + 0.65 * inner), Z[v] + (hash4(v, 2, 99, 0) - 0.5) * 0.3];
+  for (let i = 0; i < k; i++) {
+    const a = Qs[i], b = Qs[(i + 1) % k];
+    const pa = [CX[a], QUAY_BOTTOM, CZ[a]], pb = [CX[b], QUAY_BOTTOM, CZ[b]];
+    const n = nrm3([(CX[a] + CX[b]) / 2 - X[v], -0.6, (CZ[a] + CZ[b]) / 2 - Z[v]]);
+    g.tri(tip, pb, pa, n, C_ROCK_DARK, S_STONE, C_ROCK, C_ROCK);
   }
 }
 
@@ -991,7 +1127,7 @@ function wheelSpot(v) {
   const Wn = ringW[v], Xs = ringX[v], k = Wn.length; let best = -1, bh = -1;
   for (let i = 0; i < k; i++) {
     const w = Wn[i];
-    if (F(w, 0) || F(w, 1) || F(Xs[i], 0) || F(Xs[(i - 1 + k) % k], 0) || edgeLen(v, i) < 0.55) continue;
+    if (solid(w) || F(w, 1) || solid(Xs[i]) || solid(Xs[(i - 1 + k) % k]) || edgeLen(v, i) < 0.55) continue;
     const h = hash4(v, i, 44, 0); if (h > bh) { bh = h; best = i; }
   }
   return best >= 0 ? { i: best } : null;
@@ -1493,15 +1629,16 @@ function buildStilts(g, v) {
       if (cs.some((c) => F(c, y) && bridgeSet.has(c * 16 + y))) continue;
       let owner = 1e9; for (const c of cs) if (F(c, y) && c < owner) owner = c;
       if (owner !== v) continue;
-      let bottom = WATER_Y - 0.4, water = true;
+      let bottom = world.sky ? -1.9 : WATER_Y - 0.4, water = true;
       for (let l = y - 2; l >= 0; l--) if (cs.some((c) => F(c, l))) { bottom = topY(l); water = false; break; }
+      if (water && cs.some((c) => land[c])) { bottom = LAND_TOP; water = false; }
       const top = baseY(y);
       const px = CX[q], pz = CZ[q];
       const wood = M(v, y) === M_TIMBER;
       const pc = wood ? C_PILE : C_IRON, ps = wood ? S_WOOD : S_IRON;
       g.cyl([px, bottom, pz], [px, top - 0.05, pz], wood ? 0.05 : 0.04, wood ? 0.05 : 0.04, 8, pc, ps, false);
       g.box([px, top - 0.03, pz], XA, UP, ZA, 0.065, 0.03, 0.065, pc, ps);
-      if (water && !wood) g.cyl([px, -0.4, pz], [px, 0.07, pz], 0.09, 0.08, 7, C_STONE, S_STONE);
+      if (water && !wood && !world.sky) g.cyl([px, -0.4, pz], [px, 0.07, pz], 0.09, 0.08, 7, C_STONE, S_STONE);
       else if (!water) g.box([px, bottom + 0.02, pz], XA, UP, ZA, 0.07, 0.02, 0.07, pc, ps);
       if (top - bottom > 0.6) {
         const tx = px + (X[v] - px) * 0.45, tz = pz + (Z[v] - pz) * 0.45;
@@ -2234,7 +2371,7 @@ function updateShore() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, shoreBig.width, shoreBig.height);
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.3 * s; ctx.lineJoin = 'round';
   for (let v = 0; v < V; v++) {
-    if (!(cols[v] & 1) || M(v, 0) === M_TIMBER) continue;
+    if (!land[v] && (!(cols[v] & 1) || M(v, 0) === M_TIMBER)) continue;
     ctx.beginPath();
     ringQ[v].forEach((q, j) => { const x = (CX[q] - SHORE_X) * s, z = (CZ[q] - SHORE_Z) * s; if (j) ctx.lineTo(x, z); else ctx.moveTo(x, z); });
     ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -2292,6 +2429,39 @@ water.rotation.x = -Math.PI / 2;
 water.position.y = WATER_Y;
 water.receiveShadow = true;
 scene.add(water);
+
+// in the sky the harbour floats over a slow sea of cloud
+const cloudMat = new THREE.MeshStandardMaterial({ color: 0xf3e7d6, roughness: 1, metalness: 0 });
+cloudMat.onBeforeCompile = (sh) => {
+  sh.uniforms.uTime = waterUniforms.uTime;
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+    .replace('#include <fog_vertex>', '#include <fog_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', `#include <common>
+uniform float uTime; varying vec3 vWPos;
+${NOISE_GLSL}`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+vec2 cp = vWPos.xz + vec2(uTime * 0.12, uTime * 0.05);
+float puff = bhNoise(cp * 0.09) * 0.55 + bhNoise(cp * 0.31) * 0.3 + bhNoise(cp * 0.9) * 0.15;
+diffuseColor.rgb *= 0.72 + 0.4 * puff;`)
+    .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec2 cp = vWPos.xz + vec2(uTime * 0.12, uTime * 0.05); float e = 0.4;
+  float h0 = bhNoise(cp * 0.31), hx = bhNoise((cp + vec2(e, 0.0)) * 0.31), hz = bhNoise((cp + vec2(0.0, e)) * 0.31);
+  vec3 wN = normalize(vec3(-(hx - h0) * 2.2, 1.0, -(hz - h0) * 2.2));
+  normal = normalize((viewMatrix * vec4(wN, 0.0)).xyz);
+}`);
+};
+cloudMat.customProgramCacheKey = () => 'brasshaven-clouds-1';
+const clouds = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), cloudMat);
+clouds.rotation.x = -Math.PI / 2; clouds.position.y = -4.6; clouds.visible = false;
+scene.add(clouds);
+const CLOUD_COL = new THREE.Color(0xf3e7d6), _cc = new THREE.Color();
+function applySkin() {
+  water.visible = !world.sky; clouds.visible = world.sky;
+  if (todState) { applyTod(todState); regenEnv(); }
+}
 
 // faint build grid on the water, brighter around the pointer
 const gridLines = (() => {
@@ -2814,8 +2984,9 @@ function applyTod(S) {
   for (const m of [sky.material, envSky]) { const u = m.uniforms; u.uSun.value.copy(S.dir); u.uZen.value.copy(S.zen); u.uHor.value.copy(S.hor); u.uSunCol.value.copy(S.sun); u.uSunAmt.value = S.sa; }
   // night skies are dark, but the town still needs some sky light to read by
   envSky.uniforms.uZen.value.multiplyScalar(1 + 2.2 * S.night); envSky.uniforms.uHor.value.multiplyScalar(1 + 2.2 * S.night);
-  sky.material.uniforms.uLow.value.copy(S.hor); sky.material.uniforms.uStars.value = S.night;
-  envSky.uniforms.uLow.value.copy(LOW_ENV).lerp(LOW_NIGHT, S.night);
+  _cc.copy(CLOUD_COL).lerp(S.hor, 0.35).multiplyScalar(1 - 0.72 * S.night); cloudMat.color.copy(_cc);
+  sky.material.uniforms.uLow.value.copy(world.sky ? _cc : S.hor); sky.material.uniforms.uStars.value = S.night;
+  if (world.sky) envSky.uniforms.uLow.value.copy(_cc); else envSky.uniforms.uLow.value.copy(LOW_ENV).lerp(LOW_NIGHT, S.night);
   scene.fog.color.copy(S.hor);
   waterMat.color.copy(S.water);
   townUniforms.uNight.value = S.night;
@@ -3235,7 +3406,7 @@ function drawWalkers(night) {
 
 // ---------- the shoreline, for the sound of the sea ----------
 let shoreNodes = [];
-function computeShore() { shoreNodes = []; for (let v = 0; v < V; v++) if (F(v, 0) && ringW[v].some((w) => !cols[w])) shoreNodes.push(v); }
+function computeShore() { shoreNodes = []; for (let v = 0; v < V; v++) if (solid(v) && ringW[v].some((w) => !solid(w))) shoreNodes.push(v); }
 
 // ---------- gulls ----------
 const GULL_MAX = 16;
@@ -3528,7 +3699,11 @@ function markDirty(v) {
 }
 function rebuildChunk(ci) {
   const g = new Geo(true);
-  for (const v of chunkVerts[ci]) if (cols[v]) buildColumn(g, v);
+  for (const v of chunkVerts[ci]) {
+    if (cols[v]) buildColumn(g, v);
+    if (land[v] && !F(v, 0)) buildLand(g, v);
+    if (world.sky && (land[v] || (F(v, 0) && M(v, 0) !== M_TIMBER))) buildRoots(g, v);
+  }
   for (const list of [chunkMesh, chunkFine]) if (list[ci]) { scene.remove(list[ci]); list[ci].geometry.dispose(); list[ci] = null; }
   chunkDyn[ci] = g.dyn;
   if (!g.count && !g.fine.P.length) return;
@@ -3620,7 +3795,7 @@ function computeLandmarks() {
     if (t >= 6 && M(v, t) === M_BRASS) { claim(v, { kind: 'observatory', role: 'dome', t }); list.push({ id: 'observatory', v }); continue; }
     if (!F(v, 0) || M(v, 0) === M_TIMBER) continue;
     let water = 0, ok = true;
-    for (const w of ringW[v]) { if (cols[w] >> 2) { ok = false; break; } if (!F(w, 0)) water++; }
+    for (const w of ringW[v]) { if (cols[w] >> 2) { ok = false; break; } if (!solid(w)) water++; }
     if (ok && water * 2 >= ringW[v].length) { claim(v, { kind: 'lighthouse', role: 'lamp', t }); list.push({ id: 'lighthouse', v }); }
   }
   // cathedral: a copper tower of four storeys or more at the end of a straight row of four low brick blocks
@@ -3703,7 +3878,7 @@ function computeLandmarks() {
   lmMap = next; lmSig = sig; landmarks = list;
 }
 
-const KIND_TOP = 0, KIND_SIDE = 1, KIND_BOTTOM = 2;
+const KIND_TOP = 0, KIND_SIDE = 1, KIND_BOTTOM = 2, KIND_LAND = 3;
 const pickMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 const pickMesh = new THREE.Mesh(new THREE.BufferGeometry(), pickMat);
 let pickTags = new Uint32Array(0);
@@ -3731,16 +3906,22 @@ function rebuildPick() {
       if (y > 0 && !F(v, y - 1)) fan(b, KIND_BOTTOM);
     }
   }
+  for (let v = 0; v < V; v++) {
+    if (!land[v] || F(v, 0)) continue;
+    const Qs = ringQ[v], k = Qs.length, tag = v | (KIND_LAND << 17);
+    for (let i = 0; i < k; i++) { const a = Qs[i], c = Qs[(i + 1) % k]; tri([X[v], LAND_TOP, Z[v]], [CX[a], LAND_TOP, CZ[a]], [CX[c], LAND_TOP, CZ[c]], tag); }
+  }
   pickMesh.geometry.dispose();
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.computeBoundingSphere();
   pickMesh.geometry = g; pickTags = Uint32Array.from(tags);
 }
 function flush() {
-  let r = 0; for (let v = 0; v < V; v++) if (cols[v] && reachOf[v] > r) r = reachOf[v];
+  // islands are open to build on from the start; open water grows as the town reaches its edge
+  let r = world.islands ? REACH_MAX : 0; for (let v = 0; v < V; v++) if (cols[v] && reachOf[v] > r) r = reachOf[v];
   const was = reach;
   if (setReach(r)) {
     EDGE_MSG = reach < REACH_MAX ? 'Build out to the edge of the harbour and it grows' : EDGE_FULL;
-    if (booted && userEdit && reach > was) {
+    if (booted && userEdit && reach > was && !world.islands) {
       flashHint(reach < REACH_MAX ? 'The harbour grows' : 'The harbour is as big as it gets', 'New water opens around the edge for building', 3200);
       if (soundOn && actx) [0, 3, 5, 8].forEach((n, i) => setTimeout(() => plink(n, 0.7), i * 120));
     }
@@ -3778,29 +3959,48 @@ let harbourName = cleanName(store.get('name', ''));
 const shownName = () => harbourName || 'Harbour No. 1887';
 function renderName() { $('harbour-no').textContent = shownName(); }
 function setName(n) { harbourName = cleanName(n); store.set('name', harbourName); renderName(); }
-function applyEdit(adds, removes, paints, names) {
+function worldState() { return { islands: world.islands, sky: world.sky, land: world.islands ? land.slice() : null }; }
+function takeWorld(w) { world.islands = !!(w && w.islands); world.sky = !!(w && w.sky); land.fill(0); if (world.islands && w.land) land.set(w.land); }
+function applyWorld(w) {
+  takeWorld(w);
+  for (let ci = 0; ci < chunkVerts.length; ci++) dirty.add(ci);
+  groundDirty = true; applySkin(); renderWorld();
+}
+function applyEdit(adds, removes, paints, names, w) {
   if (names) setName(names[1]);
+  if (w) applyWorld(w);
   for (const [v, y] of removes) { if (y === 0) groundDirty = true; cols[v] &= ~(1 << y); markDirty(v); }
   for (const [v, y, m] of adds) { if (y === 0) groundDirty = true; cols[v] |= 1 << y; mats[v * 16 + y] = m; markDirty(v); }
   for (const [v, y, , to] of paints) { if (y === 0) groundDirty = true; mats[v * 16 + y] = to; markDirty(v); }
   flush();
   scheduleSave();
 }
-function commit(adds, removes, paints = [], names = null) {
-  if (!adds.length && !removes.length && !paints.length && !names) return;
+function commit(adds, removes, paints = [], names = null, worlds = null) {
+  if (!adds.length && !removes.length && !paints.length && !names && !worlds) return;
   removes = removes.map(([v, y]) => [v, y, M(v, y)]);
-  applyEdit(adds, removes, paints, names);
-  undoStack.push({ adds, removes, paints, names }); if (undoStack.length > 300) undoStack.shift();
+  applyEdit(adds, removes, paints, names, worlds && worlds[1]);
+  undoStack.push({ adds, removes, paints, names, worlds }); if (undoStack.length > 300) undoStack.shift();
   redoStack.length = 0; updateUndoUI();
 }
+// switching to islands fits land to the town; going back to open water keeps every block
+function setWorld(islands, sky) {
+  if (islands === world.islands && sky === world.sky) return false;
+  const after = { islands, sky, land: null };
+  if (islands) after.land = world.islands ? land.slice() : fitIslands((Math.random() * 1e9) | 0);
+  userEdit = true;
+  try { commit([], [], [], null, [worldState(), after]); } finally { userEdit = false; }
+  return true;
+}
 const flip = (paints) => paints.map(([v, y, a, b]) => [v, y, b, a]);
-function undo() { const e = undoStack.pop(); if (!e) return; applyEdit(e.removes, e.adds, flip(e.paints), e.names && [e.names[1], e.names[0]]); redoStack.push(e); updateUndoUI(); plink(2, 0.6); }
-function redo() { const e = redoStack.pop(); if (!e) return; applyEdit(e.adds, e.removes, e.paints, e.names); undoStack.push(e); updateUndoUI(); plink(4, 0.6); }
+function undo() { const e = undoStack.pop(); if (!e) return; applyEdit(e.removes, e.adds, flip(e.paints), e.names && [e.names[1], e.names[0]], e.worlds && e.worlds[0]); redoStack.push(e); updateUndoUI(); plink(2, 0.6); }
+function redo() { const e = redoStack.pop(); if (!e) return; applyEdit(e.adds, e.removes, e.paints, e.names, e.worlds && e.worlds[1]); undoStack.push(e); updateUndoUI(); plink(4, 0.6); }
 function updateUndoUI() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
 
-// compact binary form: varint vertex delta, 2-byte level mask, materials two to a byte
-function packBytes(c = cols, mt = mats) {
-  const out = [2]; let prev = -1;
+// compact binary form: varint vertex delta, 2-byte level mask, materials two to a byte;
+// version 3 starts with the ground (1 islands, 2 sky) and, for islands, one bit of land per cell
+function packBytes(c = cols, mt = mats, w = world, ld = land) {
+  const out = w && (w.islands || w.sky) ? [3, (w.islands ? 1 : 0) | (w.sky ? 2 : 0)] : [2]; let prev = -1;
+  if (w && w.islands) for (let v = 0; v < V; v += 8) { let b = 0; for (let j = 0; j < 8 && v + j < V; j++) if (ld[v + j]) b |= 1 << j; out.push(b); }
   for (let v = 0; v < V; v++) {
     const m = c[v]; if (!m) continue;
     let d = v - prev; prev = v;
@@ -3812,9 +4012,17 @@ function packBytes(c = cols, mt = mats) {
   return Uint8Array.from(out);
 }
 function unpackBytes(bytes) {
-  if (!bytes.length || bytes[0] !== 2) throw new Error('version');
-  const c = new Uint16Array(V), mt = new Uint8Array(V * 16);
+  if (!bytes.length || (bytes[0] !== 2 && bytes[0] !== 3)) throw new Error('version');
+  const c = new Uint16Array(V), mt = new Uint8Array(V * 16), w = { islands: false, sky: false, land: null };
   let i = 1, v = -1;
+  if (bytes[0] === 3) {
+    const fl = bytes[i++] | 0; w.islands = !!(fl & 1); w.sky = !!(fl & 2);
+    if (w.islands) {
+      const n = Math.ceil(V / 8); if (i + n > bytes.length) throw new Error('short');
+      w.land = new Uint8Array(V); for (let u = 0; u < V; u++) if (canBuild[u] && (bytes[i + (u >> 3)] >> (u & 7)) & 1) w.land[u] = 1;
+      i += n;
+    }
+  }
   while (i < bytes.length) {
     let d = 0, sh = 0, b;
     do { b = bytes[i++]; d |= (b & 127) << sh; sh += 7; } while (b & 128 && i < bytes.length);
@@ -3828,7 +4036,7 @@ function unpackBytes(bytes) {
     }
     if (canBuild[v]) c[v] = m & ((1 << (MAXL + 1)) - 1);
   }
-  return { c, mt };
+  return { c, mt, world: w };
 }
 const toB64 = (bytes) => { let s = ''; for (let i = 0; i < bytes.length; i += 4096) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const fromB64 = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; const bin = atob(s); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
@@ -3875,8 +4083,9 @@ function saveNow() {
 window.addEventListener('pagehide', () => { if (saveDirty) saveNow(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && saveDirty) saveNow(); });
 function loadSaved() {
+  takeWorld(null);
   const t = store.get('town:' + slots.cur, null);
-  if (typeof t === 'string' && t) { try { const { c, mt } = unpackBytes(fromB64(t)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
+  if (typeof t === 'string' && t) { try { const { c, mt, world: w } = unpackBytes(fromB64(t)); cols.set(c); mats.set(mt); takeWorld(w); return true; } catch (e) { /* fall through */ } }
   if (slots.legacy !== slots.cur) return false;
   const t2 = store.get('town2', null);
   if (typeof t2 === 'string' && t2) { try { const { c, mt } = unpackBytes(fromB64(t2)); cols.set(c); mats.set(mt); return true; } catch (e) { /* fall through */ } }
@@ -3905,7 +4114,7 @@ function openSlot(id, keep = true) {
   harbourName = cleanName(curSlot().name); store.set('name', harbourName); renderName();
   undoStack.length = redoStack.length = 0; updateUndoUI();
   for (let ci = 0; ci < chunkVerts.length; ci++) dirty.add(ci);
-  groundDirty = true;
+  groundDirty = true; applySkin();
   flush();
   saveNow();
   goHome(); Object.assign(view, goal);
@@ -3966,19 +4175,21 @@ function renderSlots() {
   $('slots-msg').textContent = slots.list.length >= SLOT_MAX ? 'All eight harbours are in use. Delete one to make room.' : '';
 }
 // a shared town opens in a harbour of its own; with all eight in use it replaces this one, and undo brings it back
-function openCode(c, mt, name) {
-  if (newSlot(toB64(packBytes(c, mt)), name)) { flashHint('Town opened', 'It has a harbour of its own; yours are under Harbours in the menu'); return; }
-  replaceTown(c, mt, name); recentre();
+function openCode(c, mt, name, w) {
+  if (newSlot(toB64(packBytes(c, mt, w || { islands: false, sky: false }, w && w.land)), name)) { flashHint('Town opened', 'It has a harbour of its own; yours are under Harbours in the menu'); return; }
+  replaceTown(c, mt, name, w); recentre();
   flashHint('Town opened', 'All eight harbours are in use, so it replaced this one. Undo brings it back');
 }
-function replaceTown(c, mt, name) {
+function replaceTown(c, mt, name, w) {
   const removes = [], adds = [];
   for (let v = 0; v < V; v++) for (let y = 0; y <= MAXL; y++) {
     if (F(v, y)) removes.push([v, y]);
     if ((c[v] >> y) & 1) adds.push([v, y, mt[v * 16 + y]]);
   }
   const n = cleanName(name);
-  commit(adds, removes, [], name !== undefined && n !== harbourName ? [harbourName, n] : null);
+  const to = { islands: !!(w && w.islands), sky: !!(w && w.sky), land: w && w.islands ? w.land : null };
+  const same = to.islands === world.islands && to.sky === world.sky && !to.islands && !world.islands;
+  commit(adds, removes, [], name !== undefined && n !== harbourName ? [harbourName, n] : null, same ? null : [worldState(), to]);
 }
 function starterTown() {
   cols.fill(0); mats.fill(0);
@@ -4097,12 +4308,13 @@ let EDGE_MSG = 'Build out to the edge of the harbour and it grows';
 const EDGE_FULL = 'The harbour ends here. Build nearer the town.';
 function planAction(hit, useTool) {
   if (!hit) return null;
-  if (hit.type === 'water') {
+  const landHit = hit.type === 'cell' && unpackTag(hit.tag).kind === KIND_LAND;
+  if (hit.type === 'water' || landHit) {
     if (useTool !== 'build') return null;
-    if (Math.hypot(hit.x, hit.z) > RADIUS + 1) return { msg: EDGE_MSG };
-    const v = nearestVertex(hit.x, hit.z);
+    const v = landHit ? unpackTag(hit.tag).v : nearestVertex(hit.x, hit.z);
+    if (!landHit && Math.hypot(hit.x, hit.z) > RADIUS + 1) return { msg: EDGE_MSG };
     if (v < 0 || !buildable[v]) return { msg: EDGE_MSG };
-    if (!F(v, 0)) return { adds: [[v, 0, curMat], [v, 1, curMat]], v, y: 1 };
+    if (!F(v, 0)) return canGround(v, curMat) ? { adds: [[v, 0, curMat], [v, 1, curMat]], v, y: 1 } : { msg: ISLE_MSG };
     if (!F(v, 1)) return { adds: [[v, 1, curMat]], v, y: 1 };
     return null;
   }
@@ -4114,10 +4326,10 @@ function planAction(hit, useTool) {
     const w = ringW[v][i];
     if (!buildable[w]) return { msg: EDGE_MSG };
     if (F(w, y)) return null;
-    if (y === 1 && !F(w, 0)) return { adds: [[w, 0, curMat], [w, 1, curMat]], v: w, y };
+    if (y === 1 && !F(w, 0)) return canGround(w, curMat) ? { adds: [[w, 0, curMat], [w, 1, curMat]], v: w, y } : { msg: ISLE_MSG };
     return { adds: [[w, y, curMat]], v: w, y };
   }
-  if (kind === KIND_BOTTOM && y - 1 >= 0 && !F(v, y - 1)) return { adds: [[v, y - 1, curMat]], v, y: y - 1 };
+  if (kind === KIND_BOTTOM && y - 1 >= 0 && !F(v, y - 1)) return y - 1 > 0 || canGround(v, curMat) ? { adds: [[v, y - 1, curMat]], v, y: y - 1 } : { msg: ISLE_MSG };
   return null;
 }
 let tool = 'build';
@@ -4532,8 +4744,8 @@ function renderMarks() {
   }
 }
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three; Setting moves the whole harbour from the sea to the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three; Setting moves the whole harbour from the sea to the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -4753,7 +4965,7 @@ $('pc-share').addEventListener('click', async () => {
 
 // ---------- first-run tips: one at a time, each done by doing it ----------
 const TIPS = [
-  { id: 'build', main: COARSE ? 'Tap the water to build a house' : 'Click the water to build a house', sub: 'Choose a material from the coins below' },
+  { id: 'build', get main() { return `${COARSE ? 'Tap' : 'Click'} ${world.islands ? 'an island' : 'the water'} to build a house`; }, sub: 'Choose a material from the coins below' },
   { id: 'storey', main: COARSE ? 'Tap a roof to add a storey' : 'Click a roof to add a storey', sub: COARSE ? 'Tap a wall to build beside it; hold to remove' : 'Click a wall to build beside it; right-click removes' },
   { id: 'material', main: 'Try another material', sub: 'Each coin builds a different kind of house', beckon: () => $('palette') },
   { id: 'iron', main: 'Build in cast iron', sub: 'An iron house carries a steam engine on an open wall', beckon: () => coins[M_IRON] },
@@ -4843,6 +5055,22 @@ $('m-slots').addEventListener('click', () => {
   if (!b.hidden) { updateCamera(0); renderer.render(scene, camera); takeThumb(); }
   renderSlots();
 });
+function renderWorld() {
+  $('w-open').setAttribute('aria-pressed', String(!world.islands)); $('w-isles').setAttribute('aria-pressed', String(world.islands));
+  $('w-ground').setAttribute('aria-pressed', String(!world.sky)); $('w-sky').setAttribute('aria-pressed', String(world.sky));
+}
+const WORLD_HINTS = {
+  open: () => ['Open', `Build anywhere ${world.sky ? 'above the clouds' : 'on the water'}; undo brings the islands back`],
+  isles: () => ['Islands', `The land fits your town. Build on the islands; undo brings back the open ${world.sky ? 'sky' : 'water'}`],
+  ground: () => ['Back on the sea', 'The harbour sits on the water again'],
+  sky: () => ['In the sky', 'The harbour floats above the clouds'],
+};
+for (const [id, isl, sk] of [['w-open', false, null], ['w-isles', true, null], ['w-ground', null, false], ['w-sky', null, true]]) {
+  $(id).addEventListener('click', () => {
+    if (!setWorld(isl === null ? world.islands : isl, sk === null ? world.sky : sk)) return;
+    plink(isl === null ? 9 : 6); flashHint(...WORLD_HINTS[id.slice(2)]());
+  });
+}
 $('slot-new').addEventListener('click', () => {
   if (!newSlot(null, '')) return;
   closeMenu(); plink(7); flashHint('A new harbour', 'Your others are kept under Harbours in the menu');
@@ -4901,8 +5129,8 @@ $('code-cancel').addEventListener('click', () => { $('open-box').hidden = true; 
 $('code-go').addEventListener('click', async () => {
   const msg = $('code-msg');
   try {
-    const { c, mt, name } = await decodeTown($('code-in').value);
-    openCode(c, mt, name); closeMenu(); plink(7);
+    const { c, mt, name, world: w } = await decodeTown($('code-in').value);
+    openCode(c, mt, name, w); closeMenu(); plink(7);
   } catch (e) {
     msg.className = 'msg err';
     msg.textContent = 'That code did not open. Check it was copied in full; it starts with BH.';
@@ -4973,7 +5201,7 @@ function recentre() {
 function goHome() { glideV.x = glideV.z = 0; yawVel = 0; recentre(); Object.assign(goal, { ty: homeView.ty, dist: homeView.dist, pitch: homeView.pitch }); }
 function boot(data) {
   let centre = -1;
-  if (data && typeof data.town === 'string') { try { const { c, mt } = unpackBytes(fromB64(data.town)); cols.set(c); mats.set(mt); } catch (e) { if (!loadSaved()) centre = starterTown(); } }
+  if (data && typeof data.town === 'string') { try { const { c, mt, world: w } = unpackBytes(fromB64(data.town)); cols.set(c); mats.set(mt); takeWorld(w); } catch (e) { if (!loadSaved()) centre = starterTown(); } }
   else if (!loadSaved()) centre = starterTown();
   setMat(curMat, false);
   let sx = 0, sz = 0, n = 0;
@@ -4987,6 +5215,7 @@ function boot(data) {
   if (data && data.view) { Object.assign(goal, data.view); Object.assign(view, data.view); }
   for (let ci = 0; ci < chunkVerts.length; ci++) dirty.add(ci);
   groundDirty = true;
+  applySkin(); renderWorld();
   setTime(todIndex, true);
   flush();
   booted = true;
@@ -4997,7 +5226,7 @@ function boot(data) {
   restHint();
   // a town code in the address opens that town (works when hosted on a normal site)
   if (/^#BH[zr]/.test(location.hash)) {
-    decodeTown(location.hash).then(({ c, mt, name }) => { openCode(c, mt, name); Object.assign(view, goal); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* framed */ } }).catch(() => flashHint('That town link did not open'));
+    decodeTown(location.hash).then(({ c, mt, name, world: w }) => { openCode(c, mt, name, w); Object.assign(view, goal); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* framed */ } }).catch(() => flashHint('That town link did not open'));
   }
   let last = performance.now(), frame = 0;
   function loop(now) {
@@ -5034,7 +5263,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
