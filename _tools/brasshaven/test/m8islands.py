@@ -1,4 +1,4 @@
-# milestone 8: islands and sky. Run with BH_CHROMIUM=/opt/pw-browsers/chromium python3 test/m8islands.py
+# milestone 8: islands. Run with BH_CHROMIUM=/opt/pw-browsers/chromium python3 test/m8islands.py
 import os, sys
 from playwright.sync_api import sync_playwright
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +27,7 @@ with sync_playwright() as p:
     ev("""(async (code) => { const b = window.__brasshaven; const t = await b.decodeTown(code); b.openCode(t.c, t.mt, t.name, t.world); })""", code)
     page.wait_for_timeout(300)
     open0=ev(SNAP)
-    check('an old town code opens as open ground', open0['cells']>100 and not open0['islands'] and not open0['sky'] and open0['land']==0, open0)
+    check('an old town code opens as open ground', open0['cells']>100 and not open0['islands'] and open0['land']==0, open0)
     # open to islands fits land to the build and keeps every block
     ev("() => window.__brasshaven.setWorld(true, false)"); page.wait_for_timeout(300)
     isl=ev(SNAP)
@@ -76,45 +76,26 @@ with sync_playwright() as p:
     page.reload(); page.wait_for_timeout(2500)
     r=ev(SNAP)
     check('the islands survive a reload', r['islands'] and r['land']==isl['land'] and r['hash']==isl['hash'], r)
-    # sky is a change of skin; all four combinations keep the town
-    for isles, sky, name in [(True, True, 'islands-sky'), (False, True, 'open-sky'), (False, False, 'open-ground')]:
-        ev(f"() => window.__brasshaven.setWorld({str(isles).lower()}, {str(sky).lower()})"); page.wait_for_timeout(400)
-        r=ev(SNAP)
-        check(f'{name} keeps every block', r['islands']==isles and r['sky']==sky and r['hash']==isl['hash'] and (r['land']>0)==isles, r)
-        page.screenshot(path=f'{ROOT}/test/m8-{name}.png')
-        if name=='open-sky':
-            r=ev("""(() => { const b = window.__brasshaven, d = b.dyn(), k = {}; for (const s of d.spins) k[s.kind] = (k[s.kind] || 0) + 1;
-              return { wheels: d.wheels.length, kinds: k }; })()""")
-            check('in the sky there are no mill wheels or wind wheels', r['wheels']==0 and 'turbine' not in r['kinds'], r)
-            check('the hull carries lift fans and propellers', r['kinds'].get('fan',0)>3 and r['kinds'].get('prop',0)>0, r)
-            # nothing hangs down to the clouds: no pole or root reaches below the hull's deepest plates
-            r=ev("(() => window.__brasshaven.fineNear(0, 0, 999, -99, -4.2, true) + window.__brasshaven.fineNear(0, 0, 999, -99, -4.2))()")
-            check('nothing dangles below the hull', r==0, r)
-            r=ev("""(() => { const b = window.__brasshaven, d = b.dyn();
-              const props = d.spins.filter((s) => s.kind === 'prop'), bad = props.filter((s) => Math.abs(s.n[0] + 1) > 1e-6 || Math.abs(s.n[2]) > 1e-6).length;
-              // every separate piece is tied in: pieces minus one girders, and following them reaches every piece
-              const part = (v) => b.land[v] || b.F(v, 0), comp = new Int32Array(b.V).fill(-1); let K = 0;
-              for (let v = 0; v < b.V; v++) { if (comp[v] >= 0 || !part(v)) continue; const q = [v]; comp[v] = K; for (let h = 0; h < q.length; h++) for (const w of b.ringW[q[h]]) if (comp[w] < 0 && part(w)) { comp[w] = K; q.push(w); } K++; }
-              const par = [...Array(K).keys()], find = (x) => (par[x] === x ? x : (par[x] = find(par[x])));
-              for (const [a, c] of b.braces()) par[find(comp[a])] = find(comp[c]);
-              const roots = new Set(); for (let i = 0; i < K; i++) roots.add(find(i));
-              return { props: props.length, bad, pieces: K, braces: b.braces().length, groups: roots.size }; })()""")
-            check('all the propellers drive the same way', r['props']>0 and r['bad']==0, r)
-            check('every separate piece is braced to the main one', r['pieces']>1 and r['braces']==r['pieces']-1 and r['groups']==1, r)
+    # back to open water keeps the town; undo brings the islands back, redo takes them away
+    ev("() => window.__brasshaven.setWorld(false)"); page.wait_for_timeout(400)
+    r=ev(SNAP)
+    check('open water keeps every block', not r['islands'] and r['land']==0 and r['hash']==isl['hash'], r)
+    page.screenshot(path=f'{ROOT}/test/m8-open.png')
     r=ev("(() => window.__brasshaven.dyn().wheels.length)()")
-    check('on the sea the mill wheels come back', r>0, r)
-    # undo walks the settings back, islands and all
+    check('the mill wheels turn on open water', r>0, r)
+    # the sky setting is retired: codes carry only the islands
+    r=ev("""(async () => { const b = window.__brasshaven; const t = await b.decodeTown(await b.encodeTown());
+      return { keys: Object.keys(t.world).sort().join(','), sky: 'sky' in b.world() }; })()""")
+    check('there is no sky setting any more', r['keys']=='islands,land' and not r['sky'], r)
     ev("() => window.__brasshaven.undo()"); r=ev(SNAP)
-    check('undo brings back the sky', not r['islands'] and r['sky'], r)
-    ev("() => window.__brasshaven.undo()"); r=ev(SNAP)
-    check('undo brings back the islands', r['islands'] and r['sky'] and r['land']==isl['land'], r)
+    check('undo brings back the islands', r['islands'] and r['land']==isl['land'], r)
     ev("() => window.__brasshaven.redo()"); r=ev(SNAP)
     check('redo takes them away again', not r['islands'] and r['land']==0 and r['hash']==isl['hash'], r)
     # the Harbours sheet shows the settings
     page.click('#gear'); page.click('#m-slots'); page.wait_for_timeout(300)
     page.click('#w-isles'); page.wait_for_timeout(300)
-    r=ev("(() => ({ w: window.__brasshaven.world(), open: document.getElementById('w-open').getAttribute('aria-pressed'), isles: document.getElementById('w-isles').getAttribute('aria-pressed'), sky: document.getElementById('w-sky').getAttribute('aria-pressed') }))()")
-    check('the Harbours sheet switches to islands', r['w']['islands'] and r['isles']=='true' and r['open']=='false' and r['sky']=='true', r)
+    r=ev("(() => ({ w: window.__brasshaven.world(), open: document.getElementById('w-open').getAttribute('aria-pressed'), isles: document.getElementById('w-isles').getAttribute('aria-pressed'), sky: document.getElementById('w-sky') }))()")
+    check('the Harbours sheet switches to islands', r['w']['islands'] and r['isles']=='true' and r['open']=='false' and r['sky'] is None, r)
     check('no page errors', not errs, errs)
     br.close()
 print('ALL PASSED' if not fails else 'FAILED: '+', '.join(fails), len(fails))
