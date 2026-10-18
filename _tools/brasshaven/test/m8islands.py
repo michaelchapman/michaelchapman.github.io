@@ -38,7 +38,12 @@ with sync_playwright() as p:
         if (m === 5 && !b.ringW[v].some((w) => b.F(w, 0) && b.M(w, 0) !== 5)) { piers++; if (b.land[v]) piersOnLand++; } }
       return { bare, piers, piersOnLand }; })()""")
     check('every stone footing sits on land', r['bare']==0, r)
-    check('timber piers stay over the water', r['piers']==0 or r['piersOnLand'] < r['piers'], r)
+    r=ev("""(() => { const b = window.__brasshaven; let wood = 0, core = 0, land = 0, extra = 0;
+      for (let v = 0; v < b.V; v++) { if (b.F(v, 0) && b.M(v, 0) === 5 && b.land[v]) wood++; if (b.F(v, 0) && b.M(v, 0) !== 5) core++;
+        if (b.land[v] && !b.F(v, 0) && b.ringW[v].some((w) => b.F(w, 0) && b.M(w, 0) !== 5)) extra++; }
+      return { wood, core, extra }; })()""")
+    check('timber piers all stay over the water', r['wood']==0, r)
+    check('the land hugs the town', r['extra'] < r['core'] * 0.6, r)
     page.screenshot(path=f'{ROOT}/test/m8-islands.png')
     # building rules: stone one cell from the shore, timber three along its own jetty
     r=ev("""(() => { const b = window.__brasshaven, near = [], far = [];
@@ -80,13 +85,24 @@ with sync_playwright() as p:
         if name=='open-sky':
             r=ev("""(() => { const b = window.__brasshaven, d = b.dyn(), k = {}; for (const s of d.spins) k[s.kind] = (k[s.kind] || 0) + 1;
               return { wheels: d.wheels.length, kinds: k }; })()""")
-            turb=r['kinds'].get('turbine',0); check('in the sky there are no mill wheels', r['wheels']==0 and turb>0, r)
+            check('in the sky there are no mill wheels or wind wheels', r['wheels']==0 and 'turbine' not in r['kinds'], r)
             check('the hull carries lift fans and propellers', r['kinds'].get('fan',0)>3 and r['kinds'].get('prop',0)>0, r)
             # nothing hangs down to the clouds: no pole or root reaches below the hull's deepest plates
             r=ev("(() => window.__brasshaven.fineNear(0, 0, 999, -99, -4.2, true) + window.__brasshaven.fineNear(0, 0, 999, -99, -4.2))()")
             check('nothing dangles below the hull', r==0, r)
+            r=ev("""(() => { const b = window.__brasshaven, d = b.dyn();
+              const props = d.spins.filter((s) => s.kind === 'prop'), bad = props.filter((s) => Math.abs(s.n[0] + 1) > 1e-6 || Math.abs(s.n[2]) > 1e-6).length;
+              // every separate piece is tied in: pieces minus one girders, and following them reaches every piece
+              const part = (v) => b.land[v] || b.F(v, 0), comp = new Int32Array(b.V).fill(-1); let K = 0;
+              for (let v = 0; v < b.V; v++) { if (comp[v] >= 0 || !part(v)) continue; const q = [v]; comp[v] = K; for (let h = 0; h < q.length; h++) for (const w of b.ringW[q[h]]) if (comp[w] < 0 && part(w)) { comp[w] = K; q.push(w); } K++; }
+              const par = [...Array(K).keys()], find = (x) => (par[x] === x ? x : (par[x] = find(par[x])));
+              for (const [a, c] of b.braces()) par[find(comp[a])] = find(comp[c]);
+              const roots = new Set(); for (let i = 0; i < K; i++) roots.add(find(i));
+              return { props: props.length, bad, pieces: K, braces: b.braces().length, groups: roots.size }; })()""")
+            check('all the propellers drive the same way', r['props']>0 and r['bad']==0, r)
+            check('every separate piece is braced to the main one', r['pieces']>1 and r['braces']==r['pieces']-1 and r['groups']==1, r)
     r=ev("(() => window.__brasshaven.dyn().wheels.length)()")
-    check('on the sea every wind wheel is a mill wheel again', r==turb, {'wheels': r, 'turbines': turb})
+    check('on the sea the mill wheels come back', r>0, r)
     # undo walks the settings back, islands and all
     ev("() => window.__brasshaven.undo()"); r=ev(SNAP)
     check('undo brings back the sky', not r['islands'] and r['sky'], r)
