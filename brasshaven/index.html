@@ -943,10 +943,7 @@ function buildGround(g, v) {
     }
   }
   if (houseAbove) return;
-  const lr = lmAt(v);
-  if (lr && lr.kind === 'gasworks') { buildGasholder(g, v); return; }
-  if (lr && lr.kind === 'market') { buildMarket(g, v); return; }
-  if (courtyard[v]) { buildGarden(g, v); return; }
+  if (buildYard(g, v)) return;
   for (let i = 0; i < k; i++) {
     if (!water[i] || i === steps || hash4(v, i, 61, 0) > 0.38) continue;
     const f = wallFrame(v, i);
@@ -1015,6 +1012,15 @@ function buildSlip(g, v, r) {
     g.strut(apex, P(0.15, GROUND_TOP + 0.7, 0), [px, 0, pz], 0.004, 0.004, C_IRON, S_IRON);
     g.box(P(0.15, GROUND_TOP + 0.68, 0), [ax, 0, az], UP, [px, 0, pz], 0.025, 0.035, 0.015, C_IRON, S_IRON);
   }
+}
+// a walled square, on stone ground or bare island grass: gasholder, market hall or garden
+function buildYard(g, v) {
+  const lr = lmAt(v);
+  if (lr && lr.kind === 'gasworks') buildGasholder(g, v);
+  else if (lr && lr.kind === 'market') buildMarket(g, v);
+  else if (courtyard[v]) buildGarden(g, v);
+  else return false;
+  return true;
 }
 function buildGarden(g, v) {
   fanAt(g, v, GROUND_TOP + 0.004, UP, C_GRASS, S_GRASS, groundDark(v, C_GRASS_DARK, C_GRASS));
@@ -3277,7 +3283,7 @@ const walkers = [];
 function isFountain(v) { if (!courtyard[v]) return false; const r = lmAt(v); if (r) return r.kind === 'gasworks'; const h = hash4(v, 0, 66, 0); return h >= 0.5 && h < 0.72; }
 function computeWalk() {
   walkable.fill(0); walkNodes = []; doors = [];
-  for (let v = 0; v < V; v++) if (F(v, 0) && !F(v, 1) && !isFountain(v)) { walkable[v] = 1; walkNodes.push(v); }
+  for (let v = 0; v < V; v++) if (((F(v, 0) && !F(v, 1)) || (land[v] && courtyard[v])) && !isFountain(v)) { walkable[v] = 1; walkNodes.push(v); }
   for (let v = 0; v < V; v++) {
     if (!F(v, 0) || !F(v, 1)) continue;
     const i = doorEdge(v); if (i < 0) continue;
@@ -4283,7 +4289,7 @@ function rebuildChunk(ci) {
   const g = new Geo(true);
   for (const v of chunkVerts[ci]) {
     if (cols[v]) buildColumn(g, v);
-    if (land[v] && !F(v, 0)) buildLand(g, v);
+    if (land[v] && !F(v, 0) && !buildYard(g, v)) buildLand(g, v);
   }
   for (const list of [chunkMesh, chunkFine]) if (list[ci]) { scene.remove(list[ci]); list[ci].geometry.dispose(); list[ci] = null; }
   chunkDyn[ci] = g.dyn;
@@ -4306,12 +4312,12 @@ function updateFine(force) {
   const d = FINE_D[tier] || 30;
   for (const m of chunkFine) if (m) { const bs = m.geometry.boundingSphere; m.visible = camera.position.distanceTo(bs.center) - bs.radius < d; }
 }
-// courtyards: open stone ground completely walled in by houses becomes a garden
+// courtyards: open stone ground or island grass completely walled in by houses becomes a garden
 let yardRegions = [], bridgeRegions = [];
 function computeCourtyards() {
   const next = new Uint8Array(V), seen = new Uint8Array(V);
   yardRegions = [];
-  const isYard = (u) => F(u, 0) && !F(u, 1) && M(u, 0) !== M_TIMBER;
+  const isYard = (u) => (F(u, 0) && !F(u, 1) && M(u, 0) !== M_TIMBER) || (land[u] && !cols[u]);
   for (let v = 0; v < V; v++) {
     if (seen[v] || !isYard(v)) continue;
     const region = [v]; seen[v] = 1; let enclosed = true;
