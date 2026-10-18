@@ -1,0 +1,6 @@
+node_modules/
+site/
+test/*.png
+test/*.jpg
+test/*.out
+__pycache__/
