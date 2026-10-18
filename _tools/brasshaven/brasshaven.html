@@ -240,11 +240,11 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
         <p id="slot-confirm-msg"></p>
         <div class="row"><button class="yes" id="slot-del-yes">Delete</button><button class="no" id="slot-del-no">Keep</button></div>
       </div>
-      <div class="seg"><span>Water</span><div role="group" aria-label="Open water or islands">
+      <div class="seg"><span>Layout</span><div role="group" aria-label="Open layout or islands">
         <button id="w-open" aria-pressed="true">Open</button><button id="w-isles" aria-pressed="false">Islands</button>
       </div></div>
-      <div class="seg"><span>Setting</span><div role="group" aria-label="On the ground or in the sky">
-        <button id="w-ground" aria-pressed="true">Ground</button><button id="w-sky" aria-pressed="false">Sky</button>
+      <div class="seg"><span>Setting</span><div role="group" aria-label="On the sea or in the sky">
+        <button id="w-ground" aria-pressed="true">Sea</button><button id="w-sky" aria-pressed="false">Sky</button>
       </div></div>
       <div class="row"><button class="go" id="slot-new">New harbour</button></div>
       <p class="msg" id="slots-msg" role="status"></p>
@@ -4724,8 +4724,8 @@ function renderMarks() {
   }
 }
 const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Water switches between open sea and islands, where stone quays reach one cell from the shore and timber jetties three; Setting lifts the whole harbour into the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Water switches between open sea and islands, where stone quays reach one cell from the shore and timber jetties three; Setting lifts the whole harbour into the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
+  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three; Setting moves the whole harbour from the sea to the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
+  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three; Setting moves the whole harbour from the sea to the sky above the clouds. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
 $('how').textContent = HOW;
 
 // time of day dial: cycles morning, golden hour, dusk and night
@@ -5040,15 +5040,15 @@ function renderWorld() {
   $('w-ground').setAttribute('aria-pressed', String(!world.sky)); $('w-sky').setAttribute('aria-pressed', String(world.sky));
 }
 const WORLD_HINTS = {
-  open: ['Open water', 'Build anywhere on the water; undo brings the islands back'],
-  isles: ['Islands', 'The land fits your town. Build on the islands; undo brings the open water back'],
-  ground: ['Back on the ground', 'The harbour sits on the sea again'],
-  sky: ['In the sky', 'The harbour floats above the clouds'],
+  open: () => ['Open', `Build anywhere ${world.sky ? 'above the clouds' : 'on the water'}; undo brings the islands back`],
+  isles: () => ['Islands', `The land fits your town. Build on the islands; undo brings back the open ${world.sky ? 'sky' : 'water'}`],
+  ground: () => ['Back on the sea', 'The harbour sits on the water again'],
+  sky: () => ['In the sky', 'The harbour floats above the clouds'],
 };
 for (const [id, isl, sk] of [['w-open', false, null], ['w-isles', true, null], ['w-ground', null, false], ['w-sky', null, true]]) {
   $(id).addEventListener('click', () => {
     if (!setWorld(isl === null ? world.islands : isl, sk === null ? world.sky : sk)) return;
-    plink(isl === null ? 9 : 6); flashHint(...WORLD_HINTS[id.slice(2)]);
+    plink(isl === null ? 9 : 6); flashHint(...WORLD_HINTS[id.slice(2)]());
   });
 }
 $('slot-new').addEventListener('click', () => {
