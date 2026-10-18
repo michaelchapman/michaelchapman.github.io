@@ -4445,15 +4445,19 @@ function rotateAbout(sx, sy, dYaw) {
 }
 function startMulti() {
   const s = pinchState();
-  multi = { span0: s.span, ang0: s.ang, last: s, zoomOn: false, rotOn: false };
+  multi = { span0: s.span, ang0: s.ang, last: s, zoomOn: false, rotOn: false, travel: 0, seen: new Set() };
   multiUsed = true; drag = null; yawVel = 0;
 }
 function moveMulti() {
   const s = pinchState(), m = multi, last = m.last;
   dragGround(last.mx, last.my, s.mx, s.my);
-  if (!m.zoomOn && Math.abs(Math.log(Math.max(1, s.span) / Math.max(1, m.span0))) > 0.07) m.zoomOn = true;
+  // fingers sliding together drift apart and tilt a little, so the further the slide has gone,
+  // the clearer a pinch or a twist has to be before it joins in
+  m.travel += Math.hypot(s.mx - last.mx, s.my - last.my);
+  const slid = Math.min(1, m.travel / Math.max(80, m.span0));
+  if (!m.zoomOn && Math.abs(Math.log(Math.max(1, s.span) / Math.max(1, m.span0))) > 0.07 + 0.23 * slid) m.zoomOn = true;
   if (m.zoomOn && s.span > 10 && last.span > 10) zoomAbout(s.mx, s.my, last.span / s.span, true);
-  if (!m.rotOn && Math.abs(angDiff(m.ang0, s.ang)) > 0.24) m.rotOn = true;
+  if (!m.rotOn && Math.abs(angDiff(m.ang0, s.ang)) > 0.24 + 0.36 * slid) m.rotOn = true;
   if (m.rotOn) rotateAbout(s.mx, s.my, -angDiff(last.ang, s.ang));
   m.last = s;
   followNow();
@@ -4548,10 +4552,17 @@ canvas.addEventListener('pointermove', (e) => {
     return;
   }
   if (pointers.size === 1) { if (!multiUsed) moveOne(p, px, py, touch); }
-  else if (pointers.size >= 2 && multi) moveMulti();
+  else if (pointers.size >= 2 && multi) {
+    // each finger reports on its own, so wait until both have moved: measured one finger at a time, a slide
+    // sideways looks like a pinch that opens and closes, which set off the zoom and stalled the slide
+    if (multi.seen.has(e.pointerId)) { multi.seen.clear(); moveMulti(); }
+    multi.seen.add(e.pointerId);
+    if (multi.seen.size >= pointers.size) { multi.seen.clear(); moveMulti(); }
+  }
 });
 function endPointer(e) {
   const p = pointers.get(e.pointerId); if (!p) return;
+  if (multi && multi.seen.size) { multi.seen.clear(); moveMulti(); }
   pointers.delete(e.pointerId);
   if (tap && tap.id === e.pointerId) {
     const held = performance.now() - tap.t, armed = tap.armed, empty = tap.empty;
@@ -5201,6 +5212,7 @@ function boot(data) {
     if (idle && frame % 2) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     doHover();
+    if (multi && multi.seen.size) { multi.seen.clear(); moveMulti(); }
     updateCamera(dt);
     waterUniforms.uTime.value = now / 1000;
     tickTod(dt);
