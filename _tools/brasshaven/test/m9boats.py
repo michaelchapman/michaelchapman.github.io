@@ -7,6 +7,7 @@ page_html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+html+
 three=open(f'{ROOT}/node_modules/three/build/three.module.min.js').read()
 code=open(f'{ROOT}/test/town-chimphaven.txt').read().strip()
 isles=open(f'{ROOT}/test/town-michael-boats.txt').read().strip()  # Michael's fully grown island harbour
+steamer_town=open(f'{ROOT}/test/town-michael-steamer.txt').read().strip()  # his later harbour, where the steamer used to get stuck
 fails=[]
 def check(name, ok, info=''):
     print(('PASS ' if ok else 'FAIL ')+name, info if not ok else '')
@@ -139,6 +140,17 @@ with sync_playwright() as p:
     check('all three kinds sail into a grown island harbour', sorted(r['kinds'])==['launch', 'skiff', 'steamer'], r['kinds'])
     check('and tie up there', r['moored']>0, r)
     check('no boat touches anything in the island harbour', not r['bad'], r['bad'])
+    # his later harbour, with narrow winding channels: the steamer must find her way in and tie up, and boats must
+    # seldom have to give up boxed in
+    ev(OPEN, steamer_town)
+    r=ev(HELP+"""
+    ((steps) => { let bad = [], moored = 0, gaveUp = 0; const seen = new Set();
+      for (let i = 0; i < steps && bad.length < 3; i++) { b.sim(0.1, 0.1); for (const o of b.boatsRaw) { if (o.kind === 'steamer' && o.state === 'moored') moored++; if (o.state === 'fade' && o.jams >= 3 && !seen.has(o)) { seen.add(o); gaveUp++; } } if (i % 10 === 0) bad = bad.concat(touches()); }
+      return { bad: bad.slice(0, 3), moored, gaveUp }; })(6000)""")
+    print('steamer harbour run', r)
+    check('the steamer ties up in a harbour of narrow channels', r['moored']>0, r)
+    check('boats seldom give up boxed in', r['gaveUp']<=4, r)
+    check('no boat touches anything there', not r['bad'], r['bad'])
     check('no page errors', not errs, errs)
     br.close()
 print('ALL PASSED' if not fails else 'FAILED: '+', '.join(fails), len(fails))
