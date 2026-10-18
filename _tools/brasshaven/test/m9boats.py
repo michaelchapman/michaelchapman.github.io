@@ -6,6 +6,7 @@ html=open(f'{ROOT}/brasshaven.html').read()
 page_html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+html+'</body></html>'
 three=open(f'{ROOT}/node_modules/three/build/three.module.min.js').read()
 code=open(f'{ROOT}/test/town-chimphaven.txt').read().strip()
+isles=open(f'{ROOT}/test/town-michael-boats.txt').read().strip()  # Michael's fully grown island harbour
 fails=[]
 def check(name, ok, info=''):
     print(('PASS ' if ok else 'FAIL ')+name, info if not ok else '')
@@ -90,7 +91,9 @@ with sync_playwright() as p:
       b.commit(adds, []); await new Promise((r) => setTimeout(r, 50));
       const yard = b.landmarks().find((l) => l.id === 'shipyard');
       let fromSlip = false;
-      for (let i = 0; i < 1500 && !fromSlip; i++) { b.sim(0.1, 0.1); fromSlip = b.boats().some((o) => o.state === 'slip'); }
+      for (let i = 0; i < 1500 && !fromSlip; i++) { b.sim(0.1, 0.1); fromSlip = b.boats().some((o) => o.state === 'slip');
+        // send the launches home now and then, so new ones keep coming (from the slip or from the sea)
+        if (i % 100 === 99) for (const o of b.boatsRaw) if (o.kind === 'launch') o.state = 'fade'; }
       return { yard: !!yard, slip: slip.map((v) => b.lmAt(v) && b.lmAt(v).role), fromSlip, found: b.found().includes('shipyard') }; })()""")
     check('a slipway from an iron house is a shipyard', r['yard'] and r['slip']==['slip']*3, r)
     check('new launches come down the slip', r['fromSlip'], r)
@@ -109,11 +112,14 @@ with sync_playwright() as p:
     check('launches and the steamer come to the harbour', 'launch' in r['kinds'] and 'steamer' in r['kinds'], r)
     check('boats tie up and leave again', r['moored']>0 and 'off' in r['states'], r)
     # more towns: the starter harbour, and a dense made-up one with houses on most cells and arches over some streets
-    OPEN="""(async (code) => { const b = window.__brasshaven; const t = await b.decodeTown(code); b.openCode(t.c, t.mt, t.name, t.world); await new Promise((r) => setTimeout(r, 50)); return b.cellCount(); })"""
+    OPEN="""(async (code) => { const b = window.__brasshaven; const t = await b.decodeTown(code); b.openCode(t.c, t.mt, t.name, t.world); await new Promise((r) => setTimeout(r, 50));
+      // the last harbour's boats sail on until they leave; clear them so the run is this harbour's own
+      for (const o of b.boatsRaw) o.state = 'fade'; b.sim(2, 0.1); return b.cellCount(); })"""
     ev(OPEN, starter)
     r=ev(RUN+"(1500)")
     print('starter run', r)
     check('no boat touches anything in the starter harbour', not r['bad'], r['bad'])
+    check('boats tie up in the starter harbour', r['moored']>0, r)
     r=ev("""(async () => { const b = window.__brasshaven; b.replaceTown(new Uint16Array(b.V), new Uint8Array(b.V * 16));
       const h = (a, c) => { const x = Math.sin(a * 127.1 + c * 311.7) * 43758.5453; return x - Math.floor(x); };
       for (let k = 0; k < 6; k++) { const adds = []; for (let v = 0; v < b.V; v++) if (b.buildable[v] && !b.cols[v] && b.edgeBand[v] <= 1 && h(v, 1) > 0.3) adds.push([v, 0, h(v, 5) < 0.15 ? 5 : 0]); if (!adds.length) break; b.commit(adds, []); }
@@ -126,6 +132,13 @@ with sync_playwright() as p:
     r=ev(RUN+"(1500)")
     print('made-up run', r)
     check('no boat touches anything in a dense made-up harbour', not r['bad'], r['bad'])
+    # a fully grown island harbour: the water boats can sail ends well short of the grid's edge, and they must still find their way in
+    ev(OPEN, isles)
+    r=ev(RUN+"(3000)")
+    print('islands run', r)
+    check('all three kinds sail into a grown island harbour', sorted(r['kinds'])==['launch', 'skiff', 'steamer'], r['kinds'])
+    check('and tie up there', r['moored']>0, r)
+    check('no boat touches anything in the island harbour', not r['bad'], r['bad'])
     check('no page errors', not errs, errs)
     br.close()
 print('ALL PASSED' if not fails else 'FAILED: '+', '.join(fails), len(fails))
