@@ -15,7 +15,7 @@ HELP = """const b = window.__brasshaven;
 const inCell = (v, x, z) => { const Q = b.ringQ[v], k = Q.length; let ins = false;
   for (let a = 0, c = k - 1; a < k; c = a++) { const xa = b.CX[Q[a]], za = b.CZ[Q[a]], xc = b.CX[Q[c]], zc = b.CZ[Q[c]]; if (za > z !== zc > z && x < ((xc - xa) * (z - za)) / (zc - za) + xa) ins = !ins; }
   return ins; };
-const cellAt = (x, z) => { const v = b.nearestVertex(x, z); if (v < 0) return -1; if (b.ringQ[v].length && inCell(v, x, z)) return v; for (const w of b.ringW[v]) if (b.ringQ[w].length && inCell(w, x, z)) return w; return v; };
+const cellAt = (x, z) => { const v = b.nearestVertex(x, z); if (v < 0) return -1; if (b.ringQ[v].length && inCell(v, x, z)) return v; for (const w of b.ringW[v]) { if (b.ringQ[w].length && inCell(w, x, z)) return w; for (const u of b.ringW[w]) if (b.ringQ[u].length && inCell(u, x, z)) return u; } return -1; };
 const hullW = (u) => (u > 0 ? Math.sqrt(Math.max(0, 1 - Math.pow(u, 2.4))) : 1 - 0.38 * Math.pow(-u, 3));
 const width = (K, x) => (K.box && Math.abs(x) < 0.36 ? 0.63 : K.hb * hullW(x / (K.L / 2)) + 0.012);
 const outline = (o) => { const K = b.BOAT[o.kind], c = Math.cos(o.h), s = -Math.sin(o.h), pts = [];
