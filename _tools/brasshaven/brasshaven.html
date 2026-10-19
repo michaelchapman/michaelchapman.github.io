@@ -1084,19 +1084,23 @@ function buildLand(g, v) {
   } else if (h < 0.3) g.blob([x + 0.1, LAND_TOP + 0.05, z - 0.08], 0.12, leaf(3), S_LEAF, 0.7);
 }
 // ---------- storeys ----------
-function buildStorey(g, v, y) {
-  const Wn = ringW[v], Xs = ringX[v], Qs = ringQ[v], k = Wn.length;
+function storeyCtx(v, y) {
+  const Wn = ringW[v], k = Wn.length;
   const st = style(v), L = look(v, y);
   const walls = Wn.map((w) => !F(w, y));
   const roofHere = !F(v, y + 1);
   const below = F(v, y - 1);
-  const door = y === 1 ? doorEdge(v) : -1;
   let tower = roofHere && y >= 6;
   if (tower) for (let l = 1; l < y; l++) if (!F(v, l)) { tower = false; break; }
   const eng = engineSpot(v), whl = wheelSpot(v), tt = towerTop(v);
   let worksWall = -1;
-  if (tt >= 6 && y === tt - 1) { let bw = 0; for (let i = 0; i < k; i++) { if (!walls[i]) continue; const W = edgeLen(v, i); if (W >= 0.66 && W > bw) { bw = W; worksWall = i; } } }
-  const ctx = { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall, lm: lmAt(v) };
+  if (tt >= 6 && y === tt - 1) { let bw = 0; for (let i = 0; i < k; i++) { if (!walls[i] || roofBelow(v, y, Wn[i]) > 0) continue; const W = edgeLen(v, i); if (W >= 0.66 && W > bw) { bw = W; worksWall = i; } } }
+  return { st, L, walls, roofHere, below, tower, engineWall: eng && eng.y === y ? eng.i : -1, wheelWall: whl && y === 1 ? whl.i : -1, worksWall, lm: lmAt(v) };
+}
+function buildStorey(g, v, y) {
+  const Wn = ringW[v], Xs = ringX[v], Qs = ringQ[v], k = Wn.length;
+  const ctx = storeyCtx(v, y), { L, walls, roofHere, below } = ctx;
+  const door = y === 1 ? doorEdge(v) : -1;
   for (let i = 0; i < k; i++) if (walls[i]) buildWall(g, v, y, i, ctx, door === i);
   if (ctx.wheelWall >= 0) buildWheelMount(g, v, ctx.wheelWall);
   for (let i = 0; i < k; i++) {
@@ -1134,7 +1138,7 @@ function engineSpot(v) {
     if (!F(v, y) || M(v, y) !== M_IRON) continue;
     let best = -1, bh = -1;
     for (let i = 0; i < Wn.length; i++) {
-      if (F(Wn[i], y) || (y === 1 && i === door) || edgeLen(v, i) < 0.62) continue;
+      if (F(Wn[i], y) || (y === 1 && i === door) || edgeLen(v, i) < 0.62 || roofBelow(v, y, Wn[i]) > 0) continue;
       const h = hash4(v, i, 41, 0); if (h > bh) { bh = h; best = i; }
     }
     if (best >= 0) return { y, i: best };
@@ -1268,6 +1272,7 @@ function openingsFor(type, sc, W, m) {
     case 'arch': return [{ pts: archPts(sc, 0.27, 0.28, 0.32), kind: 'win', cx: sc, ow: 0.27, tb: 0.28, oh: 0.32, arch: true, bars: 'cross' }];
     case 'double': return [-0.165, 0.165].map((o) => ({ pts: rectPts(sc + o, 0.21, 0.3, 0.42), kind: 'win', cx: sc + o, ow: 0.21, tb: 0.3, oh: 0.42, bars: 'cross' }));
     case 'port': return [{ pts: circlePts(sc, 0.52, 0.13, 14), kind: 'port', cx: sc, r: 0.13, tc: 0.52 }];
+    case 'oculus': return [{ pts: circlePts(sc, 0.52, 0.085, 12), kind: 'port', cx: sc, r: 0.085, tc: 0.52 }];
     case 'shop': return [{ pts: archPts(sc, 0.48, 0.2, 0.3), kind: 'win', cx: sc, ow: 0.48, tb: 0.2, oh: 0.3, arch: true, bars: 'shop' }];
     case 'lancet': return [{ pts: archPts(sc, 0.19, 0.24, 0.42), kind: 'win', cx: sc, ow: 0.19, tb: 0.24, oh: 0.42, arch: true, bars: 'vert' }];
     case 'factory': { const ow = Math.min(W - 0.18, 0.6); return [{ pts: rectPts(sc, ow, 0.2, 0.56), kind: 'win', cx: sc, ow, tb: 0.2, oh: 0.56, bars: 'grid' }]; }
@@ -1301,11 +1306,10 @@ function buildWall(g, v, y, i, ctx, isDoor) {
   };
   const onGround = y === 1 && F(v, 0);
 
-  if (m === M_GLASS) buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround);
+  if (m === M_GLASS) buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround, w);
   else {
     const street = y === 1 && F(w, 0) && !F(w, 1);
-    const type = chooseOpening(v, y, i, W, ctx, isDoor, street);
-    const holes = openingsFor(type, sc, W, m);
+    const { type, holes } = wallOpenings(v, y, i, W, ctx, isDoor, street, w);
     const doorHole = holes.find((h) => h.kind === 'door');
     // wall face, with openings cut out
     const contour = []; let holeV = [];
@@ -1515,15 +1519,40 @@ function buildWall(g, v, y, i, ctx, isDoor) {
     }
   }
 }
+// what to cut in a wall: its windows or door, kept clear of a lower neighbour's roof leaning on it
+function wallOpenings(v, y, i, W, ctx, isDoor, street, w) {
+  const sc = W / 2, m = ctx.L.m, Hs = FLOOR_H;
+  let type = chooseOpening(v, y, i, W, ctx, isDoor, street);
+  let holes = openingsFor(type, sc, W, m);
+  // the house next door is lower and its roof leans on this wall: openings sit above its ridge, or there are none
+  const rh = roofBelow(v, y, w);
+  if (rh > 0 && !isDoor) {
+    // room up to the cornice (or the string course between storeys), leaving space for a window's hood
+    const lim = Hs - (ctx.roofHere ? [0.175, 0.14, 0.11, 0.16, 0.11, 0.11][m] : 0.07);
+    const fit = (hs) => { let lo = 9, hi = -9; for (const h of hs) for (const q of h.pts) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1] + (h.kind === 'win' ? 0.085 : 0.045)); } return hs.length && hi + rh - lo + 0.02 <= lim ? rh + 0.02 - lo : null; };
+    if (type === 'blank' || type === 'gauge' || type === 'clock') type = 'none';
+    let dy = type === 'none' ? null : fit(holes);
+    for (const t of ['port', 'oculus']) if (dy === null && type !== 'none') { type = t; holes = openingsFor(type, sc, W, m); dy = fit(holes); }
+    if (dy === null) { type = 'none'; holes = []; }
+    else if (dy > 0) for (const h of holes) { h.pts = h.pts.map((q) => [q[0], q[1] + dy]); if (h.tb !== undefined) h.tb += dy; if (h.tc !== undefined) h.tc += dy; }
+  }
+  return { type, holes };
+}
+// how high the roof of a lower neighbour w rises against this house's wall at storey y (0 if it doesn't)
+function roofBelow(v, y, w) {
+  if (y < 2 || F(w, y) || !F(w, y - 1) || !F(v, y - 1)) return 0;
+  return (ROOF_HS[M(w, y - 1)] + ROOF_HS[M(v, y - 1)]) / 2 + 0.05;
+}
 function holes0(isDoor, m, sc) { if (!isDoor) return 0; return m === M_IRON || m === M_TIMBER ? 0.17 : 0.15; }
 
-function buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround) {
+function buildGlassWall(g, v, y, ctx, f, P, band, isDoor, onGround, w) {
   const { st, L, roofHere } = ctx;
   const W = f.W, U = f.U, N = f.N, Hs = FLOOR_H, fr = L.trim;
   let t0 = 0.02;
   const dw = isDoor ? 0.18 : 0;
-  if (onGround) {
-    t0 = 0.24;
+  const rh = roofBelow(v, y, w);
+  if (onGround || rh > 0) {
+    t0 = onGround ? 0.24 : Math.min(Hs - 0.3, rh + 0.03);
     const seg = isDoor ? [[0, W / 2 - dw], [W / 2 + dw, W]] : [[0, W]];
     for (const [a, b] of seg) {
       g.quad(P(a, 0, 0), P(b, 0, 0), P(b, t0, 0), P(a, t0, 0), N, st.brick, S_BRICK);
@@ -3816,7 +3845,7 @@ function hullFree(b, x, z, h, m, solo) {
 }
 const edgeOk = new Map();
 // a route over the grid from a point to a point (or to any vertex the test accepts), as a string-pulled polyline
-function route(b, x0, z0, goal) {
+function routeOnce(b, x0, z0, goal, ban) {
   const K = b.K, c = K.cls, need = K.hw + B_SAFE, C = vClr[c];
   const near = (x, z, nd) => {
     const out = [], bx = Math.floor(x / BIN), bz = Math.floor(z / BIN);
@@ -3839,7 +3868,7 @@ function route(b, x0, z0, goal) {
     const [d, v] = pop(); if (d > dist.get(v)) continue;
     if (ends ? ends.has(v) : goal.test(v)) { end = v; break; }
     for (const w of ringW[v]) {
-      if (C[w] < need || (avoid.has(w) && !ends?.has(w))) continue;
+      if (C[w] < need || ban.has(w) || (avoid.has(w) && !ends?.has(w))) continue;
       const key = b.kind + (v < w ? v * 65536 + w : w * 65536 + v);
       let ok = edgeOk.get(key); if (ok === undefined) { ok = segClear(X[v], Z[v], X[w], Z[w], c, need); edgeOk.set(key, ok); }
       if (!ok) continue;
@@ -3858,6 +3887,62 @@ function route(b, x0, z0, goal) {
     out.push(pts[j]); i = j;
   }
   return out;
+}
+// a way that is wide enough for the boat's beam can still have bends too tight for her length: follow the path
+// as she would steer it, and where her hull would touch, close that water and look for another way
+function route(b, x0, z0, goal, tail) {
+  const ban = new Set();
+  for (let k = 0; k < 5; k++) {
+    const p = routeOnce(b, x0, z0, goal, ban);
+    if (!p) return null;
+    if (tail) p.push(tail);
+    const bad = tightSpot(b, p);
+    if (!bad) return p;
+    const v = nearestVertex(bad[0], bad[1]);
+    if (v < 0 || ban.has(v)) return null;
+    ban.add(v); for (const u of ringW[v]) ban.add(u);
+  }
+  return null;
+}
+// a point some way along a path, and how far along it lies the point nearest to (x, z), looking only ahead of d0
+function pathLen(P) { if (!P.cum) { P.cum = [0]; for (let i = 1; i < P.length; i++) P.cum.push(P.cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); } return P.cum; }
+function pathAt(P, d) {
+  const cum = pathLen(P); let i = 0; while (i < P.length - 2 && cum[i + 1] <= d) i++;
+  const a = P[i], c = P[i + 1] || a, t = Math.max(0, Math.min(1, (d - cum[i]) / (cum[i + 1] - cum[i] || 1)));
+  return [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t];
+}
+function pathNear(P, x, z, d0) {
+  const cum = pathLen(P); let i = 0; while (i < P.length - 2 && cum[i + 1] <= d0) i++;
+  let best = d0, bd = 1e9;
+  for (let k = i; k < Math.min(P.length - 1, i + 4); k++) {
+    const a = P[k], c = P[k + 1], l = cum[k + 1] - cum[k] || 1, ux = (c[0] - a[0]) / l, uz = (c[1] - a[1]) / l;
+    const t = Math.max(k === i ? d0 - cum[k] : 0, Math.min(l, (x - a[0]) * ux + (z - a[1]) * uz));
+    const e = Math.hypot(a[0] + ux * t - x, a[1] + uz * t - z);
+    if (e < bd - 1e-6) { bd = e; best = cum[k] + t; }
+  }
+  return best;
+}
+// how far ahead along her path a boat steers for: she follows the path itself, not the corners of it
+const lookAhead = (K) => K.L * 0.4 + 0.25;
+// sail the path as she would steer it, from where she lies now, and say where her hull would first touch
+// to a berth: by the straight run in along the quay where there is one
+const berthRoute = (b, o) => (o.px === undefined ? route(b, b.x, b.z, { x: o.ax, z: o.az }) : route(b, b.x, b.z, { x: o.px, z: o.pz }, [o.ax, o.az]));
+function tightSpot(b, P, strict) {
+  const K = b.K, tot = pathLen(P)[P.length - 1], dt = 0.1, LA = lookAhead(K), [ex, ez] = P[P.length - 1];
+  let x = P[0][0], z = P[0][1], h = b.h, sp = b.speed || 0, ps = 0;
+  for (let n = 0, N = (4 * tot) / (K.speed * dt) + 100; n < N; n++) {
+    ps = pathNear(P, x, z, ps);
+    const last = ps + LA >= tot, [tx, tz] = last ? [ex, ez] : pathAt(P, ps + LA), dEnd = Math.hypot(tx - x, tz - z);
+    if (last && dEnd < 0.5) return null;
+    const turn = angDiff(h, Math.atan2(-(tz - z), tx - x));
+    sp += (K.speed * Math.min(1, last ? 0.2 + dEnd * 0.8 : 1) * Math.max(0.25, 1 - Math.abs(turn) * 0.6) - sp) * dt * 1.5;
+    const maxT = (0.3 + (sp * 2.4) / K.L) * dt, nh = h + Math.max(-maxT, Math.min(maxT, turn)), step = Math.max(sp, K.speed * 0.15) * dt, [dx, dz] = dirOf(nh);
+    if (hullFree(b, x + dx * step, z + dz * step, nh, B_SAFE * 0.8, true)) { x += dx * step; z += dz * step; h = nh; continue; }
+    // getting under way she may have to back and fill to come round to her course, which she can; after that she must keep to it
+    if (strict || ps > K.L * 0.8) return [x, z];
+    ps += 0.2; [x, z] = pathAt(P, ps); const [ax, az] = pathAt(P, ps + LA); h = Math.atan2(-(az - z), ax - x); sp = 0;
+  }
+  return null;
 }
 
 const boats = [], LIFE_BOATS = { high: [3, 3, 1], low: [2, 2, 1], lowest: [1, 1, 0] };
@@ -3884,8 +3969,16 @@ function findBerths(kind) {
           const ax = x - f.nx * o - dx * K.L * 0.45, az = z - f.nz * o - dz * K.L * 0.45;
           // and the glide in from there must be clear all the way
           let clear = hullFree(probe, ax, az, h, B_MOOR, true);
-          for (let k = 1; k < 4 && clear; k++) { const t = k / 4, e = t * t * (3 - 2 * t); clear = hullFree(probe, ax + (x - ax) * e, az + (z - az) * e, h, B_MOOR * 0.5, true); }
-          if (clear) { found = { x, z, h, ax, az }; break; }
+          for (let k = 1, n = Math.ceil(Math.hypot(x - ax, z - az) / 0.04); k < n && clear; k++) { const t = k / n, e = t * t * (3 - 2 * t); clear = hullFree(probe, ax + (x - ax) * e, az + (z - az) * e, h, B_MOOR * 0.5, true); }
+          if (!clear) continue;
+          found = { x, z, h, ax, az };
+          // and, where there is room, a straight run in to there along the quay's line, so that she comes up already lying along it
+          for (const d of [K.L * 0.6 + 0.3, K.L * 0.35 + 0.2]) {
+            let run = true;
+            for (let e = 0; e <= d && run; e += 0.2) run = hullFree(probe, ax - dx * e, az - dz * e, h, B_SAFE * 0.8, true);
+            if (run) { found.px = ax - dx * d; found.pz = az - dz * d; break; }
+          }
+          break;
         }
       }
       if (found) out.push({ ...found, w, nx: f.nx, nz: f.nz, door: { w, x: mx + f.nx * 0.03, z: mz + f.nz * 0.03, nx: f.nx, nz: f.nz }, taken: null });
@@ -3941,12 +4034,12 @@ function nextTrip(b, out) {
   b.path = null; b.goal = null; b.pi = 1; b.wait = 0;
   const free = out ? [] : berths[b.kind].filter((o) => !o.taken && !boats.some((p) => p.berth && Math.hypot(p.berth.x - o.x, p.berth.z - o.z) < (p.K.L + b.K.L) / 2 + 0.2));
   const tries = [];
-  if (free.length && Math.random() < 0.8) tries.push(...[...free].sort(() => Math.random() - 0.5).slice(0, 3).map((o) => ({ berth: o })));
+  if (free.length && Math.random() < 0.8) tries.push(...free.map((o) => [o, Math.random() + (o.px === undefined ? 1 : 0)]).sort((a, c) => a[1] - c[1]).slice(0, 3).map(([o]) => ({ berth: o })));
   // or a turn about the open water
   if (!out && Math.random() < 0.5) for (let k = 0; k < 12; k++) { const v = Math.floor(Math.random() * V); if (band[v] <= reach && vClr[b.K.cls][v] > b.K.hw + 0.6) { tries.push({ x: X[v], z: Z[v] }); break; } }
   tries.push({ exit: true });
   for (const g of tries) {
-    const p = g.exit ? route(b, b.x, b.z, { test: (v) => Math.hypot(X[v], Z[v]) > seaR - 0.6 && Math.hypot(X[v] - b.x, Z[v] - b.z) > 3 }) : g.berth ? route(b, b.x, b.z, { x: g.berth.ax, z: g.berth.az }) : route(b, b.x, b.z, g);
+    const p = g.exit ? route(b, b.x, b.z, { test: (v) => Math.hypot(X[v], Z[v]) > seaR - 0.6 && Math.hypot(X[v] - b.x, Z[v] - b.z) > 3 }) : g.berth ? berthRoute(b, g.berth) : route(b, b.x, b.z, g);
     if (!p) continue;
     b.path = p; b.goal = g;
     if (g.berth) { g.berth.taken = b; b.berth = g.berth; }
@@ -3962,25 +4055,52 @@ function unberth(b) {
 function glide(b, dt, dur) {
   const t = Math.min(1, b.t + dt / dur), k = t * t * (3 - 2 * t), [x0, z0, h0] = b.from, [x1, z1, h1] = b.to;
   const x = x0 + (x1 - x0) * k, z = z0 + (z1 - z0) * k, h = h0 + angDiff(h0, h1) * k;
-  if (!hullFree(b, x, z, h, B_MOOR * 0.5)) { b.wait += dt; b.speed = 0; return false; }
+  if (!hullFree(b, x, z, h, B_MOOR * 0.3)) { b.wait += dt; b.speed = 0; return false; }
   b.speed = Math.hypot(x - b.x, z - b.z) / Math.max(dt, 1e-3); b.x = x; b.z = z; b.h = h; b.t = t;
   return t >= 1;
 }
 function sail(b, dt) {
-  const K = b.K, P = b.path;
-  while (b.pi < P.length - 1 && Math.hypot(P[b.pi][0] - b.x, P[b.pi][1] - b.z) < K.L * 0.4 + 0.25) b.pi++;
-  const [tx, tz] = P[b.pi], last = b.pi === P.length - 1, dEnd = Math.hypot(tx - b.x, tz - b.z);
+  const K = b.K, P = b.path, cum = pathLen(P), tot = cum[P.length - 1];
+  // steer for a point a little way ahead along the path from where she is now, so she keeps to it round the bends
+  if (b.psP !== P) { b.psP = P; b.ps = 0; }
+  b.ps = pathNear(P, b.x, b.z, b.ps);
+  const dA = b.ps + lookAhead(K), last = dA >= tot, [tx, tz] = last ? P[P.length - 1] : pathAt(P, dA);
+  b.pi = 1; while (b.pi < P.length - 1 && cum[b.pi] <= b.ps) b.pi++;
+  const dEnd = Math.hypot(tx - b.x, tz - b.z);
   if (last && dEnd < 0.1) return true;
   const turn = angDiff(b.h, Math.atan2(-(tz - b.z), tx - b.x));
   const want = K.speed * (REDUCED ? 0.6 : 1) * Math.min(1, last ? 0.2 + dEnd * 0.8 : 1) * Math.max(0.25, 1 - Math.abs(turn) * 0.6);
   b.speed += (want - b.speed) * Math.min(1, dt * 1.5);
   const maxT = (0.3 + (b.speed * 2.4) / K.L) * dt, dh = Math.max(-maxT, Math.min(maxT, turn));
+  // she keeps her distance from everything, or, if she has already been pressed closer than that, at least no closer
+  let m = B_SAFE * 0.6;
+  if (!hullFree(b, b.x, b.z, b.h, m)) for (m = B_SAFE * 0.4; m > 0 && !hullFree(b, b.x, b.z, b.h, m); m -= B_SAFE * 0.2);
+  m = Math.max(0, m);
   // the wanted heading first, then gentler or wider ones, then slower: never a move that touches anything
-  for (const [kh, kv] of [[1, 1], [0.4, 1], [0, 1], [-1, 0.6], [2.2, 0.5], [1, 0.25]]) {
-    const h = b.h + dh * kh, step = b.speed * kv * dt, [dx, dz] = dirOf(h);
-    if (hullFree(b, b.x + dx * step, b.z + dz * step, h, B_SAFE * 0.6)) { b.x += dx * step; b.z += dz * step; b.h = h; b.wait = 0; return false; }
+  // (once she has started going astern she keeps on a little way, to give her bow room to come round)
+  if (!(b.rev > 0)) for (const [kh, kv] of [[1, 1], [0.4, 1], [0, 1], [-1, 0.6], [2.2, 0.5], [1, 0.25]]) {
+    const h = b.h + dh * kh, step = Math.max(b.speed, K.speed * 0.15) * kv * dt, [dx, dz] = dirOf(h);
+    if (hullFree(b, b.x + dx * step, b.z + dz * step, h, m)) { b.x += dx * step; b.z += dz * step; b.h = h; b.wait = 0; b.rev = 0; return false; }
   }
+  // turning on the spot, or going astern a little while swinging the bow toward where she wants to go, the way a long boat
+  // turns in a tight spot: neither is headway, so she is still waiting, and before long she will look for another way
   b.speed = 0; b.wait += dt;
+  // all but there: she can come round to the berth from here
+  if (last && b.goal && b.goal.berth && dEnd < 0.5) return true;
+  // another boat in the way: wait for her to move on, and only then back off and look for a way round
+  const [fx, fz] = dirOf(b.h + dh);
+  // (a boat that has stopped will not move on by herself, so there is no waiting for her)
+  if (!(b.rev > 0) && b.wait < 1.5 && boats.some((o) => o !== b && o.speed > 0.03 && Math.hypot(o.x - b.x, o.z - b.z) < (o.K.L + K.L) / 2 + 0.5) && hullFree(b, b.x + fx * K.speed * 0.15 * dt, b.z + fz * K.speed * 0.15 * dt, b.h + dh, m, true)) return false;
+  if (b.wait > 0.4 || b.rev > 0) for (const kh of [1, 2.2, 0, -1]) {
+    const h = b.h + Math.sign(turn || 1) * Math.max(Math.abs(dh), 0.25 * dt) * kh, step = -K.speed * 0.35 * dt, [dx, dz] = dirOf(h);
+    if (hullFree(b, b.x + dx * step, b.z + dz * step, h, m)) {
+      // (going back and forth without getting any further along is no better than being stuck)
+      if (!(b.rev > 0)) { b.revN = b.revP === P && b.ps < b.revS + 0.3 ? b.revN + 1 : 1; if (b.revN === 1) b.revS = b.ps; b.revP = P; if (b.revN > 5) b.wait = 99; }
+      b.x += dx * step; b.z += dz * step; b.h = h; b.wait -= dt; b.rev = (b.rev > 0 ? b.rev : Math.min(K.L * 0.3, 0.6)) + step; return false;
+    }
+  }
+  b.rev = 0;
+  for (const kh of [1, 2.2]) { const h = b.h + dh * kh; if (Math.abs(dh) > 1e-4 && hullFree(b, b.x, b.z, h, m)) { b.h = h; return false; } }
   return false;
 }
 function updateBoats(dt, t) {
@@ -4012,7 +4132,11 @@ function updateBoats(dt, t) {
       for (let k = 0; k < 6; k++) {
         const v = anyOf(edgeNodes); if (v === undefined) break;
         const h = Math.atan2(Z[v], -X[v]) + rr(-0.5, 0.5), b = makeBoat(kind, X[v], Z[v], h);
-        if (hullFree(b, b.x, b.z, h, B_SAFE) && nextTrip(b)) break;
+        if (vClr[b.K.cls][v] > b.K.hw + 0.3 && hullFree(b, b.x, b.z, h, B_SAFE) && !boats.some((o) => o !== b && Math.hypot(o.x - b.x, o.z - b.z) < (o.K.L + b.K.L) / 2 + 1) && nextTrip(b)) {
+          // she comes in already pointing along her way, and with room to follow it from the first
+          const [ax, az] = pathAt(b.path, lookAhead(b.K)), ph = Math.atan2(-(az - b.z), ax - b.x);
+          if (hullFree(b, b.x, b.z, ph, B_SAFE)) { b.h = ph; if (!tightSpot(b, b.path, true)) break; }
+        }
         dropBoat(boats.length - 1);
       }
       break;
@@ -4031,7 +4155,7 @@ function updateBoats(dt, t) {
     // the town changed: find the way again, to the same berth if it is still there
     if (b.replan && b.state === 'sail') {
       b.replan = false; const g = b.goal;
-      if (g && g.berth && b.berth) { g.berth = b.berth; b.path = route(b, b.x, b.z, { x: b.berth.ax, z: b.berth.az }); b.pi = 1; }
+      if (g && g.berth && b.berth) { g.berth = b.berth; b.path = berthRoute(b, b.berth); b.pi = 1; }
       else if (g && !g.berth && !g.exit) { b.path = route(b, b.x, b.z, g); b.pi = 1; }
       else b.path = null;
       if (!b.path && !nextTrip(b, b.leaving || (g && g.exit))) b.state = 'fade';
@@ -4042,16 +4166,26 @@ function updateBoats(dt, t) {
         if (b.goal.berth && b.berth) { b.state = 'in'; b.t = 0; b.wait = 0; b.turned = false; b.from = [b.x, b.z, b.h]; b.to = [b.berth.x, b.berth.z, b.berth.h]; }
         else if (b.goal.exit) b.state = 'fade';
         else if (!nextTrip(b, b.leaving)) b.state = 'fade';
-      } else if (b.wait > 3 || b.still > 6) { b.still = 0; if (b.berth) b.berth.taken = null; b.berth = null; if (!nextTrip(b, b.leaving)) b.state = 'fade'; }
+      } else if (b.wait > 3 || b.still > 6) {
+        // stuck: try another way; a boat that stays boxed in after a few tries gives up and steams off out of sight
+        b.still = 0; if (b.berth) b.berth.taken = null; b.berth = null;
+        if (!b.jamAt || Math.hypot(b.x - b.jamAt[0], b.z - b.jamAt[1]) > 2) { b.jamAt = [b.x, b.z]; b.jams = 0; }
+        if (++b.jams >= 3 || !nextTrip(b, b.leaving)) b.state = 'fade';
+      }
     } else if (b.state === 'sail' && !nextTrip(b, b.leaving)) b.state = 'fade';
-    // coming in: first swing round to the berth's line out where there is room, then ease in sideways along a path checked when the berth was found
+    // coming in: first swing round to the berth's line out where there is room, then settle on the spot the berth was
+    // found from, then ease in sideways along the way checked from there
     let swung = true;
     if (b.state === 'in' && !b.turned) {
       const dh = angDiff(b.h, b.to[2]), nh = b.h + Math.sign(dh) * Math.min(Math.abs(dh), dt * 0.9);
-      if (Math.abs(dh) < 0.02) { b.turned = true; b.h = b.to[2]; b.from = [b.x, b.z, b.h]; b.t = 0; }
-      else if (hullFree(b, b.x, b.z, nh, B_MOOR * 0.5)) { b.h = nh; b.speed = 0; }
+      if (Math.abs(dh) < 0.02) { b.turned = true; b.h = b.to[2]; b.from = [b.x, b.z, b.h]; b.to = [b.berth.ax, b.berth.az, b.h]; b.t = 0; b.wait = 0; b.settled = false; }
+      else if (hullFree(b, b.x, b.z, nh, B_MOOR * 0.3)) { b.h = nh; b.speed = 0; }
       else b.wait += dt;
-      swung = b.turned;
+      swung = false;
+    }
+    if (b.state === 'in' && b.turned && !b.settled) {
+      swung = false;
+      if (glide(b, dt, 0.3 + Math.hypot(b.to[0] - b.from[0], b.to[1] - b.from[1]) * 2)) { b.settled = true; b.from = [b.x, b.z, b.h]; b.to = [b.berth.x, b.berth.z, b.berth.h]; b.t = 0; b.wait = 0; }
     }
     if (b.state === 'in' && swung && glide(b, dt, 2.8)) {
       b.state = 'moored'; b.t = rr(7, 15); b.speed = 0;
@@ -5869,7 +6003,7 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, roofBelow, openings: (v, y, i) => wallOpenings(v, y, i, edgeLen(v, i), storeyCtx(v, y), false, false, ringW[v][i]), yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
