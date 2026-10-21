@@ -60,7 +60,7 @@ with sync_playwright() as p:
     page.locator('#pc-done').click(); page.wait_for_timeout(400)
     print('pc exited', not E("document.getElementById('app').classList.contains('pc')"), 'hint after tour', page.locator('#hint').get_attribute('class'))
     # settings: name, codes with names, undo restores
-    page.locator('#gear').click(); page.locator('#m-name').click(); page.fill('#name-in', "Michael's Wharf"); page.locator('#name-go').click(); page.wait_for_timeout(300)
+    page.locator('#brand').click(); page.fill('#name-in', "Michael's Wharf"); page.press('#name-in', 'Enter'); page.locator('#brand').click(); page.wait_for_timeout(300)
     print('name', E('window.__brasshaven.harbourName()'), 'plate', page.locator('#harbour-no').text_content())
     code = E('window.__brasshaven.encodeTown()')
     print('code tail', code[-30:])
