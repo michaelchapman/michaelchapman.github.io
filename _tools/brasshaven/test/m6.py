@@ -46,13 +46,15 @@ with sync_playwright() as p:
     d = {x['type']: x for x in ev('window.__brasshaven.marks()')}
     check(d['dome']['k'] < 0.1 and d['gate']['k'] < 0.1, 'dome shut and portcullis up by day')
     # the landmark list in the menu
-    ev("document.getElementById('gear').click()"); ev("document.getElementById('m-marks').click()")
+    ev("document.getElementById('brand').click()")
     page.wait_for_timeout(300)
     txt = ev("document.getElementById('m-marks-val').textContent")
     check(txt == '7 of 8', f'menu count {txt}')  # the shipyard is not built here; m9boats covers it
-    check(ev("document.querySelectorAll('#marks-list button').length") == 7, 'a Show button for each')
+    check(ev("document.querySelectorAll('#marks-list .medal.got').length") == 7, 'a lit medal for each')
+    ev("document.querySelector('#marks-list .medal.got').click()")
+    check(ev("document.querySelectorAll('#mark-note button').length") == 1, 'a found medal has a Show me button')
     page.screenshot(path=f'{ROOT}/test/m6-menu.png')
-    ev("document.getElementById('gear').click()")
+    ev("document.getElementById('brand').click()")
     # found survives a reload; undoing a landmark takes it away but keeps it found
     s = res['sites']
     ev(f"window.__brasshaven.commit([], [[{s['lighthouse']}, 5]])")

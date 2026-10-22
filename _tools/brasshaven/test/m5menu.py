@@ -24,10 +24,11 @@ with sync_playwright() as p:
     page.screenshot(path=f'{ROOT}/test/m5-menu.png')
     # sound off silences the master; back on restores it
     print('amb test', E("window.__brasshaven.ambTest()"))
-    page.locator('#m-sound').click(); page.wait_for_timeout(300)
-    print('after off: sound pressed', E("document.getElementById('m-sound').getAttribute('aria-pressed')"))
-    page.locator('#m-sound').click(); page.wait_for_timeout(300)
-    print('after on:', E("document.getElementById('m-sound').getAttribute('aria-pressed')"))
+    # volume all the way down is off; an old Sound: Off save opens at nought
+    page.locator('#m-vol').fill('0'); page.wait_for_timeout(300)
+    print('after off: volume', E("window.__brasshaven.volume()"))
+    page.locator('#m-vol').fill('70'); page.wait_for_timeout(300)
+    print('after on:', E("window.__brasshaven.volume()"))
     # reload keeps the setting
     page.reload(); page.wait_for_timeout(2500)
     print('after reload', E("window.__brasshaven.life().ambience"), E("document.getElementById('m-amb').value"))

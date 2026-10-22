@@ -35,7 +35,7 @@ with sync_playwright() as p:
     r=ev("(() => { const b = window.__brasshaven; const a = { cur: b.slots().cur, name: b.harbourName() }; b.openSlot(2); a.other = b.F(b.nearestVertex(6, -6), 0); return a; })()")
     check('the open harbour and both towns survive a reload', r['cur']==1 and r['name']=='Old Haven' and r['other'], r)
     # the menu lists the harbours with thumbnails; Copy makes a third
-    page.click('#gear'); page.click('#m-slots'); page.wait_for_timeout(300)
+    page.click('#brand'); page.click('#m-slots'); page.wait_for_timeout(300)
     r=ev("(() => ({ rows: document.querySelectorAll('#slots-list li').length, thumbs: [...document.querySelectorAll('#slots-list img')].filter((i) => i.src.startsWith('data:image/jpeg')).length, val: document.getElementById('m-slots-val').textContent }))()")
     check('the Harbours list shows both with thumbnails', r['rows']==2 and r['thumbs']==2 and r['val']=='2 of 8', r)
     page.click('#slots-list li.cur button:text("Copy")'); page.wait_for_timeout(300)
@@ -44,8 +44,8 @@ with sync_playwright() as p:
     page.screenshot(path=f'{ROOT}/test/m7-slots.png')
     # fill all eight; New is disabled and a town code replaces the open harbour
     ev("() => { const b = window.__brasshaven; while (b.slots().list.length < 8) b.newSlot(null, ''); }")
-    ev("() => { if (!document.getElementById('menu').hidden) document.getElementById('gear').click(); }")
-    page.click('#gear'); page.click('#m-slots'); page.wait_for_timeout(200)
+    ev("() => window.__brasshaven.closeMenu()")
+    page.click('#brand'); page.click('#m-slots'); page.wait_for_timeout(200)
     r=ev("(() => ({ dis: document.getElementById('slot-new').disabled, msg: document.getElementById('slots-msg').textContent }))()")
     check('New is turned off with eight harbours', r['dis'] and 'eight' in r['msg'], r)
     r=ev("""(async () => { const b = window.__brasshaven; b.openSlot(2); const code = await b.encodeTown(); b.openSlot(1);
@@ -56,8 +56,8 @@ with sync_playwright() as p:
     r=ev("(() => { const b = window.__brasshaven; return { name: b.harbourName(), other: b.F(b.nearestVertex(6, -6), 0) }; })()")
     check('undo brings the replaced harbour back', r['name']=='Old Haven' and not r['other'], r)
     # deleting the open harbour moves to a neighbour
-    ev("() => { if (!document.getElementById('menu').hidden) document.getElementById('gear').click(); }")
-    page.click('#gear'); page.click('#m-slots'); page.wait_for_timeout(200)
+    ev("() => window.__brasshaven.closeMenu()")
+    page.click('#brand'); page.click('#m-slots'); page.wait_for_timeout(200)
     page.click('#slots-list li.cur button:text("Delete")'); page.click('#slot-del-yes'); page.wait_for_timeout(300)
     r=ev("(() => { const b = window.__brasshaven, s = b.slots(); return { n: s.list.length, cur: s.cur, ids: s.list.map((x) => x.id), gone: localStorage.getItem('brasshaven:town:1') }; })()")
     check('Delete removes the harbour and opens another', r['n']==7 and 1 not in r['ids'] and r['cur'] in r['ids'] and r['gone'] is None, r)

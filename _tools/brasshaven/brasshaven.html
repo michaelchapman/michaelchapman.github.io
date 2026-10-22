@@ -36,9 +36,12 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .plate.riveted::before{left:7px}
 .plate.riveted::after{right:7px}
 
-.brand{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));padding:7px 14px 8px;pointer-events:none;display:flex;flex-direction:column;gap:1px}
-.brand h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:24px;line-height:1.05;letter-spacing:.03em;color:var(--brass-hi);text-shadow:0 1px 0 rgba(0,0,0,.55)}
-.brand p{margin:0;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.brand{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));padding:7px 14px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;font:inherit;text-align:left;cursor:pointer;touch-action:none}
+.brand .bt{font-family:var(--font-display);font-weight:400;font-size:24px;line-height:1.05;letter-spacing:.03em;color:var(--brass-hi);text-shadow:0 1px 0 rgba(0,0,0,.55)}
+.brand .bn{display:block;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.brand .bt::after{content:"";display:inline-block;vertical-align:middle;width:6px;height:6px;margin:-6px 0 0 9px;border:solid var(--brass);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.brand[aria-expanded="true"]{background:linear-gradient(180deg,#3a2d20,#241b14)}
+.brand:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
 
 .gear{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(16px,calc(env(safe-area-inset-right,0px) + 12px));width:50px;height:50px;padding:0;display:grid;place-items:center;color:var(--brass-hi);cursor:pointer}
 .gear svg{width:26px;height:26px}
@@ -74,7 +77,31 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .box textarea:focus-visible{outline:2px solid var(--brass-hi)}
 .box .msg{font-size:13px;color:var(--muted)}
 .box .msg.err{color:#f0a48f}
-.menu .how{margin:6px 12px 6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.menu.left{right:auto;left:max(16px,calc(env(safe-area-inset-left,0px) + 12px))}
+.menu .head{display:flex;justify-content:space-between;align-items:baseline;margin:8px 12px 4px;font:800 11px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.menu .head:first-child{margin-top:4px}
+.menu .head .val{letter-spacing:.04em;text-transform:none;font-size:13px}
+.menu .name-box{margin:0 4px;padding:8px 10px}
+.menu .name-box label{font-size:12px;color:var(--muted)}
+.menu .note{margin:0 12px 6px;font-size:12.5px;line-height:1.4;color:var(--muted)}
+.menu>.row{display:flex;margin:2px 4px 6px}
+.menu>.row button{all:unset;cursor:pointer;flex:1;text-align:center;min-height:44px;border-radius:7px;font-weight:800;font-size:14px;background:rgba(239,207,134,.12);color:var(--cream)}
+.menu>.row button:focus-visible{outline:2px solid var(--brass-hi)}
+#app:not(.lh) .lh-only{display:none}
+.menu .how{margin:2px 12px 8px;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;font-size:13.5px;line-height:1.4;color:var(--muted)}
+.menu .how li{display:flex;gap:9px}
+.menu .how b{flex:none;width:76px;color:var(--cream)}
+.medals{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:2px 8px 4px}
+.medal{all:unset;box-sizing:border-box;cursor:pointer;aspect-ratio:1;max-width:60px;width:100%;justify-self:center;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 50%,#2a221a 58%,#16110c 60%);border:1.5px dashed rgba(198,154,75,.45);color:rgba(194,176,142,.45)}
+.medal svg{width:58%;height:58%}
+.medal.got{border:2px solid #6d5124;background:radial-gradient(circle at 35% 30%,#fff0b5,#d1a14a 45%,#7a5a20);color:#3a2610;box-shadow:inset 0 0 0 3px rgba(255,240,200,.35),0 2px 4px rgba(0,0,0,.5)}
+.medal[aria-pressed="true"]{outline:2px solid var(--brass-hi);outline-offset:2px}
+.medal:focus-visible{outline:2px dashed var(--brass-hi);outline-offset:2px}
+.mark-note{margin:2px 4px 4px;padding:8px 10px}
+.mark-note p{font-size:13px;color:var(--muted)}
+.mark-note b{display:block;font-size:14.5px;color:var(--cream)}
+.mark-note .row{margin-top:4px}
+@media (max-width:1000px) and (min-height:461px){.menu{max-height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 236px)}}
 
 /* bottom instruments: material coins above the tool dock */
 .palette{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 86px);display:flex;align-items:center;gap:6px;padding:5px 8px 5px 12px}
@@ -191,6 +218,20 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
 .home-pill.off{opacity:0;transform:translateY(-6px);pointer-events:none;visibility:hidden;transition:opacity .3s ease,transform .3s ease,visibility 0s .3s}
 .home-pill:focus-visible{outline:2px solid var(--brass-hi);outline-offset:2px}
 #app.pc .home-pill{display:none}
+.ride-pill{gap:9px;padding:0 11px 0 15px}
+.ride-pill svg{width:16px;height:16px}
+#app.riding .palette,#app.riding .dock,#app.riding .home-pill:not(.ride-pill){opacity:0;pointer-events:none;visibility:hidden}
+.hold.ride circle{fill:rgba(239,207,134,.12);stroke:var(--brass-hi)}
+/* Little hands: only the town, a big day-and-night button and a gear that must be held */
+#app.lh .palette,#app.lh .dock,#app.lh #pc-btn,#app.lh .home-pill,#app.lh .hint{display:none}
+#app.lh .brand{pointer-events:none}
+#app.lh .brand .bt::after{display:none}
+#app.lh #time-btn{width:84px;height:84px}
+#app.lh #time-btn svg{width:46px;height:46px}
+#app.lh .side{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
+#app.lh .gear{opacity:.55}
+.gear.holding{animation:gearhold 1.5s linear forwards}
+@keyframes gearhold{from{box-shadow:0 0 0 0 rgba(239,207,134,.2),0 8px 22px var(--shadow)}to{box-shadow:0 0 0 9px rgba(239,207,134,.75),0 8px 22px var(--shadow);opacity:1}}
 @media (max-height:460px){
   .hint{padding:6px 12px;font-size:13px;max-width:min(420px,calc(100vw - 32px))}
   .hint span{font-size:12px}
@@ -214,10 +255,10 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
   <canvas id="scene" tabindex="0" aria-label="Harbour. Tap the water to build; drag to look around."></canvas>
   <div class="vignette" aria-hidden="true"></div>
 
-  <header class="brand plate">
-    <h1>Brasshaven</h1>
-    <p id="harbour-no">Harbour No. 1887</p>
-  </header>
+  <button class="brand plate" id="brand" aria-label="Your harbour" aria-expanded="false" aria-controls="hmenu">
+    <span class="bt">Brasshaven</span>
+    <span class="bn" id="harbour-no">Harbour No. 1887</span>
+  </button>
 
   <button class="gear plate" id="gear" aria-label="Menu" aria-expanded="false" aria-controls="menu">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 2.8h3.4l.5 2.4a7.5 7.5 0 0 1 2 1.2l2.3-.8 1.7 2.9-1.8 1.6a7.6 7.6 0 0 1 0 2.4l1.8 1.6-1.7 2.9-2.3-.8a7.5 7.5 0 0 1-2 1.2l-.5 2.4h-3.4l-.5-2.4a7.5 7.5 0 0 1-2-1.2l-2.3.8-1.7-2.9 1.8-1.6a7.6 7.6 0 0 1 0-2.4L3.8 8.5l1.7-2.9 2.3.8a7.5 7.5 0 0 1 2-1.2z"/><circle cx="12" cy="12" r="3.1"/></svg>
@@ -232,59 +273,71 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
     </button>
   </div>
 
-  <div class="menu plate" id="menu" hidden>
-    <button class="item" id="m-slots"><span>Harbours</span><span class="val" id="m-slots-val">1 of 8</span></button>
+  <div class="menu plate left" id="hmenu" role="dialog" aria-label="Your harbour" hidden>
+    <div class="head">This harbour</div>
+    <div class="box name-box">
+      <label for="name-in">Name</label>
+      <input id="name-in" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="Harbour No. 1887" enterkeyhint="done">
+    </div>
+    <div class="seg"><span>Layout</span><div role="group" aria-label="Layout of this harbour: open water or islands">
+      <button id="w-open" aria-pressed="true">Open</button><button id="w-isles" aria-pressed="false">Islands</button>
+    </div></div>
+    <div class="head">Landmarks <span class="val" id="m-marks-val">0 of 8</span></div>
+    <div class="medals" id="marks-list"></div>
+    <div class="box mark-note" id="mark-note"><p id="mark-text">Tap a medal to see what it is, or how to build it.</p></div>
+    <div class="rule"></div>
+    <button class="item" id="m-share"><span>Share or open a town</span></button>
+    <div class="box" id="share-box" hidden>
+      <div class="row"><button class="go" id="share-copy">Copy this town</button></div>
+      <p class="msg" id="share-msg" role="status"></p>
+      <textarea id="share-out" readonly aria-label="Town code" hidden></textarea>
+      <label for="code-in">Or paste a town code or link</label>
+      <textarea id="code-in" spellcheck="false" autocomplete="off"></textarea>
+      <div class="row"><button class="go" id="code-go">Open town</button></div>
+      <p class="msg" id="code-msg" role="status"></p>
+    </div>
+    <button class="item" id="m-slots"><span>Your harbours</span><span class="val" id="m-slots-val">1 of 8</span></button>
     <div class="box" id="slots-box" hidden>
       <ul class="slots" id="slots-list"></ul>
       <div class="box warn" id="slot-confirm" hidden>
         <p id="slot-confirm-msg"></p>
         <div class="row"><button class="yes" id="slot-del-yes">Delete</button><button class="no" id="slot-del-no">Keep</button></div>
       </div>
-      <div class="seg"><span>Layout</span><div role="group" aria-label="Open layout or islands">
-        <button id="w-open" aria-pressed="true">Open</button><button id="w-isles" aria-pressed="false">Islands</button>
-      </div></div>
       <div class="row"><button class="go" id="slot-new">New harbour</button></div>
       <p class="msg" id="slots-msg" role="status"></p>
     </div>
-    <button class="item" id="m-share"><span>Share this town</span></button>
-    <div class="box" id="share-box" hidden>
-      <p class="msg" id="share-msg" role="status"></p>
-      <textarea id="share-out" readonly aria-label="Town code"></textarea>
-    </div>
-    <button class="item" id="m-open"><span>Open a town code</span></button>
-    <div class="box" id="open-box" hidden>
-      <label for="code-in">Paste a town code or link</label>
-      <textarea id="code-in" spellcheck="false" autocomplete="off"></textarea>
-      <div class="row"><button class="go" id="code-go">Open town</button><button class="no" id="code-cancel">Cancel</button></div>
-      <p class="msg" id="code-msg" role="status"></p>
-    </div>
-    <button class="item" id="m-marks"><span>Landmarks</span><span class="val" id="m-marks-val">0 of 7</span></button>
-    <div class="box" id="marks-box" hidden><ul class="marks" id="marks-list"></ul></div>
     <div class="rule"></div>
-    <button class="item" id="m-view"><span>Reset view</span></button>
-    <button class="item" id="m-sound" aria-pressed="true"><span>Sound</span><span class="val" id="m-sound-val">On</span></button>
-    <label class="seg"><span>Volume</span><input type="range" id="m-vol" min="0" max="100" step="5" value="70"></label>
+    <button class="item" id="m-clear"><span class="danger">Clear this harbour</span></button>
+    <div class="box warn" id="confirm" hidden>
+      <p>Pull down every building and quay? You can undo this.</p>
+      <div class="row"><button class="yes" id="c-yes">Clear</button><button class="no" id="c-no">Keep</button></div>
+    </div>
+  </div>
+
+  <div class="menu plate" id="menu" role="dialog" aria-label="Settings" hidden>
+    <div class="head">Settings</div>
+    <label class="seg"><span>Volume</span><input type="range" id="m-vol" min="0" max="100" step="5" value="70" aria-label="Volume; all the way down is off"></label>
     <label class="seg"><span>Ambience</span><input type="range" id="m-amb" min="0" max="100" step="5" value="60" aria-label="Ambience: the harbour's own sounds"></label>
+    <div class="seg"><span>Day</span><div role="group" aria-label="Day: turning or still">
+      <button id="d-turn" aria-pressed="true">Turning</button><button id="d-still" aria-pressed="false">Still</button>
+    </div></div>
     <div class="seg"><span>Motion</span><div role="group" aria-label="Motion">
       <button id="mo-full" aria-pressed="true">Full</button><button id="mo-calm" aria-pressed="false">Calm</button>
     </div></div>
     <div class="seg"><span>Detail</span><div role="group" aria-label="Detail level">
       <button id="q-auto" aria-pressed="true">Auto</button><button id="q-high" aria-pressed="false">High</button><button id="q-low" aria-pressed="false">Low</button>
     </div></div>
-    <button class="item" id="m-tips" aria-pressed="true"><span>Tips</span><span class="val" id="m-tips-val">On</span></button>
-    <button class="item" id="m-name"><span>Name your harbour</span></button>
-    <div class="box" id="name-box" hidden>
-      <label for="name-in">Harbour name</label>
-      <input id="name-in" type="text" maxlength="28" autocomplete="off" spellcheck="false" placeholder="Harbour No. 1887">
-      <div class="row"><button class="go" id="name-go">Save name</button><button class="no" id="name-cancel">Cancel</button></div>
-    </div>
+    <div class="seg"><span>Tips</span><div role="group" aria-label="Tips">
+      <button id="t-on" aria-pressed="true">On</button><button id="t-off" aria-pressed="false">Off</button>
+    </div></div>
+    <div class="seg"><span>Little hands</span><div role="group" aria-label="Little hands mode, for small children">
+      <button id="lh-on" aria-pressed="false">On</button><button id="lh-off" aria-pressed="true">Off</button>
+    </div></div>
+    <p class="note" id="lh-note">Every tap builds or makes something happen, nothing can be pulled down, and the view turns by itself. Little hands keeps its own harbour. Hold the gear to come back here.</p>
+    <div class="row lh-only"><button class="no wide" id="lh-tidy">Tidy up the little harbour</button></div>
     <div class="rule"></div>
-    <button class="item" id="m-clear"><span class="danger">Clear the harbour</span></button>
-    <div class="box warn" id="confirm" hidden>
-      <p>Pull down every building and quay? You can undo this.</p>
-      <div class="row"><button class="yes" id="c-yes">Clear</button><button class="no" id="c-no">Keep</button></div>
-    </div>
-    <p class="how" id="how"></p>
+    <button class="item" id="m-how" aria-expanded="false"><span>How to play</span></button>
+    <ul class="how" id="how" hidden></ul>
   </div>
 
   <div class="hint" id="hint" role="status"></div>
@@ -294,6 +347,7 @@ body{margin:0;background:var(--sky);color:var(--cream);font-family:var(--font-ui
   <div class="flash" id="flash" aria-hidden="true"></div>
   <div class="hold" id="hold" aria-hidden="true"><svg viewBox="0 0 88 88"><circle cx="44" cy="44" r="38"/></svg></div>
   <button class="home-pill plate off" id="home-pill" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.2 12 4.6l8 6.6"/><path d="M6.2 9.6v9.6h11.6V9.6"/><path d="M10.2 19.2v-5h3.6v5"/></svg><span>Back to the harbour</span></button>
+  <button class="home-pill ride-pill plate off" id="ride-pill" tabindex="-1" aria-label="Stop riding along"><span id="ride-name">Riding along</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
   <div class="pc-bar plate riveted" id="pc-bar" hidden>
     <button class="txt" id="pc-cancel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg><span>Done</span></button>
     <button class="shutter" id="pc-snap" aria-label="Take the picture"></button>
@@ -2849,7 +2903,10 @@ const haloMat = pointsMat(true); haloMat.uniforms.uCol.value.setRGB(1.0, 0.62, 0
 const halos = new THREE.Points(new THREE.BufferGeometry(), haloMat); halos.frustumCulled = false; halos.renderOrder = 6; halos.visible = false; scene.add(halos);
 function rebuildHalos() {
   const n = lampList.length, p = new Float32Array(n * 3), sz = new Float32Array(n), a = new Float32Array(n);
-  lampList.forEach((l, i) => { p.set(l, i * 3); sz[i] = 0.62; a[i] = 0.7; });
+  // a lamp new since dusk is lit already, unless the lamplighter is still on his round
+  const keep = new Set();
+  lampList.forEach((l, i) => { p.set(l, i * 3); sz[i] = 0.62; const k = lampKey(l); keep.add(k); if (!lampLevel.has(k)) lampLevel.set(k, lampsOn && !lighting ? 1 : 0); a[i] = 0.7 * lampLevel.get(k); });
+  for (const k of [...lampLevel.keys()]) if (!keep.has(k)) lampLevel.delete(k);
   halos.geometry.dispose();
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('size', new THREE.BufferAttribute(sz, 1)); g.setAttribute('alpha', new THREE.BufferAttribute(a, 1));
@@ -3282,6 +3339,7 @@ const walkIM = {
   headC: lifeIM(automatonHead(2), autoMat, WALK_MAX),
   legs: lifeIM(new THREE.BoxGeometry(0.014, 0.075, 0.014).translate(0, -0.0375, 0), legMat, WALK_MAX * 2),
   lantern: lifeIM(new THREE.BoxGeometry(0.018, 0.026, 0.018), lanternMat, WALK_MAX),
+  pole: lifeIM(CYL(0.0035, 0.0035, 0.3, 5, 0, 0.15, 0), autoMat, 4),
 };
 walkIM.lantern.castShadow = false;
 for (const im of [walkIM.bodyA, walkIM.bodyB]) im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(WALK_MAX * 3).fill(1), 3);
@@ -3342,6 +3400,7 @@ function arrive(w) {
   if (w.state === 'emerge') w.state = 'walk';
   const u = w.node;
   if (!walkable[u]) { w.state = 'fade'; return; }
+  if (ride && ride.ref === w && w.steps < 4) w.steps = 4;
   w.steps--;
   if (w.steps <= 0) {
     const d = doors.find((dd) => dd.w === u);
@@ -3349,15 +3408,17 @@ function arrive(w) {
     if (w.steps < -14 || !doors.length) { w.state = 'fade'; return; }
   }
   // the market is where townsfolk linger longest
-  if (isMarket(u) && occ[u] <= 1 && Math.random() < 0.6) w.pause = rr(1.6, 4.5);
+  if (w.lighter && lighting) { /* on his round */ }
+  else if (isMarket(u) && occ[u] <= 1 && Math.random() < 0.6) w.pause = rr(1.6, 4.5);
   else if (Math.random() < (stopAt[u] && occ[u] <= 1 ? 0.35 : 0.08)) w.pause = rr(0.8, 2.6);
   // mostly straight on, now and then round a corner, rarely back the way it came, and away from crowds
-  const hx = Math.cos(w.heading), hz = -Math.sin(w.heading);
+  const hx = Math.cos(w.heading), hz = -Math.sin(w.heading), lamp = w.lighter && lighting ? lamplighterPull(u) : null;
   let best = -1, bs = -1e9;
   for (const n of ringW[u]) {
     if (!walkable[n] || occ[n] >= 2 || gateShut.has(n)) continue;
     const dx = X[n] - X[u], dz = Z[n] - Z[u], l = Math.hypot(dx, dz) || 1;
-    const s = (dx * hx + dz * hz) / l + Math.random() * 1.3 - (n === w.prev ? 2.5 : 0) - crowd(n) * 0.9;
+    let s = (dx * hx + dz * hz) / l + Math.random() * 1.3 - (n === w.prev ? 2.5 : 0) - crowd(n) * 0.9;
+    if (lamp) s -= Math.hypot(lamp[0] - X[n], lamp[2] - Z[n]) * 1.6;
     if (s > bs) { bs = s; best = n; }
   }
   if (best < 0) { w.pause = rr(1, 2.5); w.prev = -1; return; }
@@ -3372,12 +3433,13 @@ function updateWalkers(dt) {
   for (const w of walkers) if (w.state !== 'fade' && w.state !== 'gone' && w.node >= 0) occ[w.node]++;
   spawnT -= dt;
   if (walkers.length < want && spawnT <= 0 && walkNodes.length) { spawnWalker(); spawnT = rr(0.4, 1.2); }
-  if (walkers.length > want + 2) for (const w of walkers) if (w.state === 'walk' && w.steps > 1) { w.steps = 1; break; }
+  if (walkers.length > want + 2) for (const w of walkers) if (w.state === 'walk' && w.steps > 1 && !w.lighter && !(ride && ride.ref === w)) { w.steps = 1; break; }
   const hurry = REDUCED ? 0.6 : 1;
   for (let i = walkers.length - 1; i >= 0; i--) {
     const w = walkers[i];
     if (w.state === 'gone') { walkers.splice(i, 1); continue; }
     if (w.state === 'fade') { w.scale -= dt * 2.5; w.moving = 0; if (w.scale <= 0) walkers.splice(i, 1); continue; }
+    if (w.hop > 0) w.hop = Math.max(0, w.hop - dt);
     const dx = w.gx - w.x, dz = w.gz - w.z, d = Math.hypot(dx, dz);
     w.scale = w.state === 'enter' ? Math.min(w.scale, d / 0.12 + 0.08) : Math.min(1, w.scale + dt * 3);
     if (w.pause > 0) { w.pause -= dt; w.moving = Math.max(0, w.moving - dt * 4); continue; }
@@ -3399,10 +3461,10 @@ const lifeHalo = new THREE.Points(lhGeo, haloMat); lifeHalo.frustumCulled = fals
 let nLights = 0;
 function addLight(x, y, z, size) { if (nLights >= LH_MAX) return; lhPos[nLights * 3] = x; lhPos[nLights * 3 + 1] = y; lhPos[nLights * 3 + 2] = z; lhSize[nLights] = size; nLights++; }
 function drawWalkers(night) {
-  let nA = 0, nB = 0, hA = 0, hB = 0, hC = 0, nl = 0, nLan = 0;
+  let nA = 0, nB = 0, hA = 0, hB = 0, hC = 0, nl = 0, nLan = 0, nPole = 0;
   for (const w of walkers) {
     if (w.scale <= 0.01) continue;
-    const s = w.scale * PERSON, bob = Math.abs(Math.sin(w.phase)) * 0.008 * w.moving * PERSON;
+    const s = w.scale * PERSON, bob = Math.abs(Math.sin(w.phase)) * 0.008 * w.moving * PERSON + (w.hop > 0 ? Math.sin(Math.PI * (1 - w.hop / 0.55)) * 0.045 * PERSON : 0);
     _o3.position.set(w.x, GROUND_TOP + bob, w.z); _o3.rotation.set(0, w.heading, 0); _o3.scale.setScalar(s); _o3.updateMatrix();
     const body = w.kind === 0 ? walkIM.bodyA : walkIM.bodyB, bi = w.kind === 0 ? nA++ : nB++;
     body.setMatrixAt(bi, _o3.matrix); body.setColorAt(bi, w.color);
@@ -3414,7 +3476,18 @@ function drawWalkers(night) {
       _o3.rotation.set(0, w.heading, sw * side); _o3.updateMatrix();
       walkIM.legs.setMatrixAt(nl++, _o3.matrix);
     }
-    if (night > 0.3 && w.lantern && w.kind !== 2) {
+    if (w.lighter) {
+      // a long brass pole, its wick alight while there are lamps to light
+      const bx = 0.05 * s, bz = 0.045 * s;
+      _o3.position.set(w.x + bx * ch + bz * sh, GROUND_TOP + bob + 0.11 * s, w.z - bx * sh + bz * ch); _o3.rotation.set(0, w.heading, -0.3); _o3.scale.setScalar(s); _o3.updateMatrix();
+      walkIM.pole.setMatrixAt(nPole++, _o3.matrix);
+      if (night > 0.15) {
+        const tx = 0.139 * s, tz = 0.045 * s, px = w.x + tx * ch + tz * sh, pz = w.z - tx * sh + tz * ch, py = GROUND_TOP + bob + 0.4 * s;
+        _o3.position.set(px, py, pz); _o3.rotation.set(0, w.heading, 0); _o3.scale.setScalar(s * 0.6); _o3.updateMatrix();
+        walkIM.lantern.setMatrixAt(nLan++, _o3.matrix);
+        addLight(px, py, pz, 0.16 * s);
+      }
+    } else if (night > 0.3 && w.lantern && w.kind !== 2) {
       const lx = 0.05 * s, lz = 0.045 * s, px = w.x + lx * ch + lz * sh, pz = w.z - lx * sh + lz * ch, py = GROUND_TOP + bob + 0.125 * s;
       _o3.position.set(px, py, pz); _o3.rotation.set(0, w.heading, 0); _o3.updateMatrix();
       walkIM.lantern.setMatrixAt(nLan++, _o3.matrix);
@@ -3422,7 +3495,7 @@ function drawWalkers(night) {
     }
   }
   const set = (im, n) => { im.count = n; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; };
-  set(walkIM.bodyA, nA); set(walkIM.bodyB, nB); set(walkIM.headA, hA); set(walkIM.headB, hB); set(walkIM.headC, hC); set(walkIM.legs, nl); set(walkIM.lantern, nLan);
+  set(walkIM.bodyA, nA); set(walkIM.bodyB, nB); set(walkIM.headA, hA); set(walkIM.headB, hB); set(walkIM.headC, hC); set(walkIM.legs, nl); set(walkIM.lantern, nLan); set(walkIM.pole, nPole);
 }
 
 // ---------- the shoreline, for the sound of the sea ----------
@@ -4685,7 +4758,7 @@ const NAME_MAX = 28;
 function cleanName(t) { return String(t || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX); }
 let harbourName = cleanName(store.get('name', ''));
 const shownName = () => harbourName || 'Harbour No. 1887';
-function renderName() { $('harbour-no').textContent = shownName(); }
+function renderName() { $('harbour-no').textContent = shownName(); const ni = $('name-in'); if (document.activeElement !== ni) ni.value = harbourName; }
 function setName(n) { harbourName = cleanName(n); store.set('name', harbourName); renderName(); }
 function worldState() { return { islands: world.islands, land: world.islands ? land.slice() : null }; }
 function takeWorld(w) { world.islands = !!(w && w.islands); land.fill(0); if (world.islands && w.land) land.set(w.land); }
@@ -4959,11 +5032,18 @@ function starterTown() {
 /* ============================================================
    10. Sound: a music-box pluck per block, pitched by height
    ============================================================ */
-let actx = null, soundOn = store.get('sound', true), master = null, volume = Math.max(0, Math.min(100, store.get('volume', 70) | 0));
+// one volume control: all the way down is off (an old Sound: Off setting becomes a volume of nought)
+let actx = null, master = null, volume = Math.max(0, Math.min(100, store.get('volume', 70) | 0));
+if (store.get('sound', true) === false) { volume = 0; store.set('volume', 0); store.set('sound', true); }
+let soundOn = volume > 0;
 const volGain = () => Math.pow(volume / 70, 1.7);
 // every sound runs through one master gain so the volume setting applies to all of it
 function bus() { if (!master) { master = actx.createGain(); master.gain.value = soundOn ? volGain() : 0; master.connect(actx.destination); } return master; }
-function setVolume(v) { volume = v; store.set('volume', v); if (master && actx) master.gain.setTargetAtTime(soundOn ? volGain() : 0, actx.currentTime, 0.02); }
+function setVolume(v) {
+  volume = v; store.set('volume', v); soundOn = v > 0;
+  if (master && actx) master.gain.setTargetAtTime(soundOn ? volGain() : 0, actx.currentTime, 0.02);
+  if (actx) { if (soundOn) actx.resume().catch(() => {}); else setTimeout(() => { if (!soundOn) actx.suspend().catch(() => {}); }, 200); }
+}
 function ensureAudio() {
   if (!soundOn) return;
   try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state !== 'running') actx.resume(); } catch (e) { actx = null; }
@@ -5063,7 +5143,7 @@ function planAction(hit, useTool) {
 let tool = 'build';
 let curMat = Math.max(0, Math.min(5, store.get('mat', 0) | 0));
 let hinted = store.get('hinted', false);
-let pending = null;
+let pending = null, lastAct = null;
 function lonely(v) { if (cols[v]) return false; for (const w of ringW[v]) if (cols[w]) return false; return true; }
 function act(sx, sy, useTool, ptype = 'mouse') {
   if (pcMode) return false;
@@ -5092,6 +5172,7 @@ function act(sx, sy, useTool, ptype = 'mouse') {
   userEdit = true;
   try { commit(plan.adds || [], plan.removes || [], plan.paints || []); } finally { userEdit = false; }
   const cells = plan.adds || plan.removes || plan.paints;
+  lastAct = plan.adds || null;
   flashGhost(cells, plan.adds ? 'build' : plan.removes ? 'remove' : 'paint');
   if (cells && cells.length) scatterGulls(X[cells[0][0]], Z[cells[0][0]]);
   if (plan.adds) plink(plan.y); else if (plan.removes) thunk(); else brush(plan.y);
@@ -5113,12 +5194,14 @@ const goal = { ...view };
 let homeView = { ...view };
 let yawVel = 0;
 function clampGoal() {
-  goal.dist = Math.max(4.5, Math.min(75, goal.dist));
+  goal.dist = Math.max(ride ? 1.2 : 4.5, Math.min(75, goal.dist));
   goal.pitch = Math.max(0.16, Math.min(1.38, goal.pitch));
+  if (ride) return;
   const r = Math.hypot(goal.tx, goal.tz), lim = RADIUS + 2;
   if (r > lim) { goal.tx *= lim / r; goal.tz *= lim / r; }
 }
 function updateCamera(dt) {
+  if (ride) followRide(dt); else if (littleOn) littleCamera(dt);
   // a flick keeps turning, and a two-finger drag keeps gliding, only once the fingers are off the glass
   if (!pointers.size) {
     if (Math.abs(yawVel) > 1e-4) { goal.yaw += yawVel * dt; yawVel *= Math.exp(-dt * 4.5); }
@@ -5225,6 +5308,7 @@ function moveMulti() {
 }
 function moveOne(p, fx, fy, touch) {
   const dx = p.x - fx, dy = p.y - fy;
+  if (ride) ride.userT = performance.now();
   if (p.mode === 'pan') { dragGround(fx, fy, p.x, p.y); if (touch) followNow(); return; }
   if (!drag) drag = { lock: null, ax: 0, ay: 0, lx: 0, ly: 0 };
   drag.ax += dx; drag.ay += dy;
@@ -5254,10 +5338,11 @@ function resolveHit(sx, sy, useTool, ptype) {
 }
 const holdEl = $('hold');
 function showHoldRing(x, y, ms) {
+  if (!tap || !tap.creature) holdEl.classList.remove('ride');
   holdEl.style.left = x + 'px'; holdEl.style.top = y + 'px'; holdEl.style.setProperty('--d', ms + 'ms');
   holdEl.classList.remove('on'); void holdEl.offsetWidth; holdEl.classList.add('on');
 }
-function hideHoldRing() { holdEl.classList.remove('on'); }
+function hideHoldRing() { holdEl.classList.remove('on'); setTimeout(() => { if (!holdEl.classList.contains('on')) holdEl.classList.remove('ride'); }, 150); }
 function clearHold() {
   clearTimeout(holdTimer); clearTimeout(fireTimer); hideHoldRing();
   if (tap && tap.armed && !ghostFade) { ghost.visible = false; ghostKey = ''; }
@@ -5277,28 +5362,44 @@ function armRemove(id) {
     tap = null;
   }, HOLD_FIRE - HOLD_ARM);
 }
+function armRide(id) {
+  if (!tap || tap.id !== id || pcMode || !tap.creature || tap.creature.kind === 'gull') return;
+  tap.armed = true; holdEl.classList.add('ride');
+  showHoldRing(tap.x, tap.y, HOLD_FIRE - HOLD_ARM);
+  fireTimer = setTimeout(() => {
+    if (!tap || tap.id !== id) return;
+    hideHoldRing(); const c = tap.creature; tap = null; startRide(c);
+  }, HOLD_FIRE - HOLD_ARM);
+}
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // a long press must not start the browser's text selection, magnifier or callout
 canvas.addEventListener('touchstart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 canvas.addEventListener('pointerdown', (e) => {
   canvas.focus({ preventScroll: true });
   try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-  ensureAudio(); noteInput(); closeMenu();
+  ensureAudio(); noteInput();
+  // a tap that closes a menu only closes it
+  const dismiss = menuOpen(); closeMenu();
+  if (littleOn) { if (!dismiss) littleTaps.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() }); return; }
   const touch = e.pointerType !== 'mouse';
   if (touch && !touchCount()) { Object.assign(goal, view); glideV.x = glideV.z = 0; }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, button: e.button, type: e.pointerType, mode: e.button === 1 || e.shiftKey ? 'pan' : 'orbit' });
   yawVel = 0;
   if (pointers.size === 1) {
     multiUsed = false; drag = null; clearHold();
-    tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), button: e.button, type: e.pointerType };
-    if (touch) holdTimer = setTimeout(() => armRemove(e.pointerId), HOLD_ARM);
-    else { ghostKey = ''; setGhost([], 'build'); }
+    tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), button: e.button, type: e.pointerType, dismiss };
+    // a person, boat or airship under the finger: a tap greets them, a hold goes along with them
+    if (!dismiss && !ride && e.button !== 2) tap.creature = creatureAt(e.clientX, e.clientY, false);
+    if (tap.creature) holdTimer = setTimeout(() => armRide(e.pointerId), HOLD_ARM);
+    else if (touch && !dismiss && !ride) holdTimer = setTimeout(() => armRemove(e.pointerId), HOLD_ARM);
+    if (!touch) { ghostKey = ''; setGhost([], 'build'); }
   } else {
     clearHold(); tap = null; drag = null;
     if (pointers.size === 2) startMulti();
   }
 });
 canvas.addEventListener('pointermove', (e) => {
+  const lt = littleTaps.get(e.pointerId); if (lt) { lt.x = e.clientX; lt.y = e.clientY; return; }
   const p = pointers.get(e.pointerId);
   if (!p) { if (e.pointerType === 'mouse') hover(e.clientX, e.clientY); return; }
   noteInput();
@@ -5322,6 +5423,12 @@ canvas.addEventListener('pointermove', (e) => {
   }
 });
 function endPointer(e) {
+  const lt = littleTaps.get(e.pointerId);
+  if (lt) {
+    littleTaps.delete(e.pointerId);
+    if (littleOn && e.type === 'pointerup' && Math.hypot(lt.x - lt.sx, lt.y - lt.sy) < 40 && performance.now() - lt.t < 2500) littleTap(lt.sx, lt.sy);
+    return;
+  }
   const p = pointers.get(e.pointerId); if (!p) return;
   if (multi && multi.seen.size) { multi.seen.clear(); moveMulti(); }
   pointers.delete(e.pointerId);
@@ -5330,7 +5437,11 @@ function endPointer(e) {
     clearHold();
     // a quick tap builds; a slow one on open water still builds; a hold that showed the red outline cancels
     const ok = e.type === 'pointerup' && !armed && (p.type === 'mouse' || held < HOLD_ARM || (empty && held < HOLD_FIRE + 400));
-    if (ok) act(tap.x, tap.y, tap.button === 2 ? 'remove' : tool, tap.type);
+    if (ok && !tap.dismiss) {
+      if (ride) endRide();
+      else if (tap.creature) reactTo(tap.creature, false);
+      else act(tap.x, tap.y, tap.button === 2 ? 'remove' : tool, tap.type);
+    }
     tap = null;
   }
   if (pointers.size >= 2) startMulti(); else multi = null;
@@ -5381,10 +5492,13 @@ window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
   if (e.target instanceof HTMLButtonElement && (e.key === ' ' || e.key === 'Enter')) return;
   const k = e.key.toLowerCase(); const mod = e.ctrlKey || e.metaKey;
+  if (littleOn) return;
   if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
   if (mod && k === 'y') { e.preventDefault(); redo(); return; }
   if (mod) return;
   noteInput();
+  if (littleOn) return;
+  if (k === 'escape' && ride) { endRide(); return; }
   if (k === 'b') setTool('build');
   else if (k === 'p') setTool('paint');
   else if (k === 'r') setTool('remove');
@@ -5436,7 +5550,7 @@ let hintTimer = 0;
 function showHint(main, sub) { hintEl.classList.remove('tip'); hintEl.textContent = ''; hintEl.append(document.createTextNode(main)); if (sub) { const s = document.createElement('span'); s.textContent = sub; hintEl.append(s); } hintEl.classList.remove('gone'); }
 function hideHint() { hintEl.classList.add('gone'); }
 let hintFlashing = false;
-function flashHint(msg, sub, ms) { clearTimeout(hintTimer); hintFlashing = true; showHint(msg, sub); hintTimer = setTimeout(() => { hintFlashing = false; restHint(); }, ms || (sub ? 2600 : 2200)); }
+function flashHint(msg, sub, ms) { if (littleOn) return; clearTimeout(hintTimer); hintFlashing = true; showHint(msg, sub); hintTimer = setTimeout(() => { hintFlashing = false; restHint(); }, ms || (sub ? 2600 : 2200)); }
 // each explanation is shown once per player; after that the game simply does the thing
 const SEEN_BEFORE = ['mat0', 'mat1', 'mat2', 'mat3', 'mat4', 'mat5', 'time0', 'time1', 'time2', 'time3'];
 const seen = new Set(store.get('seen', null) || (hinted ? SEEN_BEFORE : []));
@@ -5466,27 +5580,56 @@ function noteLandmarks(announce) {
   if (fresh.length) { store.set('found', [...foundSet]); if (announce) showFound(fresh[0]); }
   renderMarks();
 }
+const MARK_ICONS = {
+  lighthouse: 'M9 21l1.2-12h3.6L15 21zM9.5 9h5M10.5 9V6h3v3M12 3.5V6M4 5.5l4 2M20 5.5l-4 2',
+  observatory: 'M4 20h16M6 20v-6h12v6M6 14a6 6 0 0 1 12 0M12 8v4M14.5 8.5l3-5',
+  cathedral: 'M3 21v-9l3-3 3 3v9M9 21v-7h12v7M18 21v-3a1.5 1.5 0 0 0-3 0v3M6 9V4.5M4.8 6h2.4',
+  gate: 'M3 21V6h4v15M17 21V6h4v15M7 9h10v4H7M10 21v-4a2 2 0 0 1 4 0v4',
+  ironworks: 'M3 21v-9l5 3v-3l5 3v-3l4 2.5V4h3v17zM18.5 4V2.5',
+  gasworks: 'M5 21V8h14v13M5 8l2-3h10l2 3M5 12h14M5 16h14M9 8v13M15 8v13',
+  market: 'M3 11l9-6 9 6zM4 11v9h16v-9M8 11l1.5-5M16 11l-1.5-5M12 5v6M10 20v-5h4v5',
+  shipyard: 'M3 12h18l-2.5 4h-13zM6 12V8.5h8V12M2 21l20-3',
+};
+let markSel = null;
 function renderMarks() {
   $('m-marks-val').textContent = `${foundSet.size} of ${LANDMARKS.length}`;
-  const ul = $('marks-list'); if ($('marks-box').hidden) return;
-  ul.textContent = '';
+  const grid = $('marks-list'); grid.textContent = '';
   for (const d of LANDMARKS) {
-    const li = document.createElement('li'), div = document.createElement('div'), b = document.createElement('b'), got = foundSet.has(d.id);
-    li.className = got ? 'yes' : 'no'; b.textContent = got ? d.name : 'Not yet found';
-    div.append(b, document.createTextNode(got ? d.line : d.hint)); li.append(div);
-    const here = got && landmarks.find((l) => l.id === d.id);
-    if (here) {
-      const btn = document.createElement('button'); btn.className = 'go'; btn.textContent = 'Show'; btn.setAttribute('aria-label', 'Show the ' + d.name);
-      btn.addEventListener('click', () => { glideV.x = glideV.z = 0; Object.assign(goal, { tx: X[here.v], tz: Z[here.v], ty: 2.4, dist: Math.min(goal.dist, 13) }); closeMenu(); });
-      li.append(btn);
-    }
-    ul.append(li);
+    const got = foundSet.has(d.id), btn = document.createElement('button');
+    btn.className = 'medal' + (got ? ' got' : ''); btn.setAttribute('aria-pressed', String(markSel === d.id));
+    btn.setAttribute('aria-label', got ? d.name : 'A landmark not yet found');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${MARK_ICONS[d.id]}"/></svg>`;
+    btn.addEventListener('click', () => { markSel = markSel === d.id ? null : d.id; renderMarks(); plink(got ? 9 : 4, 0.4); });
+    grid.append(btn);
+  }
+  const note = $('mark-note'); note.textContent = '';
+  const d = LANDMARKS.find((l) => l.id === markSel);
+  const p = document.createElement('p');
+  if (!d) { p.textContent = foundSet.size ? 'Tap a medal to see a landmark, or how to build one you haven’t found.' : 'Certain arrangements of blocks become landmarks. Tap a medal to see how to build one.'; note.append(p); return; }
+  const got = foundSet.has(d.id), b = document.createElement('b');
+  b.textContent = got ? d.name : 'Not found yet';
+  p.append(b, document.createTextNode(got ? d.line : d.hint)); note.append(p);
+  const here = got && landmarks.find((l) => l.id === d.id);
+  if (here) {
+    const row = document.createElement('div'), btn = document.createElement('button');
+    row.className = 'row'; btn.className = 'go'; btn.textContent = 'Show me'; btn.setAttribute('aria-label', 'Show the ' + d.name);
+    btn.addEventListener('click', () => { endRide(); glideV.x = glideV.z = 0; Object.assign(goal, { tx: X[here.v], tz: Z[here.v], ty: 2.4, dist: Math.min(goal.dist, 13) }); closeMenu(); });
+    row.append(btn); note.append(row);
   }
 }
-const HOW = COARSE
-  ? 'Tap water to build a house. Tap a roof to add a storey, a wall to build beside it. Pick a material from the coins; Paint changes a block’s material. Hold a block until the ring fills to remove it. Drag one finger to turn the view; two fingers move it, pinch to zoom, twist to turn. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial changes the time of day, and the camera takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Skiffs, steam launches and a paddle steamer call at open quays and timber jetties, and slip under bridges where there is room. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.'
-  : 'Click water to build a house. Click a roof to add a storey, a wall to build beside it. Pick a material from the coins (keys 1–6); Paint (P) changes a block’s material. Right-click removes. Drag to turn, scroll to zoom toward the pointer, Shift-drag to pan. Ctrl Z undoes. Cast-iron houses carry steam engines on their open walls, and timber houses on the water turn mill wheels. The dial (T) changes the time of day, and the camera (C) takes a postcard of your harbour. Clockwork townsfolk walk the open quays and streets, and gulls settle on the roofs. Skiffs, steam launches and a paddle steamer call at open quays and timber jetties, and slip under bridges where there is room. Some arrangements of blocks become landmarks, such as a lighthouse or a cathedral; Landmarks in this menu lists the ones you have found and hints at the rest. Build out to the edge and the harbour grows, to about three times its first size. Harbours in this menu keeps up to eight towns side by side. In the Harbours menu, Layout switches between open building and islands, where stone quays reach one cell from the shore and timber jetties three. Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.';
-$('how').textContent = HOW;
+const HOW = [
+  ['Build', COARSE ? 'Tap the water. Tap a roof to add a storey, a wall to build beside it.' : 'Click the water. Click a roof to add a storey, a wall to build beside it.'],
+  ['Materials', COARSE ? 'Pick a coin. Paint changes a block’s material.' : 'Pick a coin (keys 1–6). Paint (P) changes a block’s material.'],
+  ['Remove', COARSE ? 'Hold a block until the ring fills. Undo puts it back.' : 'Right-click a block. Ctrl Z undoes.'],
+  ['Look', COARSE ? 'Drag to turn. Two fingers move, pinch zooms, twist turns.' : 'Drag to turn, scroll to zoom, Shift-drag to pan.'],
+  ['Townsfolk', COARSE ? 'Tap a person, boat, gull or airship. Hold one to ride along.' : 'Click a person, boat, gull or airship. Hold one to ride along.'],
+  ['Time', 'The day turns by itself; the dial jumps ahead. A lamplighter lights the streets at dusk.'],
+  ['Landmarks', 'Some arrangements become a lighthouse, a cathedral and more. Tap the harbour’s name to see them.'],
+  ['Harbours', 'Tap the harbour’s name to rename it, switch to islands, share it, or keep up to eight towns.'],
+];
+for (const [k, t] of HOW) { const li = document.createElement('li'), b = document.createElement('b'), sp = document.createElement('span'); b.textContent = k; sp.textContent = t; li.append(b, sp); $('how').append(li); }
+const howEnd = document.createElement('li'); howEnd.innerHTML = '<span>Brasshaven is a steampunk homage to Townscaper by Oskar Stålberg.</span>'; $('how').append(howEnd);
+$('m-how').addEventListener('click', () => { const h = $('how'); h.hidden = !h.hidden; $('m-how').setAttribute('aria-expanded', String(!h.hidden)); });
 
 // time of day dial: cycles morning, golden hour, dusk and night
 const TIME_ICONS = [
@@ -5501,7 +5644,9 @@ function renderTime() {
   timeBtn.setAttribute('aria-label', 'Time of day: ' + TIMES[todIndex].name);
 }
 function cycleTime() {
-  setTime(todIndex + 1); renderTime(); renderPcTime(); tipEvent('time');
+  // in Little hands the dial is a big day-and-night switch
+  if (littleOn) { setTime(todIndex >= 2 ? 1 : 3); syncDay(); renderTime(); renderPcTime(); plink(todIndex === 3 ? 4 : 9, 0.6); setTimeout(() => plink(todIndex === 3 ? 2 : 11, 0.5), 140); return; }
+  setTime(todIndex + 1); syncDay(); renderTime(); renderPcTime(); tipEvent('time');
   if (firstTime('time' + todIndex)) flashHint(TIMES[todIndex].name, TIMES[todIndex].line); else flashHint(TIMES[todIndex].name, null, 1100);
   plink(todIndex === 3 ? 2 : 6 + todIndex, 0.35);
 }
@@ -5715,7 +5860,7 @@ const TIPS = [
 // players from before the tips existed already know everything but the postcard
 const tipsDone = new Set(store.get('tipsDone', null) || (hinted ? TIPS.slice(0, -1).map((t) => t.id) : []));
 let tipsOn = store.get('tips', true), tipTimer = 0, beckoning = null;
-function currentTip() { return tipsOn ? TIPS.find((t) => !tipsDone.has(t.id)) || null : null; }
+function currentTip() { return tipsOn && !littleOn && !ride ? TIPS.find((t) => !tipsDone.has(t.id)) || null : null; }
 function tipEvent(id) {
   if (tipsDone.has(id)) return;
   const was = currentTip();
@@ -5747,15 +5892,16 @@ function setTips(on) {
   if (on && !currentTip()) { tipsDone.clear(); store.set('tipsDone', []); }
   renderTips(); restHint();
 }
-function renderTips() { $('m-tips').setAttribute('aria-pressed', String(tipsOn)); $('m-tips-val').textContent = tipsOn ? 'On' : 'Off'; }
-$('m-tips').addEventListener('click', () => setTips(!tipsOn));
+function renderTips() { $('t-on').setAttribute('aria-pressed', String(tipsOn)); $('t-off').setAttribute('aria-pressed', String(!tipsOn)); }
+$('t-on').addEventListener('click', () => { if (!tipsOn) setTips(true); });
+$('t-off').addEventListener('click', () => { if (tipsOn) setTips(false); });
 renderTips();
 
 // ---------- settings: volume, motion, the harbour's name ----------
 const volIn = $('m-vol');
 function renderVol() { volIn.value = String(volume); volIn.style.setProperty('--v', volume + '%'); }
 volIn.addEventListener('input', () => { setVolume(+volIn.value); renderVol(); });
-volIn.addEventListener('change', () => { ensureAudio(); plink(6, 0.7); });
+volIn.addEventListener('change', () => { ensureAudio(); if (soundOn) plink(6, 0.7); });
 renderVol();
 const ambIn = $('m-amb');
 function renderAmb() { ambIn.value = String(ambVolume); ambIn.style.setProperty('--v', ambVolume + '%'); }
@@ -5768,29 +5914,19 @@ function renderMotion() {
 }
 for (const [id, calm] of [['mo-full', false], ['mo-calm', true]]) $(id).addEventListener('click', () => { REDUCED = calm; store.set('motion', calm ? 'calm' : 'full'); yawVel = 0; renderMotion(); });
 renderMotion();
-$('m-marks').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm', 'name-box', 'slots-box']) $(id).hidden = true;
-  const b = $('marks-box'); b.hidden = !b.hidden; renderMarks();
-});
-$('m-name').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm', 'marks-box', 'slots-box']) $(id).hidden = true;
-  const b = $('name-box'); b.hidden = !b.hidden;
-  if (!b.hidden) { const i = $('name-in'); i.value = harbourName; i.focus(); i.select(); }
-});
-$('name-cancel').addEventListener('click', () => { $('name-box').hidden = true; });
 function saveName() {
   const n = cleanName($('name-in').value);
-  $('name-box').hidden = true;
+  $('name-in').value = n;
   if (n === harbourName) return;
   commit([], [], [], [harbourName, n]);
   flashHint(shownName(), n ? 'Your harbour has a name. Shared towns carry it.' : 'Back to the harbour’s old number');
 }
-$('name-go').addEventListener('click', saveName);
-$('name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } else if (e.key === 'Escape') { e.preventDefault(); $('name-box').hidden = true; } });
+$('name-in').addEventListener('change', saveName);
+$('name-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); $('name-in').blur(); } else if (e.key === 'Escape') { e.preventDefault(); $('name-in').value = harbourName; $('name-in').blur(); } });
 
 
 $('m-slots').addEventListener('click', () => {
-  for (const id of ['share-box', 'open-box', 'confirm', 'name-box', 'marks-box']) $(id).hidden = true;
+  for (const id of ['share-box', 'confirm']) $(id).hidden = true;
   const b = $('slots-box'); b.hidden = !b.hidden; $('slot-confirm').hidden = true;
   if (!b.hidden) { updateCamera(0); renderer.render(scene, camera); takeThumb(); }
   renderSlots();
@@ -5814,24 +5950,33 @@ $('slot-new').addEventListener('click', () => {
 });
 $('slot-del-no').addEventListener('click', () => { $('slot-confirm').hidden = true; });
 $('slot-del-yes').addEventListener('click', () => { $('slot-confirm').hidden = true; deleteSlot(slotDel); thunk(); renderSlots(); });
-const menu = $('menu'), gear = $('gear');
-const MENU_BOXES = ['confirm', 'share-box', 'open-box', 'name-box', 'marks-box', 'slots-box'];
-function closeMenu() { if (menu.hidden) return; menu.hidden = true; gear.setAttribute('aria-expanded', 'false'); for (const id of MENU_BOXES) $(id).hidden = true; }
-gear.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; gear.setAttribute('aria-expanded', String(open)); for (const id of MENU_BOXES) $(id).hidden = true; });
-$('m-view').addEventListener('click', () => { goHome(); closeMenu(); });
-$('home-pill').addEventListener('click', () => { goHome(); });
-function renderSound() { $('m-sound').setAttribute('aria-pressed', String(soundOn)); $('m-sound-val').textContent = soundOn ? 'On' : 'Off'; }
-$('m-sound').addEventListener('click', () => {
-  soundOn = !soundOn; store.set('sound', soundOn); renderSound();
-  if (master && actx) master.gain.setTargetAtTime(soundOn ? volGain() : 0, actx.currentTime, 0.04);
-  if (soundOn) { ensureAudio(); plink(5); } else if (actx) setTimeout(() => { if (!soundOn) actx.suspend().catch(() => {}); }, 200);
-});
+// two menus: the harbour's own sheet opens from its name plate, settings from the gear
+const menu = $('menu'), gear = $('gear'), hmenu = $('hmenu'), brand = $('brand');
+const MENU_BOXES = ['confirm', 'share-box', 'slots-box'];
+const menuOpen = () => !menu.hidden || !hmenu.hidden;
+function closeMenu() {
+  if (!menuOpen()) return;
+  if (document.activeElement === $('name-in')) saveName();
+  menu.hidden = hmenu.hidden = true; gear.setAttribute('aria-expanded', 'false'); brand.setAttribute('aria-expanded', 'false');
+  for (const id of MENU_BOXES) $(id).hidden = true;
+  markSel = null;
+}
+function openMenu(which) {
+  const was = which === 'h' ? !hmenu.hidden : !menu.hidden;
+  closeMenu(); if (was) return;
+  if (which === 'h') {
+    hmenu.hidden = false; brand.setAttribute('aria-expanded', 'true');
+    $('name-in').value = harbourName; renderMarks(); renderSlots(); hmenu.scrollTop = 0;
+  } else { menu.hidden = false; gear.setAttribute('aria-expanded', 'true'); menu.scrollTop = 0; }
+}
+gear.addEventListener('click', () => { if (!littleOn) openMenu('s'); });
+brand.addEventListener('click', () => { if (!littleOn) openMenu('h'); });
+$('home-pill').addEventListener('click', () => { endRide(); goHome(); });
 document.addEventListener('visibilitychange', () => {
   if (!actx) return;
   if (document.hidden) { lastHour = null; actx.suspend().catch(() => {}); } else if (soundOn) actx.resume().catch(() => {});
 });
-renderSound();
-$('m-clear').addEventListener('click', () => { $('confirm').hidden = false; $('c-yes').focus(); });
+$('m-clear').addEventListener('click', () => { for (const id of ['slots-box', 'share-box']) $(id).hidden = true; $('confirm').hidden = false; $('c-yes').focus(); });
 $('c-no').addEventListener('click', () => { $('confirm').hidden = true; });
 $('c-yes').addEventListener('click', () => {
   const removes = []; for (let v = 0; v < V; v++) for (let y = 0; y <= MAXL; y++) if (F(v, y)) removes.push([v, y]);
@@ -5840,9 +5985,12 @@ $('c-yes').addEventListener('click', () => {
 
 // sharing: inside the artifact viewer a link cannot be built, so share a code; on a normal host, share a link
 const FRAMED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
-$('m-share').addEventListener('click', async () => {
+$('m-share').addEventListener('click', () => {
+  for (const id of ['slots-box', 'confirm']) $(id).hidden = true;
+  const b = $('share-box'); b.hidden = !b.hidden; $('code-msg').textContent = ''; $('share-msg').textContent = ''; $('share-out').hidden = true;
+});
+$('share-copy').addEventListener('click', async () => {
   const box = $('share-box'), msg = $('share-msg'), out = $('share-out');
-  $('open-box').hidden = true;
   if (!cellCount) { box.hidden = false; out.hidden = true; msg.textContent = 'Build something first, then share it.'; return; }
   const copyTry = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText.bind(navigator.clipboard) : null;
   // the clipboard call must start inside the click, so hand it a promise of the text
@@ -5857,12 +6005,10 @@ $('m-share').addEventListener('click', async () => {
   box.hidden = false; out.hidden = false; out.value = text;
   msg.className = 'msg';
   msg.textContent = copied
-    ? (FRAMED ? 'Town code copied. Anyone can paste it into “Open a town code”.' : 'Link copied. Anyone who opens it sees this town.')
-    : 'Copy this code, then paste it into “Open a town code” to rebuild the town.';
+    ? (FRAMED ? 'Town code copied. Anyone can paste it below to rebuild the town.' : 'Link copied. Anyone who opens it sees this town.')
+    : 'Copy this code. Pasting it below rebuilds the town.';
   if (!copied) { out.focus(); out.select(); }
 });
-$('m-open').addEventListener('click', () => { $('share-box').hidden = true; const b = $('open-box'); b.hidden = !b.hidden; $('code-msg').textContent = ''; if (!b.hidden) $('code-in').focus(); });
-$('code-cancel').addEventListener('click', () => { $('open-box').hidden = true; });
 $('code-go').addEventListener('click', async () => {
   const msg = $('code-msg');
   try {
@@ -5901,7 +6047,7 @@ const frustum = new THREE.Frustum(), _pm = new THREE.Matrix4(), homePill = $('ho
 let lostShown = false, lostCheckT = 0;
 function checkLost() {
   let lost = false;
-  if (cellCount && !pcMode && !townBox.isEmpty()) {
+  if (cellCount && !pcMode && !ride && !littleOn && !townBox.isEmpty()) {
     _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(_pm);
     lost = !frustum.intersectsBox(townBox);
   }
@@ -5922,6 +6068,325 @@ function updatePointScale() {
   steamMat.uniforms.uMax.value = haloMat.uniforms.uMax.value = Math.max(64, pr * h * 0.3);
 }
 window.addEventListener('resize', resize);
+
+/* ============================================================
+   13b. Play: tap what moves, ride along, Little hands, a turning day and its lamplighter
+   ============================================================ */
+// ---------- tapping what moves: townsfolk, boats, gulls and airships answer back ----------
+const _sp = new THREE.Vector3();
+function screenOf(x, y, z) {
+  _sp.set(x, y, z).project(camera); if (_sp.z > 1 || _sp.z < -1) return null;
+  const r = canvas.getBoundingClientRect();
+  return [r.left + ((_sp.x + 1) / 2) * r.width, r.top + ((1 - _sp.y) / 2) * r.height];
+}
+const pxPerUnit = (x, y, z) => (canvas.clientHeight / 2) / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * Math.max(0.1, camera.position.distanceTo(_sp.set(x, y, z))));
+// what a finger on this spot would touch; little fingers get a more generous reach
+function creatureAt(sx, sy, generous) {
+  const slack = generous ? 30 : 8;
+  let best = null, bd = 1;
+  const test = (kind, ref, x, y, z, r) => {
+    const p = screenOf(x, y, z); if (!p) return;
+    const rad = r * pxPerUnit(x, y, z) + slack, d = Math.hypot(p[0] - sx, p[1] - sy) / rad;
+    if (d < bd) { bd = d; best = { kind, ref }; }
+  };
+  for (const w of walkers) if (w.scale > 0.5 && w.state !== 'fade' && w.state !== 'gone' && w.state !== 'enter') test('walker', w, w.x, GROUND_TOP + 0.21 * PERSON, w.z, 0.15 * PERSON);
+  for (const b of boats) {
+    if (b.s < 0.5 || b.state === 'fade') continue;
+    const [dx, dz] = dirOf(b.h), n = b.kind === 'steamer' ? 3 : b.kind === 'launch' ? 2 : 1, y = b.K.air * 0.4;
+    for (let i = 0; i < n; i++) { const u = n > 1 ? (i / (n - 1) - 0.5) * b.K.L * 0.7 : 0; test('boat', b, b.x + dx * u, y, b.z + dz * u, Math.max(0.28, b.K.hb * 1.5)); }
+  }
+  for (const g of gulls) test('gull', g, g.x, g.y, g.z, 0.2);
+  for (const s of ships) { const p = s.grp.position; test('ship', s, p.x, p.y, p.z, 0.9); }
+  return best;
+}
+const FOLK_FIRST = ['Ada', 'Silas', 'Mabel', 'Horace', 'Edith', 'Jasper', 'Ottilie', 'Barnaby', 'Winifred', 'Cornelius', 'Hettie', 'Ambrose', 'Florence', 'Ezra', 'Clementine', 'Percival', 'Ivy', 'Augustus', 'Nell', 'Thaddeus', 'Lavinia', 'Septimus'];
+const FOLK_LAST = ['Pell', 'Cogsworth', 'Brassey', 'Thimble', 'Gaskell', 'Ratchet', 'Wick', 'Copperfield', 'Spindle', 'Hobb', 'Tallow', 'Quill', 'Ferrow', 'Bellweather', 'Stoke', 'Larkin', 'Sprocket', 'Pewter'];
+const FOLK_JOBS = ['Clockmaker', 'Harbour pilot', 'Engine fitter', 'Glassblower', 'Sailmaker', 'Telegraph clerk', 'Boilermaker', 'Baker', 'Ship’s chandler', 'Net mender', 'Bookbinder', 'Tea merchant', 'Airship rigger', 'Mapmaker', 'Bell founder', 'Gauge maker', 'Pie seller', 'Lighthouse keeper'];
+function whoIs(w) {
+  if (!w.who) w.who = [anyOf(FOLK_FIRST) + ' ' + anyOf(FOLK_LAST), w.lighter ? 'Lamplighter' : anyOf(FOLK_JOBS)];
+  return w.who;
+}
+const BOAT_NAME = { skiff: 'A rowing skiff', launch: 'A steam launch', steamer: 'The paddle steamer' };
+function whistle(freqs, dur, vol) {
+  if (!soundOn || !actx) return;
+  const t = actx.currentTime, out = actx.createGain(), f = actx.createBiquadFilter();
+  f.type = 'bandpass'; f.frequency.value = freqs[0] * 2.2; f.Q.value = 0.8;
+  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + 0.07); out.gain.setValueAtTime(vol, t + dur - 0.18); out.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+  for (const fr of freqs) {
+    const o = actx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(fr * 0.96, t); o.frequency.linearRampToValueAtTime(fr, t + 0.1);
+    o.connect(f); o.start(t); o.stop(t + dur + 0.02);
+  }
+  f.connect(out); out.connect(bus());
+  noise(dur * 0.7, freqs[0] * 3, vol * 0.3, 'bandpass');
+}
+function harbourCry(fn) { if (!soundOn || !actx) return; if (!amb) startAmbience(); if (amb) fn(); }
+function reactTo(c, little) {
+  ensureAudio();
+  if (c.kind === 'walker') {
+    const w = c.ref;
+    w.pause = Math.max(w.pause, little ? 1.2 : 2.2); w.hop = 0.55; w.moving = 0;
+    w.heading = Math.atan2(-(camera.position.z - w.z), camera.position.x - w.x);
+    plink(7, 0.45); setTimeout(() => plink(9, 0.45), 120);
+    if (!little) { const [n, j] = whoIs(w); flashHint(n, j, 2200); }
+  } else if (c.kind === 'boat') {
+    const b = c.ref, [dx, dz] = dirOf(b.h);
+    if (b.kind === 'skiff') { plink(10, 0.5); setTimeout(() => plink(12, 0.5), 160); }
+    else if (b.kind === 'launch') { whistle([740, 932], 0.75, 0.06); for (let i = 0; i < 7; i++) emitPuff(EMIT.funnel, [b.x + dx * 0.06, 0.84, b.z + dz * 0.06]); }
+    else { whistle([233, 294, 349], 1.5, 0.075); for (const fx of [-0.12, -0.57]) for (let i = 0; i < 6; i++) emitPuff(EMIT.stack, [b.x + dx * fx, 1.4, b.z + dz * fx]); }
+    if (!little) flashHint(BOAT_NAME[b.kind], 'Hold on her to go aboard', 2000);
+  } else if (c.kind === 'gull') {
+    const g = c.ref;
+    for (const o of gulls) if (Math.hypot(o.x - g.x, o.z - g.z) < 2.5) { if (o.perch || o.state === 'final') takeOff(o); else circleAround(o, o.x, o.y + rr(0.6, 1.2), o.z); }
+    harbourCry(() => { gullCry(0.08); gullCry(0.06, 0.25); });
+  } else if (c.kind === 'ship') {
+    const p = c.ref.grp.position;
+    whistle([98, 123, 147], 1.8, 0.08);
+    for (let i = 0; i < 10; i++) emitPuff(EMIT.exhaust, [p.x + rr(-0.4, 0.4), p.y - 0.45, p.z + rr(-0.4, 0.4)]);
+    if (!little) flashHint('The airship', 'Hold on her to go aboard', 2000);
+  }
+}
+
+// ---------- riding along: hold on a person, a boat or an airship and the view goes with them ----------
+let ride = null;
+const ridePill = $('ride-pill');
+const RIDE_LABEL = { walker: (w) => 'Walking with ' + whoIs(w)[0], boat: (b) => (b.kind === 'skiff' ? 'In a rowing skiff' : b.kind === 'launch' ? 'Aboard a steam launch' : 'Aboard the paddle steamer'), ship: () => 'Aboard the airship' };
+function startRide(c) {
+  if (c.kind === 'gull') { reactTo(c, false); return; }
+  ride = { kind: c.kind, ref: c.ref, saved: { ...goal }, userT: 0, h: null, px: null, pz: null };
+  yawVel = 0; glideV.x = glideV.z = 0;
+  const T = rideSpot(); if (T) { ride.h = T.h; goal.yaw = T.h - Math.PI / 2; }
+  $('ride-name').textContent = RIDE_LABEL[c.kind](c.ref);
+  ridePill.classList.remove('off'); ridePill.tabIndex = 0; appEl.classList.add('riding');
+  hideHint(); plink(9, 0.5);
+}
+function endRide(back = true) {
+  if (!ride) return;
+  const s = ride.saved; ride = null;
+  ridePill.classList.add('off'); ridePill.tabIndex = -1; appEl.classList.remove('riding');
+  if (back) Object.assign(goal, s);
+  restHint();
+}
+ridePill.addEventListener('click', () => endRide());
+// where the one being ridden with is, and which way they are going
+function rideSpot() {
+  const r = ride.ref;
+  let x, y, z, dist, pitch;
+  if (ride.kind === 'walker') {
+    if (!walkers.includes(r) || r.state === 'fade' || r.state === 'gone') return null;
+    x = r.x; z = r.z; y = GROUND_TOP + 0.3 * PERSON; dist = 2.4; pitch = 0.3;
+  } else if (ride.kind === 'boat') {
+    if (!boats.includes(r) || r.state === 'fade') return null;
+    x = r.x; z = r.z; y = r.K.air * 0.6; dist = r.K.L * 0.9 + 1.6; pitch = 0.26;
+  } else {
+    if (!ships.includes(r)) return null;
+    const p = r.grp.position; x = p.x; y = p.y; z = p.z; dist = 4.6; pitch = 0.3;
+  }
+  // heading from the way they move, held while they stand still
+  let h = ride.h;
+  if (ride.px !== null) { const dx = x - ride.px, dz = z - ride.pz; if (Math.hypot(dx, dz) > 0.002) h = Math.atan2(-dz, dx); }
+  if (h === null) h = ride.kind === 'walker' ? r.heading : ride.kind === 'boat' ? r.h : r.yaw || 0;
+  ride.px = x; ride.pz = z;
+  return { x, y, z, h, dist, pitch };
+}
+// how far the view can stand back along this line before a wall or roof is in the way
+const rideRay = new THREE.Raycaster(), _rd = new THREE.Vector3(), _ro = new THREE.Vector3();
+function rideClear(T, yaw, pitch, dist) {
+  if (!pickTags.length) return dist;
+  const cp = Math.cos(pitch);
+  rideRay.set(_ro.set(T.x, T.y, T.z), _rd.set(Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp));
+  rideRay.far = dist + 0.3;
+  const hit = rideRay.intersectObject(pickMesh, false)[0];
+  return hit ? Math.max(0.7, hit.distance - 0.3) : dist;
+}
+function followRide(dt) {
+  const T = rideSpot();
+  if (!T) { const k = ride.kind; endRide(); flashHint(k === 'walker' ? 'Home for the night' : 'She has sailed on', 'Back to the harbour'); return; }
+  ride.h = ride.h === null ? T.h : ride.h + angDiff(ride.h, T.h) * Math.min(1, dt * 2.5);
+  goal.tx = T.x; goal.ty = T.y; goal.tz = T.z;
+  // a few times a second, find a line of sight: lift the view over the roofs, or come in closer
+  ride.clipT = (ride.clipT || 0) - dt;
+  if (ride.clipT <= 0) {
+    ride.clipT = 0.12;
+    let best = null;
+    for (const p of [Math.max(goal.pitch, T.pitch), 0.6, 0.85, 1.1]) {
+      if (best && p <= best.p) continue;
+      const d = rideClear(T, goal.yaw, p, T.dist);
+      if (d >= T.dist - 0.05) { best = { p, d }; break; }
+      if (!best || d > best.d + 0.3) best = { p, d };
+    }
+    ride.clipP = best.p; ride.clipD = best.d;
+  }
+  goal.dist += (Math.min(T.dist, ride.clipD) - goal.dist) * Math.min(1, dt * 4);
+  // the view swings round behind them, unless a finger has just turned it
+  const wantP = Math.max(T.pitch, ride.clipP);
+  if (performance.now() - ride.userT > 2500) goal.yaw += angDiff(goal.yaw, ride.h - Math.PI / 2) * Math.min(1, dt * 1.2);
+  goal.pitch += (wantP - goal.pitch) * Math.min(1, dt * 2);
+}
+
+// ---------- Little hands: every tap builds or makes something happen; nothing can be pulled down ----------
+let littleOn = !!store.get('little', false), gearHold = 0;
+const littleTaps = new Map();
+function renderLittle() {
+  $('lh-on').setAttribute('aria-pressed', String(littleOn)); $('lh-off').setAttribute('aria-pressed', String(!littleOn));
+  appEl.classList.toggle('lh', littleOn);
+  gear.setAttribute('aria-label', littleOn ? 'Settings: hold to open' : 'Settings');
+}
+function setLittle(on) {
+  if (on === littleOn) return;
+  if (on && !slots.list.some((s) => s.little) && slots.list.length >= SLOT_MAX) {
+    $('lh-note').textContent = 'Little hands needs a harbour of its own, and all eight are in use. Delete one under the harbour’s name, then try again.';
+    return;
+  }
+  endRide(false); closeMenu();
+  littleOn = on; store.set('little', on);
+  if (on) {
+    // Little hands builds in a harbour of its own, so a grown-up's towns are safe
+    store.set('littlePrev', slots.cur);
+    const mine = slots.list.find((s) => s.little);
+    if (mine) openSlot(mine.id);
+    else if (newSlot(null, 'Little harbour')) { curSlot().little = true; saveSlots(); renderSlots(); }
+    setTool('build'); hideHint(); setBeckon(null);
+    goal.pitch = 0.62;
+  } else {
+    const prev = store.get('littlePrev', null);
+    if (prev !== null && prev !== slots.cur && slots.list.some((s) => s.id === prev)) openSlot(prev);
+    restHint();
+  }
+  renderLittle();
+  plink(on ? 9 : 5, 0.6);
+}
+$('lh-on').addEventListener('click', () => setLittle(true));
+$('lh-off').addEventListener('click', () => setLittle(false));
+$('lh-tidy').addEventListener('click', () => {
+  const removes = []; for (let v = 0; v < V; v++) for (let y = 0; y <= MAXL; y++) if (F(v, y)) removes.push([v, y]);
+  if (removes.length) commit([], removes); thunk(); closeMenu(); goHome();
+});
+// the settings open from a held gear, so small fingers can't wander off into them
+gear.addEventListener('pointerdown', (e) => {
+  if (!littleOn) return;
+  e.preventDefault(); gear.classList.add('holding');
+  clearTimeout(gearHold); gearHold = setTimeout(() => { gear.classList.remove('holding'); openMenu('s'); plink(5, 0.5); }, 1500);
+});
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) gear.addEventListener(ev, () => { clearTimeout(gearHold); gear.classList.remove('holding'); });
+let lastLittleMat = -1;
+function littleTap(sx, sy) {
+  ensureAudio(); noteInput();
+  const c = creatureAt(sx, sy, true);
+  if (c) { reactTo(c, true); return; }
+  // a new colour each time, never the same twice running
+  let m = Math.floor(Math.random() * 6); if (m === lastLittleMat) m = (m + 1 + Math.floor(Math.random() * 5)) % 6;
+  lastLittleMat = m; setMat(m, false);
+  lastAct = null;
+  if (act(sx, sy, 'build', 'mouse') && lastAct && lastAct.length) {
+    const [v, y] = lastAct[lastAct.length - 1];
+    for (let i = 0; i < 6; i++) emitPuff(EMIT.stack, [X[v] + rr(-0.25, 0.25), topY(y) + 0.1, Z[v] + rr(-0.25, 0.25)]);
+    setTimeout(() => plink(Math.min(12, y + 4), 0.35), 90);
+  } else {
+    // nothing to build here: a splash and a note, so no tap goes unanswered
+    const g = groundAt(sx, sy, _g0);
+    if (g) for (let i = 0; i < 5; i++) emitPuff(EMIT.wake, [g.x + rr(-0.15, 0.15), 0.03, g.z + rr(-0.15, 0.15)]);
+    plink(Math.floor(Math.random() * 13), 0.4); scatterGulls(g ? g.x : view.tx, g ? g.z : view.tz);
+  }
+}
+// with no fingers to steer it, the view turns slowly round the town and keeps all of it in sight
+function littleCamera(dt) {
+  if (pcMode) return;
+  goal.yaw += dt * (REDUCED ? 0.02 : 0.05);
+  const k = Math.min(1, dt * 0.4);
+  goal.tx += (townCX - goal.tx) * k; goal.tz += (townCZ - goal.tz) * k;
+  const aspect = camera.aspect || 1, want = Math.max(14, Math.min(48, (townRad * 2.3 + 7) / Math.min(1, Math.pow(aspect, 0.6))));
+  goal.dist += (want - goal.dist) * k; goal.pitch += (0.62 - goal.pitch) * k; goal.ty += (1.9 - goal.ty) * k;
+}
+
+// ---------- a turning day: each time of day holds a while, then gives way to the next ----------
+const DAY_SEG = 60, DAY_HOLD = 32;
+const PRESETS = TIMES.map(presetState);
+let dayOn = store.get('day', null); if (dayOn === null) dayOn = !REDUCED;
+let dayPos = 0, dayApplyT = 0, dayEnvT = 0, dayLastK = -1, dayLastI = -1;
+function syncDay() { dayPos = todIndex * DAY_SEG; dayLastK = -1; dayLastI = -1; }
+function tickDay(dt) {
+  if (!dayOn || pcMode || todK < 1) return;
+  dayPos = (dayPos + dt) % (DAY_SEG * TIMES.length);
+  dayApplyT -= dt; if (dayApplyT > 0) return;
+  dayApplyT = 0.2;
+  const i = Math.floor(dayPos / DAY_SEG), u = dayPos - i * DAY_SEG, j = (i + 1) % TIMES.length;
+  let k = u < DAY_HOLD ? 0 : (u - DAY_HOLD) / (DAY_SEG - DAY_HOLD); k = k * k * (3 - 2 * k);
+  if (k === dayLastK && i === dayLastI) return;
+  todState = k ? mixState(PRESETS[i], PRESETS[j], k) : PRESETS[i];
+  applyTod(todState);
+  dayEnvT -= 0.2; if (dayEnvT <= 0 || i !== dayLastI) { regenEnv(); dayEnvT = 2; }
+  dayLastK = k; dayLastI = i;
+  const near = k < 0.5 ? i : j;
+  if (near !== todIndex) { todIndex = near; store.set('time', near); renderTime(); renderPcTime(); }
+}
+function renderDay() { $('d-turn').setAttribute('aria-pressed', String(dayOn)); $('d-still').setAttribute('aria-pressed', String(!dayOn)); }
+$('d-turn').addEventListener('click', () => { dayOn = true; store.set('day', true); syncDay(); renderDay(); });
+$('d-still').addEventListener('click', () => { dayOn = false; store.set('day', false); setTime(todIndex); renderDay(); });
+
+// ---------- the lamplighter: at dusk the street lamps come on one by one as he passes ----------
+let lampsOn = null, lighting = false, lightT = 0, lightStep = 0, lamplighter = null, lampsDirty = true;
+const lampKey = (l) => `${Math.round(l[0] * 50)},${Math.round(l[1] * 50)},${Math.round(l[2] * 50)}`;
+const lampLevel = new Map();
+const streetLamp = (l) => l[1] < GROUND_TOP + 1.5;
+function nextUnlit(x, z) {
+  let best = null, bd = 1e9;
+  for (const l of lampList) { if ((lampLevel.get(lampKey(l)) || 0) > 0) continue; const d = Math.hypot(l[0] - x, l[2] - z) + (streetLamp(l) ? 0 : 3); if (d < bd) { bd = d; best = l; } }
+  return best;
+}
+function lightLamp(l, near) {
+  lampLevel.set(lampKey(l), 0.001); lampsDirty = true;
+  if (near && soundOn && actx && Math.hypot(l[0] - view.tx, l[2] - view.tz) < view.dist * 0.6) noise(0.12, 2400, 0.012, 'bandpass');
+}
+function sendLamplighter() {
+  if (!walkNodes.length) return;
+  const quiet = doors.filter((d) => occ[d.w] === 0);
+  let w;
+  if (quiet.length) { const d = anyOf(quiet); w = makeWalker(d.x, d.z, d.w); w.state = 'emerge'; w.heading = Math.atan2(-d.nz, d.nx); aimAt(w, d.w, d.x, d.z); occ[d.w]++; }
+  else { const v = anyOf(walkNodes); w = makeWalker(X[v], Z[v], v); w.gx = w.x; w.gz = w.z; occ[v]++; }
+  Object.assign(w, { lighter: true, kind: 0, color: new THREE.Color(0x2f4a3a), lantern: false, speed: 0.3, steps: 9999 });
+  walkers.push(w); lamplighter = w;
+}
+function updateLamps(dt) {
+  const night = nightNow(), want = night > 0.28;
+  if (lampsOn === null || (!booted && want)) {
+    // on opening, the lamps are already as the hour has them
+    lampsOn = want; for (const l of lampList) lampLevel.set(lampKey(l), want ? 1 : 0); lampsDirty = true;
+  } else if (want && !lampsOn) {
+    lampsOn = true; lighting = true; lightT = 0; lightStep = 0;
+    for (const l of lampList) lampLevel.set(lampKey(l), 0);
+    lampsDirty = true;
+    if (!lamplighter || !walkers.includes(lamplighter)) sendLamplighter();
+  } else if (!want && lampsOn && night < 0.12) {
+    lampsOn = false; lighting = false;
+    for (const l of lampList) lampLevel.set(lampKey(l), 0); lampsDirty = true;
+  }
+  if (lamplighter && !walkers.includes(lamplighter)) lamplighter = null;
+  if (lighting) {
+    lightT += dt; lightStep -= dt;
+    const L = lamplighter;
+    if (L) for (const l of lampList) if (streetLamp(l) && !(lampLevel.get(lampKey(l)) > 0) && Math.hypot(l[0] - L.x, l[2] - L.z) < 0.85) lightLamp(l, true);
+    // the lamplighter can't reach every lamp, so after a while the rest come on one by one from where he is
+    if (lightT > (L ? 8 : 0.5) && lightStep <= 0) {
+      lightStep = L ? 0.45 : 0.25;
+      const l = nextUnlit(L ? L.x : townCX, L ? L.z : townCZ);
+      if (l) lightLamp(l, false);
+    }
+    if (!nextUnlit(0, 0)) { lighting = false; if (L) L.steps = 4; }
+  } else if (lamplighter && !lampsOn && lamplighter.steps > 4) lamplighter.steps = 4;
+  // each lamp warms up over a moment
+  for (const [k, a] of lampLevel) if (a > 0 && a < 1) { lampLevel.set(k, Math.min(1, a + dt * 2.2)); lampsDirty = true; }
+  if (lampsDirty) {
+    lampsDirty = false;
+    const al = halos.geometry.attributes.alpha;
+    if (al) { lampList.forEach((l, i) => { al.array[i] = 0.7 * (lampLevel.get(lampKey(l)) || 0); }); al.needsUpdate = true; }
+  }
+}
+// the lamplighter heads for the nearest street lamp still dark
+function lamplighterPull(u) {
+  const l = nextUnlit(X[u], Z[u]);
+  return l && streetLamp(l) ? l : null;
+}
 
 /* ============================================================
    14. Boot and frame loop
@@ -5954,13 +6419,15 @@ function boot(data) {
   for (let ci = 0; ci < chunkVerts.length; ci++) dirty.add(ci);
   groundDirty = true;
   renderWorld();
-  setTime(todIndex, true);
+  setTime(todIndex, true); syncDay();
   flush();
   booted = true;
   noteLandmarks(false);
   applyTier(quality === 'low' ? 'low' : 'high');
   renderName();
   renderSlots();
+  renderLittle(); renderDay();
+  if (littleOn) goal.pitch = view.pitch = 0.62;
   restHint();
   // a town code in the address opens that town (works when hosted on a normal site)
   if (/^#BH[zr]/.test(location.hash)) {
@@ -5977,12 +6444,13 @@ function boot(data) {
     if (multi && multi.seen.size) { multi.seen.clear(); moveMulti(); }
     updateCamera(dt);
     waterUniforms.uTime.value = now / 1000;
-    tickTod(dt);
+    tickTod(dt); tickDay(dt);
     updateDyn(dt, now / 1000);
     updateMarks(dt);
     updateSteam(dt);
     updateShips(dt, now / 1000);
     updateLife(dt, now / 1000);
+    updateLamps(dt);
     tickAmbience(dt);
     if (ghostFade > 0) { ghostFade = Math.max(0, ghostFade - dt * ghostRate); ghostMat.opacity = Math.min(1, ghostFade * 1.5); if (!ghostFade) { ghost.visible = false; ghostKey = ''; ghostMat.opacity = 0.95; } }
     updateFine();
@@ -6003,11 +6471,17 @@ function boot(data) {
   requestAnimationFrame((t) => { last = t; loop(t); setTimeout(() => $('loading').classList.add('done'), 60); });
 }
 window.claude?.hot?.snapshot?.(() => ({ town: toB64(packBytes()), view: { ...goal } }));
-window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, roofBelow, openings: (v, y, i) => wallOpenings(v, y, i, edgeLen(v, i), storeyCtx(v, y), false, false, ringW[v][i]), yards: () => courtyard.reduce((a, b) => a + b, 0),
+window.__brasshaven = { world: () => ({ ...world }), land, setWorld, genIslands, fitIslands, canGround, solid, fineNear: (x, z, r, y0 = -9, y1 = 99, main = false) => { let n = 0; for (const m of main ? chunkMesh : chunkFine) if (m) { const p = m.geometry.attributes.position.array; for (let i = 0; i < p.length; i += 3) if (p[i + 1] > y0 && p[i + 1] < y1 && Math.hypot(p[i] - x, p[i + 2] - z) < r) n++; } return n; }, shoreAt: (x, z) => { const k = shoreSmall.width / SHORE_SIZE; return shoreSmall.getContext('2d').getImageData(Math.floor((x - SHORE_X) * k), Math.floor((z - SHORE_Z) * k), 1, 1).data[0] / 255; }, fineD: (d) => { FINE_D.high = d; updateFine(true); }, fineCount: () => chunkFine.filter((m) => m && m.visible).length, renderInfo: () => { updateFine(true); renderer.render(scene, camera); const r = renderer.info.render; return { tris: r.triangles, calls: r.calls }; }, reach: () => reach, reachOf, edgeBand, canBuild, radius: () => RADIUS, edgeMsg: () => EDGE_MSG, shadowR: () => sun.shadow.camera.right, slots: () => JSON.parse(JSON.stringify(slots)), openSlot, newSlot, deleteSlot, saveNow, openCode, userCommit: (adds, removes) => { userEdit = true; try { commit(adds, removes); } finally { userEdit = false; } }, landmarks: () => landmarks.map((l) => ({ ...l })), found: () => [...foundSet], lmAt: (v) => lmMap.get(v), marks: () => markList.map((m) => ({ type: m.type, k: m.s.k, a: m.s.a, v: m.v })), gateShut: () => [...gateShut], sparks: () => skN, person: PERSON, walkers: () => walkers.map((w) => ({ x: w.x, z: w.z, node: w.node, state: w.state, scale: w.scale })), foundShown: () => $('found').classList.contains('on') && $('found-name').textContent, peal: (vol = 0.05) => { ensureAudio(); if (!amb) startAmbience(); return amb ? peal(actx.currentTime + 0.1, vol) : 0; }, foghorn: () => { ensureAudio(); if (!amb) startAmbience(); if (amb) foghorn(0.08); }, V, cols, mats, F, M, X, Z, ringW, ringQ, buildable, nearestVertex, act, pickAt, planAction, camera, goal, view, renderer, commit, undo, redo, setTool, setMat, encodeTown, decodeTown, replaceTown, cellCount: () => cellCount, gears: () => gearList.length, clocks: () => clockList.length, engines: () => engineList.length, wheels: () => wheelList.length, ships: () => ships.map((sh) => ({ state: sh.state, p: sh.grp.position.toArray() })), mast: () => mastV, mastPos: () => mastPos && mastPos.toArray(), particles: () => pN, setTime, time: () => todIndex, enterPostcard, exitPostcard, snapPostcard, pcBlob: () => pcBlob, tips: () => ({ on: tipsOn, done: [...tipsDone], current: currentTip() && currentTip().id }), tipEvent, setTips, harbourName: () => harbourName, tier: () => tier, applyTier, volume: () => volume, motion: () => REDUCED, groundAt: (x, y) => { const g = groundAt(x, y, new THREE.Vector3()); return g && g.toArray(); }, syncCam: () => { Object.assign(view, goal); updateCamera(0); camera.updateMatrixWorld(); }, lost: () => lostShown, seen: () => [...seen], hintText: () => (hintEl.classList.contains('gone') ? '' : hintEl.textContent), cleanShot: () => { updateCamera(0); renderer.render(scene, camera); return canvas.toDataURL('image/jpeg', 0.9); }, engineSpot, wheelSpot, dockNow: () => { for (const sh of ships) sh.timer = 0; }, sim: (sec, step = 0.05) => { const t0 = performance.now() / 1000; for (let t = 0; t < sec; t += step) { tickTod(step); updateDyn(step, t0 + t); updateMarks(step); updateSteam(step); updateShips(step, t0 + t); updateLife(step, t0 + t); updateLamps(step); } return pN; }, shipsRaw: ships, dyn: () => ({ mains: chunkDyn.flatMap((d) => (d ? d.mains : [])), lamps: chunkDyn.flatMap((d) => (d ? d.lamps : [])), engines: engineList, wheels: wheelList, gears: gearList, clocks: clockList }), emitters: () => { const c = {}; for (const e of emitList) c[e.kind] = (c[e.kind] || 0) + 1; return c; }, bridges: () => bridgeSet.size, boats: () => boats.map((b) => ({ kind: b.kind, state: b.state, x: b.x, z: b.z, h: b.h, s: b.s })), boatsRaw: boats, BOAT, berths: () => berths, hullFree, route, clearAt, headroom, syncBoats, buildClearMap, findBerths, CX, CZ, roofBelow, openings: (v, y, i) => wallOpenings(v, y, i, edgeLen(v, i), storeyCtx(v, y), false, false, ringW[v][i]), yards: () => courtyard.reduce((a, b) => a + b, 0),
   life: () => ({ walkers: walkers.length, walkStates: walkers.map((w) => w.state), doors: doors.length, walkable: walkNodes.length, gulls: gulls.map((g) => g.state), perches: perchList.length, amb: !!amb, ambience: ambVolume }),
   lifeRaw: { walkers, gulls, perches: () => perchList, occ: () => occ }, scatterGulls, startAmbience, tickAmbience, updateLife, scene,
   lifeShow: (on) => { for (const im of [...Object.values(walkIM), gullIM, wingIM, lifeHalo]) im.visible = on; },
   ambTest: () => { ensureAudio(); startAmbience(); if (!amb) return 'no ambience'; gullCry(0.05); creak(0.03); bell(actx.currentTime, 0.05); chuff(0.05); envNoise(0.3, 'bandpass', 700, 0.8, 0.05); lastHour = -1; ambT = 0; tickAmbience(1); return actx.state; } };
+Object.assign(window.__brasshaven, {
+  creatureAt, reactTo, startRide, endRide, ride: () => ride && { kind: ride.kind }, littleTap, setLittle, little: () => littleOn, menuOpen, openMenu, closeMenu,
+  tickDay, day: () => ({ on: dayOn, pos: dayPos, night: nightNow() }), setDayPos: (p) => { dayPos = p; dayLastK = -1; dayApplyT = 0; },
+  lamps: () => ({ on: lampsOn, lighting, total: lampList.length, lit: lampList.filter((l) => (lampLevel.get(lampKey(l)) || 0) > 0).length, lighter: !!lamplighter && walkers.includes(lamplighter) }),
+  updateLamps, screenOf, walkersRaw: walkers,
+});
 try {
   window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 } catch (e) {

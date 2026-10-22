@@ -92,7 +92,7 @@ with sync_playwright() as p:
     ev("() => window.__brasshaven.redo()"); r=ev(SNAP)
     check('redo takes them away again', not r['islands'] and r['land']==0 and r['hash']==isl['hash'], r)
     # the Harbours sheet shows the settings
-    page.click('#gear'); page.click('#m-slots'); page.wait_for_timeout(300)
+    page.click('#brand'); page.wait_for_timeout(300)
     page.click('#w-isles'); page.wait_for_timeout(300)
     r=ev("(() => ({ w: window.__brasshaven.world(), open: document.getElementById('w-open').getAttribute('aria-pressed'), isles: document.getElementById('w-isles').getAttribute('aria-pressed'), sky: document.getElementById('w-sky') }))()")
     check('the Harbours sheet switches to islands', r['w']['islands'] and r['isles']=='true' and r['open']=='false' and r['sky'] is None, r)
