@@ -1,4 +1,4 @@
-// Drives the real controls on desktop and phone: build, cancel from the queue, place a Nest, launch, retask and recall each unit.
+// Drives the real controls on desktop and phone: build, cancel from the queue, place a Nest, launch squads, retask and recall.
 // Needs Playwright (npm install playwright) and a built page: python3 _tools/drone-season/build/site.py
 const path = require('path');
 const { chromium } = require('playwright');
@@ -32,14 +32,21 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     };
     await tap('#btn-go'); await page.waitForTimeout(500);
     const S = () => page.evaluate(() => { const { G } = window.__ds, s = G.sim, S0 = s.sides[0]; return {
-      q: S0.queue.map(x => x.type), nectar: Math.round(S0.nectar), armed: G.armed, placing: G.placing, sel: G.sel, stance: G.stance, counts: G.counts, paused: G.paused,
+      q: S0.queue.map(x => x.type), nectar: Math.round(S0.nectar), armed: G.armed, group: G.group.slice(), placing: G.placing, sel: G.sel, stance: G.stance, paused: G.paused, auto: S0.auto,
       sorties: [...s.sorties.values()].filter(o => o.side === 0 && o.label !== 'Guard').map(o => ({ id: o.id, type: o.type, mode: o.mode, n: o.units.length, route: o.route.length, target: o.target })),
       homing: s.units.filter(u => u.side === 0 && u.homing).length, chips: document.querySelectorAll('#queue .qchip').length }; });
     const scr = (x, y) => page.evaluate(([x, y]) => { const { S2, computeM } = window.__ds; computeM(false); return S2(x, y); }, [x, y]);
     // freeze the rival so the test is about controls
     await page.evaluate(() => { const { G } = window.__ds; G.sim.ai[1] = null; G.sim.sides[0].nectar = 600; });
 
-    let st;
+    let st = await S();
+    ok(label + ' Auto build starts on', st.auto === true);
+    await tap('#btn-auto'); await page.waitForTimeout(150);
+    // clear anything Auto queued in the first moments, refunding it
+    await page.evaluate(() => { const { G, DS } = window.__ds; for (const q of G.sim.sides[0].queue.slice()) DS.cancelBuild(G.sim, 0, q.id); G.sim.sides[0].nectar = 600; });
+    await page.waitForTimeout(150);
+    st = await S();
+    ok(label + ' the Auto chip turns it off', st.auto === false && st.q.length === 0, JSON.stringify(st.q));
     await tap('#buy-sting'); await tap('#buy-raider'); await tap('#buy-decoy'); await tap('#buy-warden');
     await page.waitForTimeout(250); st = await S();
     ok(label + ' build buttons queue in order', st.q.join() === 'sting,raider,decoy,warden' && st.chips === 4, JSON.stringify(st.q) + ' chips ' + st.chips);
@@ -62,20 +69,34 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     const counts = await page.evaluate(() => { const { G, DS } = window.__ds; return { raider: DS.parkedCount(G.sim, 0, 'raider'), warden: DS.parkedCount(G.sim, 0, 'warden'), decoy: DS.parkedCount(G.sim, 0, 'decoy'), nest: DS.nestCount(G.sim, 0) }; });
     ok(label + ' queued units arrive and the Nest grows', counts.raider === 2 && counts.warden === 1 && counts.decoy === 2 && counts.nest === 1, JSON.stringify(counts));
     await page.waitForTimeout(300);
-    // warden: tap a patrol point
-    await tap('#arm-warden'); st = await S(); ok(label + ' arm Warden', st.armed === 'warden');
+    // Patrol squad: tap a patrol point
+    await tap('#sq-4'); st = await S(); ok(label + ' arm the Patrol squad', st.armed === 'warden' && st.group.join() === 'warden');
     await tapXY(await scr(600, 500)); await page.waitForTimeout(120); st = await S();
-    ok(label + ' tap launches a Warden patrol', st.sorties.some(o => o.type === 'warden' && o.route === 1));
-    // raider: drag a bombing route
-    await tap('#arm-raider'); st = await S(); ok(label + ' arm Raiders', st.armed === 'raider');
-    if (!mobile) { await page.keyboard.press('c'); st = await S(); ok('desk C cycles how many', st.counts.raider === 2, JSON.stringify(st.counts)); }
-    else { await tap('#ctx-main [data-act="n2"]'); st = await S(); ok('phone count buttons', st.counts.raider === 2); }
+    ok(label + ' tap launches a Warden patrol and disarms', st.sorties.some(o => o.type === 'warden' && o.route === 1) && st.armed === null);
+    // edit the Bomb run squad to two Raiders and no Decoys, then drag a bombing route
+    if (mobile) {
+      const bb = await (await page.$('#sq-3')).boundingBox();
+      const cdp = await ctx.newCDPSession(page);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 }] });
+      await page.waitForTimeout(700);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else await page.click('#sq-3', { button: 'right' });
+    await page.waitForTimeout(200);
+    const sh = await page.evaluate(() => window.__ds.G.sheet);
+    ok(label + (mobile ? ' long-press' : ' right-click') + ' on a squad opens its editor and pauses', !!sh && sh.kind === 'squad' && sh.i === 3 && await page.isVisible('#sheet'));
+    await page.waitForTimeout(400);
+    await tap('#sheet-body [data-act="m+"][data-r="raider"]'); await tap('#sheet-body [data-act="m-"][data-r="decoy"]'); await tap('#sheet-body [data-act="m-"][data-r="decoy"]');
+    const mix = await page.evaluate(() => window.__ds.G.squads[3].mix);
+    ok(label + ' squad steppers change the mix', mix.raider === 2 && !mix.decoy, JSON.stringify(mix));
+    await tap('#sheet-done'); await page.waitForTimeout(150);
+    await tap('#sq-3'); st = await S(); ok(label + ' arm the edited squad', st.group.join() === 'raider');
     await drag(await scr(320, 420), await scr(700, 300)); st = await S();
     const rs = st.sorties.find(o => o.type === 'raider');
     ok(label + ' drag launches 2 Raiders on a route', !!rs && rs.n === 2 && rs.mode === 'route', JSON.stringify(st.sorties));
-    // decoys: tap a point
-    await tap('#arm-decoy'); await tapXY(await scr(900, 300)); await page.waitForTimeout(120); st = await S();
-    ok(label + ' Decoys launch as a pair', st.sorties.some(o => o.type === 'decoy' && o.n === 2));
+    // Swarm: Stings with Decoys leading
+    await tap('#sq-2'); await tapXY(await scr(900, 300)); await page.waitForTimeout(120); st = await S();
+    const sw = st.sorties.filter(o => o.type === 'decoy' || o.type === 'sting');
+    ok(label + ' Swarm launches Stings and a pair of Decoys', sw.some(o => o.type === 'decoy' && o.n === 2) && sw.some(o => o.type === 'sting' && o.n >= 4), JSON.stringify(sw));
     // select the raiders and recall them
     await page.evaluate(() => { const { G, DS } = window.__ds; for (let i = 0; i < 60; i++) DS.step(G.sim); G.sim.events.length = 0; });
     await page.waitForTimeout(200);
@@ -85,12 +106,15 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     if (!mobile) await page.keyboard.press('x'); else await tap('#ctx-main [data-act="recall"]');
     await page.waitForTimeout(120); st = await S();
     ok(label + ' Recall sends the Raiders home', st.homing >= 2, 'homing ' + st.homing);
-    // stings raid the Heart by tapping it
-    await tap('#arm-sting'); await tapXY(await scr(1380, 500)); await page.waitForTimeout(120); st = await S();
+    // stings raid the Heart by tapping it (build more first: the Swarm took them all)
+    await page.evaluate(() => { const { G, DS } = window.__ds; G.sim.sides[0].nectar = 600; for (let i = 0; i < 3; i++) DS.build(G.sim, 0, 'sting'); let n = 0; while (G.sim.sides[0].queue.length && n++ < 30 * 30) DS.step(G.sim); G.sim.events.length = 0; });
+    await page.waitForTimeout(200);
+    await tap('#sq-1'); await tapXY(await scr(1380, 500)); await page.waitForTimeout(120); st = await S();
     ok(label + ' tapping the rival Heart with Stings armed starts a raid', st.sorties.some(o => o.type === 'sting' && o.mode === 'raid'));
     if (!mobile) {
       await page.keyboard.press('6'); st = await S(); ok('desk key 6 queues a Raider', st.q.includes('raider'));
-      await page.keyboard.press('r'); st = await S(); ok('desk key R with no Wardens ready leaves the arm unchanged', st.armed === 'sting');
+      await page.keyboard.press('w'); st = await S(); ok('desk key W arms the Strike squad', st.armed === 'sting');
+      await page.keyboard.press('t'); st = await S(); ok('desk key T with no Wardens ready leaves the arm unchanged', st.group.join() === 'sting');
       await page.keyboard.press('Escape'); st = await S(); ok('desk Esc cancels', st.armed === null);
       await page.keyboard.press('d'); st = await S(); ok('desk D toggles dash', st.stance === 'dash');
       await page.keyboard.press('p'); st = await S(); ok('desk P pauses', st.paused === true && await page.isVisible('#ov-pause'));

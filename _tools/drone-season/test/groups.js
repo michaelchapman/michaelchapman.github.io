@@ -1,4 +1,4 @@
-// Grouped launches and the map orientation lock on a small phone (toolbar resizes and a real rotation).
+// Squad launches (a mixed package on one route, Again), and the map orientation lock on a small phone (toolbar resizes and a real rotation).
 // Needs Playwright (npm install playwright) and a built page: python3 _tools/drone-season/build/site.py
 const path = require('path');
 const { chromium } = require('playwright');
@@ -19,8 +19,10 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     const P = () => page.evaluate(() => window.__ds.cam.portrait);
     const p0 = await P();
     const flips = [];
-    for (const t of ['#arm-sting', '#arm-glint', '#arm-sting', '#arm-glint', '#btn-guard', '#buy-sting']) { await page.tap(t); await page.waitForTimeout(250); flips.push(await P()); }
-    ok('small phone: arming and tapping the dock never flips the map', flips.every(v => v === p0), `start ${p0} then ${flips.join(',')}`);
+    const fits = [];
+    for (const t of ['#sq-1', '#sq-0', '#sq-1', '#sq-0', '#btn-guard', '#tab-posts', '#tab-flying', '#tab-build', '#buy-sting', '#btn-auto']) { await page.tap(t); await page.waitForTimeout(250); flips.push(await P()); fits.push(await page.evaluate(() => window.__ds.cam.fit.toFixed(4))); }
+    ok('small phone: arming, tabs and the dock never flip the map', flips.every(v => v === p0), `start ${p0} then ${flips.join(',')}`);
+    ok('small phone: nor do they resize it', new Set(fits).size === 1, fits.join(','));
     for (const h of [620, 700, 600, 667]) { await page.setViewportSize({ width: 375, height: h }); await page.waitForTimeout(250); flips.push(await P()); }
     ok('small phone: browser bars resizing the height never flip it', flips.every(v => v === p0), flips.join(','));
     await page.setViewportSize({ width: 667, height: 375 }); await page.waitForTimeout(300);
@@ -56,27 +58,27 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
       await page.waitForTimeout(120);
     };
     await tap('#btn-go'); await page.waitForTimeout(500);
-    await page.evaluate(() => { const { G, DS } = window.__ds; G.sim.ai[1] = null; G.sim.sides[0].nectar = 600; for (const t of ['raider', 'raider', 'decoy', 'decoy']) DS.build(G.sim, 0, t); let n = 0; while (G.sim.sides[0].queue.length && n++ < 30 * 60) DS.step(G.sim); G.sim.events.length = 0; });
+    await page.evaluate(() => { const { G, DS } = window.__ds; G.sim.ai[1] = null; DS.setAuto(G.sim, 0, false); G.sim.sides[0].queue.length = 0; G.sim.sides[0].nectar = 600; for (const t of ['raider', 'raider', 'decoy', 'decoy']) DS.build(G.sim, 0, t); let n = 0; while (G.sim.sides[0].queue.length && n++ < 30 * 60) DS.step(G.sim); G.sim.events.length = 0; });
     await page.waitForTimeout(300);
     const S = () => page.evaluate(() => { const { G } = window.__ds, s = G.sim; return { group: G.group.slice(), armed: G.armed, sel: G.sel,
       sorties: [...s.sorties.values()].filter(o => o.side === 0).map(o => ({ id: o.id, type: o.type, n: o.units.length, pkg: o.pkg, stance: o.stance, mode: o.mode, end: o.route.length ? o.route[o.route.length - 1] : null })),
       homing: s.units.filter(u => u.side === 0 && u.homing).length, ctx: document.getElementById('ctx-main').textContent }; });
-    await tap('#arm-raider'); await tap('#arm-decoy'); await page.waitForTimeout(200);
+    await tap('#sq-3'); await page.waitForTimeout(200);
     let st = await S();
-    ok(label + ' tapping Raiders then Decoys arms a group', st.group.join() === 'raider,decoy' && /Group: 1 Raider \+ 2 Decoys/.test(st.ctx), JSON.stringify(st.group) + ' | ' + st.ctx);
+    ok(label + ' the Bomb run squad arms a Raider with Decoys', st.group.join() === 'decoy,raider' && /Bomb run: 1 Raider \+ 2 Decoys/.test(st.ctx), JSON.stringify(st.group) + ' | ' + st.ctx);
     await page.screenshot({ path: SP + label + '-group-armed.png' });
     await drag(await scr(330, 430), await scr(900, 300));
     st = await S();
     const rs = st.sorties.find(o => o.type === 'raider'), ds = st.sorties.find(o => o.type === 'decoy');
     ok(label + ' one drag launches both on the same route as one package', rs && ds && rs.pkg && rs.pkg === ds.pkg && Math.abs(rs.end.x - ds.end.x) < 1, JSON.stringify(st.sorties));
     ok(label + ' Decoys lead (dash) while Raiders cruise', ds && ds.stance === 'dash' && rs.stance === 'quiet');
-    st = await S(); ok(label + ' group stays armed while more are ready', st.group.join() === 'raider,decoy', JSON.stringify(st.group));
-    await tap('#ctx-main [data-act="cancel"]');
+    st = await S(); ok(label + ' the squad disarms after launching', st.armed === null, JSON.stringify(st.group));
+
     await page.evaluate(() => { const { G, DS } = window.__ds; for (let i = 0; i < 45; i++) DS.step(G.sim); G.sim.events.length = 0; });
     await page.waitForTimeout(200);
     const dp = await page.evaluate(() => { const { G, S2, computeM } = window.__ds; computeM(false); const u = G.sim.units.find(u => u.side === 0 && u.type === 'raider' && !u.parked); return u ? S2(u.x, u.y) : null; });
     await tapXY(dp); await page.waitForTimeout(150); st = await S();
-    ok(label + ' tapping one member selects the whole group', st.sel && st.sel.pkg === rs.pkg && /Group: .*selected/.test(st.ctx), st.ctx);
+    ok(label + ' tapping one member selects the whole group', st.sel && st.sel.pkg === rs.pkg && /Bomb run: 1 Raider \+ 2 Decoys selected/.test(st.ctx), st.ctx);
     await page.screenshot({ path: SP + label + '-group-selected.png' });
     await tapXY(await scr(700, 700)); await page.waitForTimeout(150); st = await S();
     const r2 = st.sorties.find(o => o.type === 'raider'), d2 = st.sorties.find(o => o.type === 'decoy');
@@ -84,9 +86,17 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     if (mobile) { try { await page.tap('#ctx-main [data-act="recall"]', { timeout: 3000 }); } catch (e) { ok(label + ' recall chip present', false, JSON.stringify(await S())); } } else await page.keyboard.press('x');
     await page.waitForTimeout(150); st = await S();
     ok(label + ' Recall brings the Raider home (Decoys stay on task)', st.homing >= 1, 'homing ' + st.homing);
-    // a single tile still works on its own, and tapping an armed tile removes it from the group
-    await tap('#arm-sting'); await tap('#arm-glint'); await tap('#arm-sting'); st = await S();
-    ok(label + ' tapping an armed tile again removes it from the group', st.group.join() === 'glint', JSON.stringify(st.group));
+    // Again: the same squad on the same route as its first launch
+    if (mobile) await tap('#ctx-main [data-act="again"]'); else await page.keyboard.press('a');
+    await page.waitForTimeout(150);
+    st = await S();
+    const pk2 = st.sorties.filter(o => o.pkg && o.pkg !== rs.pkg && o.n);
+    ok(label + ' Again sends the same squad on the same route', pk2.length === 2 && pk2.every(o => Math.abs(o.end.x - rs.end.x) < 1), JSON.stringify(pk2));
+    // two squads arm together; tapping an armed squad again removes it
+    await tap('#sq-1'); await tap('#sq-0'); st = await S();
+    ok(label + ' tapping two squads arms both', st.group.join() === 'glint,sting', JSON.stringify(st.group));
+    await tap('#sq-1'); st = await S();
+    ok(label + ' tapping an armed squad again removes it', st.group.join() === 'glint', JSON.stringify(st.group));
     await ctx.close();
   }
   await browser.close();

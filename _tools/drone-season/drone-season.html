@@ -146,7 +146,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .chip.on { color: var(--amber-hi); border-color: rgba(245, 165, 36, 0.55); background: var(--amber-wash); }
 .chip.cancel { color: var(--ink); }
 
-/* launch row: what is ready to fly */
+/* squads: what is ready to fly */
 .launch { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .ltile {
   position: relative; min-width: 0; text-align: left;
@@ -167,13 +167,57 @@ svg.i { width: 1em; height: 1em; flex: none; }
 @keyframes flash { from { box-shadow: inset 0 0 0 2px var(--amber-hi), inset 0 0 18px rgba(245, 165, 36, 0.35); } }
 .ftile .sub { grid-row: 1; grid-column: 3; justify-self: end; }
 .ftile .meter { grid-row: 2; grid-column: 2 / span 2; }
+.sq { grid-template-rows: auto auto 3px; padding-bottom: 5px; }
+.sq .meter { grid-row: 3; grid-column: 1 / -1; margin-top: 3px; height: 2px; }
+.sq.part .ct { color: var(--amber-hi); }
+.ltile.empty .meter i { background: var(--ink-faint); }
 .meter { height: 3px; background: var(--rule); position: relative; }
 .meter i { position: absolute; inset: 0 auto 0 0; width: calc(var(--m, 1) * 100%); background: var(--amber); }
 
-/* build row: costs in nectar, a visible queue you can cancel from */
-.build { display: grid; gap: 5px; padding-top: 6px; border-top: 1px solid var(--rule); }
+/* panel: Build, Posts and Flying tabs */
+.panel { display: grid; gap: 5px; padding-top: 5px; border-top: 1px solid var(--rule); }
+.tabs { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+.tablist { display: flex; gap: 2px; }
+.tablist button {
+  position: relative; font-family: var(--f-display); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint); padding: 6px 10px 5px; min-height: 30px; border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px;
+}
+.tablist button:hover { color: var(--ink-dim); }
+.tablist button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--amber); }
+.tb { font-style: normal; font-family: var(--f-data); font-size: 10px; font-weight: 600; letter-spacing: 0; color: var(--ink-dim); min-width: 0; }
+.tb:empty { display: none; }
+.tb.warn { color: #fff; background: var(--lock); padding: 0 4px; }
+.tab-ctl { display: flex; align-items: center; gap: 6px; }
+.chip.auto .led { width: 7px; height: 7px; transform: rotate(45deg); background: var(--rule-hi); flex: none; }
+.chip.auto.on .led { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.tab-body { height: 77px; min-width: 0; }
+.tab-body.build { display: grid; grid-template-rows: 30px 42px; gap: 5px; }
+.tab-body.build[hidden] { display: none; }
+.cards { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: stretch; padding-bottom: 2px; }
+.cards::-webkit-scrollbar { display: none; }
+.dcard {
+  flex: none; min-width: 112px; max-width: 190px; display: grid; align-content: center; gap: 4px; text-align: left;
+  padding: 7px 10px; border: 1px solid var(--rule-hi); background: var(--panel);
+}
+.dcard:hover { border-color: var(--ink-faint); }
+.dcard.sel { border-color: var(--amber); background: #1d1a12; }
+.dcard.short { border-color: rgba(255, 94, 77, 0.7); }
+.dcard.add { border-style: dashed; min-width: 96px; color: var(--amber-hi); }
+.dcard.add.on { border-style: solid; border-color: var(--amber); background: var(--amber-wash); }
+.dcard:disabled { opacity: 0.45; cursor: default; }
+.c-n { font-family: var(--f-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: baseline; gap: 8px; }
+.c-n em { font-style: normal; font-family: var(--f-body); font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-faint); }
+.c-n em.pri { font-family: var(--f-display); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 1px 4px; border: 1px solid var(--rule-hi); color: var(--ink-dim); }
+.c-n em.p2 { color: var(--amber-hi); border-color: rgba(245, 165, 36, 0.55); }
+.c-s { font-family: var(--f-data); font-size: 12px; color: var(--ink); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.c-s svg { color: var(--amber); font-size: 13px; margin-left: 4px; }
+.c-s svg:first-child { margin-left: 0; }
+.cards-note { margin: 0; align-self: center; font-size: 12px; line-height: 1.35; color: var(--ink-faint); max-width: 46ch; flex: 0 1 auto; min-width: 180px; }
+.cards-note b { color: var(--ink-dim); }
 .bq { display: flex; align-items: center; gap: 8px; min-height: 30px; min-width: 0; }
-.bq-l { font-family: var(--f-display); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bloom); flex: none; }
+.q-status { font-size: 12px; color: var(--ink-faint); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-status.wait { color: var(--bloom); }
+.qchip.auto { border-style: dashed; }
 .queue { display: flex; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .queue::-webkit-scrollbar { display: none; }
 .qchip {
@@ -185,7 +229,6 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .qchip .qp { position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--p, 0) * 100%); background: var(--bloom); }
 .qchip .x { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255, 94, 77, 0.88); color: #fff; font-size: 18px; opacity: 0; transition: opacity 0.12s; }
 .qchip:hover .x, .qchip:focus-visible .x { opacity: 1; }
-.q-empty { font-size: 12px; color: var(--ink-faint); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .q-count { margin-left: auto; font-family: var(--f-data); font-size: 11px; color: var(--ink-faint); flex: none; }
 .bbtns { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .bbtn {
@@ -201,6 +244,61 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .bbtn:active:not(:disabled) { transform: translateY(1px); }
 .bbtn:disabled { opacity: 0.42; cursor: default; }
 .bbtn.armed { border-color: var(--amber); background: var(--amber-wash); opacity: 1; }
+
+/* ---------- quick orders menu ---------- */
+.qmenu {
+  position: absolute; z-index: 7; min-width: 200px; max-width: min(280px, calc(100% - 16px));
+  background: rgba(10, 15, 19, 0.97); border: 1px solid var(--rule-hi); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  display: grid; padding: 4px 0;
+}
+.qm-h { font-family: var(--f-display); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); padding: 5px 12px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qmenu button { display: grid; grid-template-columns: 20px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left; padding: 7px 12px; min-height: 44px; }
+.qmenu button svg { grid-row: 1 / span 2; color: var(--amber); font-size: 17px; }
+.qmenu button:hover:not(:disabled), .qmenu button:focus-visible { background: var(--amber-wash); }
+.qmenu button:disabled { opacity: 0.4; cursor: default; }
+.qm-l { font-family: var(--f-display); font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); }
+.qm-s { font-size: 11px; color: var(--ink-faint); }
+
+/* ---------- sheets: plan, squad, post (the round pauses underneath) ---------- */
+.sheet-wrap { position: absolute; inset: 0; z-index: 9; background: rgba(4, 7, 10, 0.55); display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  width: 100%; max-width: 620px; max-height: min(86%, 760px); display: grid; grid-template-rows: auto minmax(0, 1fr);
+  background: var(--basin); border: 1px solid var(--rule-hi); border-bottom: 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px var(--gut-r) 12px var(--gut-l); border-bottom: 1px solid var(--rule); }
+.sheet-head h2 { margin: 2px 0 0; font-family: var(--f-display); font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; }
+.sheet-head .kicker { color: var(--amber-hi); font-size: 11px; }
+.sheet-body { overflow-y: auto; padding: 12px var(--gut-r) 18px var(--gut-l); display: grid; gap: 14px; align-content: start; }
+.sh-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.sh-l { font-family: var(--f-display); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); min-width: 84px; }
+.sh-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-dim); max-width: 62ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip svg { color: var(--amber); }
+.chip:disabled { opacity: 0.45; cursor: default; }
+.plan-rows, .mix-rows { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.plan-rows li, .mix-rows li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--rule); min-height: 44px; }
+.plan-rows li.empty { color: var(--ink-faint); font-size: 13px; }
+.plan-rows li > svg, .mix-rows li > svg { color: var(--amber); font-size: 18px; }
+.pr-i { font-family: var(--f-data); font-size: 12px; color: var(--ink-faint); width: 18px; text-align: right; }
+.pr-mv { display: inline-flex; flex-direction: column; }
+.pr-mv button { font-size: 9px; line-height: 1; width: 26px; height: 17px; color: var(--ink-dim); }
+.pr-mv button:disabled { opacity: 0.25; cursor: default; }
+.pr-n { flex: 1; min-width: 0; font-family: var(--f-display); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.pr-n small { font-family: var(--f-body); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-faint); }
+.pr-now { font-family: var(--f-data); font-size: 11px; color: var(--ink-faint); width: 86px; text-align: right; white-space: nowrap; }
+.plan-rows li.met .pr-now { color: var(--leaf); }
+.pr-x { width: 32px; height: 32px; font-size: 18px; color: var(--ink-faint); }
+.pr-x:hover { color: var(--lock); }
+.step { display: inline-flex; align-items: center; border: 1px solid var(--rule-hi); }
+.step button { width: 34px; height: 32px; font-size: 18px; color: var(--ink); }
+.step button:disabled { opacity: 0.3; cursor: default; }
+.step b { font-family: var(--f-data); font-size: 15px; font-weight: 600; min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+#sq-name { font: 600 15px var(--f-display); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--panel); border: 1px solid var(--rule-hi); padding: 7px 10px; width: 170px; }
+#sq-name:focus { outline: 2px solid var(--amber-hi); outline-offset: -2px; }
+.btn.danger { color: var(--lock); border-color: rgba(255, 94, 77, 0.5); }
+.cmd th { width: 64px; }
+.cmd td { color: var(--ink-dim); }
+.cmd b { color: var(--ink); }
 
 /* ---------- overlays ---------- */
 .overlay {
@@ -317,10 +415,24 @@ svg.i { width: 1em; height: 1em; flex: none; }
   .ftile .meter { grid-row: 2; grid-column: 1 / span 2; align-self: end; margin-bottom: 3px; }
   .ftile .nm { grid-row: 1; grid-column: 2; justify-self: end; }
   .bbtns { gap: 4px; }
-  .build { padding-top: 5px; gap: 4px; }
+  .panel { padding-top: 4px; gap: 4px; }
+  .tabs { min-height: 28px; }
+  .tablist button { font-size: 11px; padding: 5px 7px 4px; min-height: 28px; letter-spacing: 0.06em; gap: 4px; }
+  .tab-body { height: 72px; }
+  .tab-body.build { grid-template-rows: 28px 40px; gap: 4px; }
+  .dcard { min-width: 96px; padding: 6px 8px; }
+  .c-n { font-size: 12px; }
   .bq { min-height: 28px; }
+  .sq .meter { grid-row: 3; }
+  .sheet-head h2 { font-size: 18px; }
+  .pr-now { width: 50px; }
+  .pr-n small { display: none; }
+  .pr-n { font-size: 12px; }
+  .plan-rows li, .mix-rows li { gap: 6px; }
+  .step button { width: 30px; }
   .qchip { width: 28px; height: 28px; font-size: 14px; }
-  .ctx { align-items: flex-start; min-height: 70px; }
+  .ctx { align-items: flex-start; height: 70px; min-height: 0; overflow: hidden; }
+  .ctx-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .seg-l { display: none; }
   .ctx-main { gap: 6px 8px; }
   .ctx-text { font-size: 12px; flex-basis: 100%; }
@@ -358,6 +470,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     <symbol id="g-warden" viewBox="0 0 24 24"><path d="M21 12L9 4.5v15z" fill="currentColor"/><rect x="3.5" y="4" width="2.8" height="16" fill="currentColor"/></symbol>
     <symbol id="g-decoy" viewBox="0 0 24 24"><path d="M20 12L9.5 5.6l2 4.4L6 12l5.5 2-2 4.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.6"/></symbol>
     <symbol id="g-nest" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4l-8.1-4.7V7.3z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="8.4" r="1.9" fill="currentColor"/><circle cx="8.7" cy="14" r="1.9" fill="currentColor"/><circle cx="15.3" cy="14" r="1.9" fill="currentColor"/></symbol>
+    <symbol id="g-post" viewBox="0 0 24 24"><path d="M12 2.5l7 9.5-7 9.5-7-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
     <symbol id="g-canopy" viewBox="0 0 24 24"><g fill="#4f9a76"><circle cx="8" cy="9" r="3.4"/><circle cx="12.5" cy="7" r="3.4"/><circle cx="15.5" cy="11.5" r="3.4"/><circle cx="10" cy="14" r="3.4"/><circle cx="15" cy="16.5" r="3"/></g><path d="M3 12c1-6 6-9.5 11-9 5 .6 8 5 7.5 10-.6 5.5-6 9-11.5 8.4C5 20.8 2.4 16.5 3 12z" fill="none" stroke="#7fd1a4" stroke-width="1.4" stroke-dasharray="2.2 2"/></symbol>
     <symbol id="g-focus" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7.5 3c0 5.5 9 5 9 9s-9 3.5-9 9M16.5 3c0 5.5-9 5-9 9s9 3.5 9 9" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="g-guard" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.3-7 10-3.8-1.7-7-5-7-10V6z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
@@ -397,37 +510,63 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <div class="ctx-main" id="ctx-main"></div>
         <button class="chip on" id="btn-guard" aria-pressed="true" title="Parked Stings intercept drones near your Heart"><svg class="i"><use href="#g-guard"/></svg><span id="guard-l">Guard on</span></button>
       </div>
-      <div class="launch" role="group" aria-label="Launch">
-        <button class="ltile" id="arm-glint" aria-label="Arm a Glint scout"><svg class="i gly"><use href="#g-glint"/></svg><span class="nm">Glint</span><span class="sub" id="sub-glint">ready</span><span class="ct" id="ct-glint">1</span></button>
-        <button class="ltile" id="arm-sting" aria-label="Arm Stings"><svg class="i gly"><use href="#g-sting"/></svg><span class="nm">Stings</span><span class="sub" id="sub-sting">ready</span><span class="ct" id="ct-sting">4</span></button>
-        <button class="ltile" id="arm-decoy" aria-label="Arm Decoys"><svg class="i gly"><use href="#g-decoy"/></svg><span class="nm">Decoys</span><span class="sub" id="sub-decoy">none</span><span class="ct" id="ct-decoy">0</span></button>
-        <button class="ltile" id="arm-warden" aria-label="Arm a Warden"><svg class="i gly"><use href="#g-warden"/></svg><span class="nm">Wardens</span><span class="sub" id="sub-warden">none</span><span class="ct" id="ct-warden">0</span></button>
-        <button class="ltile" id="arm-raider" aria-label="Arm a Raider"><svg class="i gly"><use href="#g-raider"/></svg><span class="nm">Raiders</span><span class="sub" id="sub-raider">none</span><span class="ct" id="ct-raider">0</span></button>
+      <div class="launch" role="group" aria-label="Squads. Tap one, then the map. Long-press or right-click to change its mix.">
+        <button class="ltile sq" id="sq-0" data-sq="0"></button>
+        <button class="ltile sq" id="sq-1" data-sq="1"></button>
+        <button class="ltile sq" id="sq-2" data-sq="2"></button>
+        <button class="ltile sq" id="sq-3" data-sq="3"></button>
+        <button class="ltile sq" id="sq-4" data-sq="4"></button>
         <button class="ltile ftile" id="btn-focus" aria-pressed="false" aria-label="Slow time"><svg class="i gly"><use href="#g-focus"/></svg><span class="nm">Slow</span><span class="sub" id="sub-focus">time</span><span class="meter"><i id="m-focus"></i></span></button>
       </div>
-      <div class="build">
-        <div class="bq">
-          <span class="bq-l">Build</span>
-          <div class="queue" id="queue" role="group" aria-label="Build queue. Tap an item to cancel it and get the nectar back."></div>
-          <span class="q-empty" id="q-empty">Queue empty. Tap a button below to build.</span>
-          <span class="q-count" id="q-count"></span>
+      <div class="panel">
+        <div class="tabs">
+          <div class="tablist" role="tablist" aria-label="Dock panel">
+            <button role="tab" id="tab-build" data-tab="build" aria-selected="true" aria-controls="body-build">Build</button>
+            <button role="tab" id="tab-posts" data-tab="posts" aria-selected="false" aria-controls="body-posts">Posts<i class="tb" id="tb-posts"></i></button>
+            <button role="tab" id="tab-flying" data-tab="flying" aria-selected="false" aria-controls="body-flying">Flying<i class="tb" id="tb-flying"></i></button>
+          </div>
+          <div class="tab-ctl">
+            <button class="chip auto" id="btn-auto" aria-pressed="false" title="Keep the queue full from your production plan (B)"><i class="led" aria-hidden="true"></i><span>Auto</span></button>
+            <button class="chip" id="btn-plan" title="Production plan: what auto build keeps topped up">Plan</button>
+          </div>
         </div>
-        <div class="bbtns" role="group" aria-label="Build">
-          <button class="bbtn" id="buy-forager" aria-label="Build a Forager for 25 nectar"><svg class="i"><use href="#g-forager"/></svg><span class="bn">Forager</span><span class="bc">&#9670;25</span><span class="bk" id="bk-forager">2</span></button>
-          <button class="bbtn" id="buy-glint" aria-label="Build a Glint for 10 nectar"><svg class="i"><use href="#g-glint"/></svg><span class="bn">Glint</span><span class="bc">&#9670;10</span></button>
-          <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings &times;4</span><span class="bc">&#9670;24</span></button>
-          <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys &times;2</span><span class="bc">&#9670;10</span></button>
-          <button class="bbtn" id="buy-warden" aria-label="Build a Warden for 35 nectar"><svg class="i"><use href="#g-warden"/></svg><span class="bn">Warden</span><span class="bc">&#9670;35</span></button>
-          <button class="bbtn" id="buy-raider" aria-label="Build a Raider for 40 nectar"><svg class="i"><use href="#g-raider"/></svg><span class="bn">Raider</span><span class="bc">&#9670;40</span></button>
-          <button class="bbtn" id="buy-nest" aria-label="Place a Nest for 80 nectar"><svg class="i"><use href="#g-nest"/></svg><span class="bn">Nest</span><span class="bc">&#9670;80</span><span class="bk" id="bk-nest">0/2</span></button>
+        <div class="tab-body build" id="body-build" role="tabpanel" aria-labelledby="tab-build">
+          <div class="bq">
+            <div class="queue" id="queue" role="group" aria-label="Build queue. Tap an item to cancel it and get the nectar back."></div>
+            <span class="q-status" id="q-status">Queue empty.</span>
+            <span class="q-count" id="q-count"></span>
+          </div>
+          <div class="bbtns" role="group" aria-label="Build">
+            <button class="bbtn" id="buy-forager" aria-label="Build a Forager for 25 nectar"><svg class="i"><use href="#g-forager"/></svg><span class="bn">Forager</span><span class="bc">&#9670;25</span><span class="bk" id="bk-forager">2</span></button>
+            <button class="bbtn" id="buy-glint" aria-label="Build a Glint for 10 nectar"><svg class="i"><use href="#g-glint"/></svg><span class="bn">Glint</span><span class="bc">&#9670;10</span></button>
+            <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings &times;4</span><span class="bc">&#9670;24</span></button>
+            <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys &times;2</span><span class="bc">&#9670;10</span></button>
+            <button class="bbtn" id="buy-warden" aria-label="Build a Warden for 35 nectar"><svg class="i"><use href="#g-warden"/></svg><span class="bn">Warden</span><span class="bc">&#9670;35</span></button>
+            <button class="bbtn" id="buy-raider" aria-label="Build a Raider for 40 nectar"><svg class="i"><use href="#g-raider"/></svg><span class="bn">Raider</span><span class="bc">&#9670;40</span></button>
+            <button class="bbtn" id="buy-nest" aria-label="Place a Nest for 80 nectar"><svg class="i"><use href="#g-nest"/></svg><span class="bn">Nest</span><span class="bc">&#9670;80</span><span class="bk" id="bk-nest">0/2</span></button>
+          </div>
         </div>
+        <div class="tab-body cards" id="body-posts" role="tabpanel" aria-labelledby="tab-posts" hidden></div>
+        <div class="tab-body cards" id="body-flying" role="tabpanel" aria-labelledby="tab-flying" hidden></div>
       </div>
     </div>
   </footer>
 
+  <div class="qmenu" id="qmenu" role="menu" hidden></div>
+
+  <section class="sheet-wrap" id="sheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h">
+      <div class="sheet-head">
+        <div><div class="kicker" id="sheet-k">Paused while you plan</div><h2 id="sheet-h">Plan</h2></div>
+        <button class="btn primary" id="sheet-done">Done</button>
+      </div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </section>
+
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2.5</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -444,7 +583,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <div class="field-l"><span>Map</span><div class="mapno"><b id="mapno">0000</b><button class="chip" id="btn-newmap">New map</button></div></div>
       </div>
       <button class="go" id="btn-go">Launch round</button>
-      <p class="keys">Keys: 1&ndash;7 build &middot; Q W E R T arm Glint, Stings, Decoys, Wardens, Raiders &middot; D dash &middot; C how many &middot; X recall &middot; F forager &middot; G guard &middot; Space slow time &middot; Esc cancel &middot; P pause &middot; scroll to zoom</p>
+      <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Space slow time &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
     </div>
   </section>
 
@@ -480,6 +619,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
           <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base.</td></tr>
         </tbody>
       </table>
+      <h3 class="sub-h">Commanding the hive</h3>
+      <table class="units cmd">
+        <tbody>
+          <tr><th>Squads</th><td>Tap a squad, then tap the map or drag a route. Tap two to send them together. Long-press or right-click a squad to change its mix. <b>Again</b> resends your last squad the same way.</td></tr>
+          <tr><th>Auto</th><td>Keeps two items in the queue from your plan: the first row below its target, saving up for it rather than skipping ahead. Losses are rebuilt. What you build yourself goes first.</td></tr>
+          <tr><th>Posts</th><td>A spot the hive keeps staffed with Glints, Wardens or Decoys. It relieves a Glint before its battery fades and replaces Wardens that go home to rearm. Higher priority posts are filled first.</td></tr>
+          <tr><th>Quick</th><td>Tap a blue contact for Strike, Bomb or Intercept. Press and hold open ground to scout, hunt, patrol, set a post or grow a Nest there.</td></tr>
+        </tbody>
+      </table>
       <div class="btn-row">
         <button class="btn primary" id="btn-resume">Resume</button>
         <button class="btn" id="btn-restart">Restart</button>
@@ -504,7 +652,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 </div>
 
 <script>
-/* Drone Season · simulation core (milestone 2). Pure logic, no DOM, deterministic per seed. */
+/* Drone Season · simulation core (milestone 2.5, Command). Pure logic, no DOM, deterministic per seed. */
 (function (root) {
   'use strict';
 
@@ -517,6 +665,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const LOCK_MEMORY = 3, CONTACT_MEMORY = 6;
   const QUEUE_MAX = 8, NEST_MAX = 2, NEST_FROM_HEART = 560, NEST_FROM_NEST = 300, NEST_ENEMY_CLEAR = 520;
   const BLAST_R = 30, WARDEN_ENGAGE = 210, WARDEN_LEASH = 320;
+  const NEST_GUARD_R = 120, AUTO_QUEUE = 2, POST_MAX = 5, PLAN_MAX_ROWS = 12;
+  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider'];
+  const POST_TYPES = ['glint', 'warden', 'decoy'];
+  const POST_CAP = { glint: 2, warden: 3, decoy: 4 };
 
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
@@ -811,6 +963,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       droneDestroyed: 0, droneLost: 0, heartDealt: 0, heartTaken: 0,
       heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, recovered: 0, returns: 0, decoyDrew: 0,
       fieldDanger: new Float32Array(map.fields.length).fill(-999), best: null,
+      plan: [], auto: false, autoSkip: null, posts: [], postSeq: 1,
     }));
     for (let s = 0; s < 2; s++) {
       const hp = map.hearts[s];
@@ -883,13 +1036,17 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (!near) return 'Grow Nests within reach of your Heart or another Nest.';
     return '';
   }
-  function build(sim, side, type, site) {
+  // Auto items (from the production plan) wait behind anything you queue yourself, except the one already in the vat.
+  function build(sim, side, type, site, opts) {
     const S = sim.sides[side], b = BUILD[type];
     if (!b || sim.over || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
     if (b.site && (!site || nestSiteError(sim, side, site.x, site.y))) return null;
     S.nectar -= b.cost; S.spent += b.cost;
-    const q = { id: S.qid++, type, t: b.time, total: b.time, site: b.site ? { x: site.x, y: site.y } : null };
-    S.queue.push(q);
+    const auto = !!(opts && opts.auto);
+    const q = { id: S.qid++, type, t: b.time, total: b.time, site: b.site ? { x: site.x, y: site.y } : null, auto };
+    let at = S.queue.length;
+    if (!auto) { const i = S.queue.findIndex((x, k) => k > 0 && x.auto); if (i > 0) at = i; }
+    S.queue.splice(at, 0, q);
     return q;
   }
   function cancelBuild(sim, side, qid) {
@@ -897,6 +1054,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (i < 0 || sim.over) return null;
     const q = S.queue.splice(i, 1)[0], c = BUILD[q.type].cost;
     S.nectar += c; S.spent -= c;
+    if (q.auto) S.autoSkip = { type: q.type, until: sim.t + 15 };   // cancelling an auto item skips that row for a while
     return q;
   }
   function parkedOf(sim, side, type) {
@@ -932,7 +1090,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const so = {
       id: sim.nextSortie++, side, type, units: [], route: rt, ox: base.x, oy: base.y,
       stance: opts.stance || 'quiet', mode: opts.mode || 'route', target: opts.target || 0,
-      cost: 0, destroyed: 0, killed: {}, born: sim.t, label: opts.label || '', n: k, pkg: opts.pkg || 0,
+      cost: 0, destroyed: 0, killed: {}, born: sim.t, label: opts.label || '', n: k, pkg: opts.pkg || 0, post: opts.post || 0,
     };
     for (let i = 0; i < k; i++) {
       const u = avail[i];
@@ -950,7 +1108,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     opts = opts || {};
     const so = sim.sorties.get(sortieId);
     if (!so || sim.over) return false;
-    so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0;
+    so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0; so.post = 0;
     if (opts.stance) so.stance = opts.stance;
     for (const id of so.units) {
       const u = sim.byId.get(id);
@@ -963,6 +1121,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function recall(sim, sortieId) {
     const so = sim.sorties.get(sortieId);
     if (!so || sim.over) return false;
+    so.post = 0;
     if (TYPES[so.type].reuse) { for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.homing = true; u.target = 0; } } }
     else if (so.type === 'sting') { so.mode = 'home'; for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.target = 0; u.diving = false; } } }
     else return false;
@@ -1192,7 +1351,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       sim.events.push({ k: 'killed', side: u.side, type: u.type, x: u.x, y: u.y, by });
     } else if (how === 'expired') {
       if (TYPES[u.type].reuse) { S.lost += v; S.droneLost += v; S.losses++; S.lostBy[u.type] = (S.lostBy[u.type] || 0) + 1; }
-      sim.events.push({ k: 'fizzle', side: u.side, type: u.type, x: u.x, y: u.y });
+      const so = sim.sorties.get(u.sortie);
+      sim.events.push({ k: 'fizzle', side: u.side, type: u.type, x: u.x, y: u.y, post: so ? so.post : 0 });
     }
   }
   function damage(sim, tgt, amt, src) {
@@ -1503,23 +1663,31 @@ svg.i { width: 1em; height: 1em; flex: none; }
         if (hit) damage(sim, best, 1, h);
       }
     }
-    // guard: parked Stings intercept tracked drones near the Heart
+    // guard: parked Stings intercept tracked drones near the Heart or a Nest
     if (S.guard && sim.tick % 3 === 0) {
-      let parked = null;
+      let parked = null, bases = null;
       for (const c of S.pic.values()) {
         if (c.grade < 2 || c.static) continue;
         const e = sim.byId.get(c.id);
         if (!e || e.hp <= 0 || e.parked || isStructure(e)) continue;
-        if (Math.hypot(e.x - h.x, e.y - h.y) > GUARD_R) continue;
-        const need = e.diving ? 2 : Math.min(2, TYPES[c.type].hp);
+        if (!bases) bases = basesOf(sim, s);
+        // the Heart guards against anything close; a Nest only against Stings and Raiders closing on it
+        let at = null;
+        const striker = c.type === 'sting' || c.type === 'raider';
+        for (const b of bases) {
+          const dx = b.x - e.x, dy = b.y - e.y;
+          if (b.type === 'heart' ? dx * dx + dy * dy <= GUARD_R * GUARD_R : striker && dx * dx + dy * dy <= NEST_GUARD_R * NEST_GUARD_R && dx * c.vx + dy * c.vy > 0) { at = b; break; }
+        }
+        if (!at) continue;
+        const need = at.type === 'nest' ? 1 : e.diving ? 2 : Math.min(2, TYPES[c.type].hp);
         let have = targetedBy(sim, s, e.id);
         if (have >= need) continue;
         if (!parked) parked = parkedOf(sim, s, 'sting');
         while (have < need && parked.length) {
-          const so = launch(sim, s, 'sting', 1, [], { mode: 'guard', target: e.id, stance: 'dash', label: 'Guard', fromHeart: true });
+          const so = launch(sim, s, 'sting', 1, [], { mode: 'guard', target: e.id, stance: 'dash', label: 'Guard', fromHeart: at.type === 'heart' });
           parked.shift(); have++;
           if (!so) break;
-          sim.events.push({ k: 'guard', side: s, type: c.type, x: e.x, y: e.y });
+          sim.events.push({ k: 'guard', side: s, type: c.type, x: e.x, y: e.y, at: at.type });
         }
         if (!parked.length) break;
       }
@@ -1611,6 +1779,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
     sim.holder = holder;
 
+    if (sim.tick % 15 === 7) for (let s = 0; s < 2; s++) { postTick(sim, s); autoTick(sim, s); }
     if (sim.tick % 15 === 0) for (const ai of sim.ai) if (ai) aiTick(sim, ai);
 
     if (t >= C.round) {
@@ -1643,6 +1812,155 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (forceCount(sim, side, type) < want) return S.nectar >= BUILD[type].cost ? build(sim, side, type) : null;
     }
     return null;
+  }
+
+  // ---------- command: production plan, auto build and posts ----------
+  // The plan is a priority list of [type, target]; a type may appear more than once to build in stages.
+  function setPlan(sim, side, rows) {
+    sim.sides[side].plan = (rows || []).filter(r => r && PLAN_TYPES.includes(r.type || r[0]))
+      .slice(0, PLAN_MAX_ROWS).map(r => ({ type: r.type || r[0], want: Math.max(0, Math.min(60, (r.want != null ? r.want : r[1]) | 0)) }));
+  }
+  function setAuto(sim, side, on) { const S = sim.sides[side]; S.auto = !!on; S.autoSkip = null; }
+
+  const byPri = posts => posts.slice().sort((a, b) => b.pri - a.pri || a.id - b.id);
+  function postUnits(sim, side, post, type) {
+    const out = [];
+    for (const so of sim.sorties.values()) {
+      if (so.side !== side || so.post !== post.id || (type && so.type !== type)) continue;
+      for (const id of so.units) { const u = sim.byId.get(id); if (u && u.hp > 0 && !u.parked) out.push(u); }
+    }
+    return out;
+  }
+  // A unit counts as on station until it has to leave: a Warden going home to rearm, or a Glint or Decoy
+  // whose battery is down to the time a fresh one needs to fly out (so the relief arrives as it fades).
+  function onStation(sim, side, post, u) {
+    if (u.homing) return false;
+    const T = TYPES[u.type];
+    if (u.type === 'warden') return u.nets > 0 && u.battery >= 25 && u.hp >= T.hp;
+    const b = nearestBase(sim, side, post.x, post.y);
+    return u.battery > dist(b.x, b.y, post.x, post.y) / T.speed + 6;
+  }
+  function postStaff(sim, side, post) {
+    const out = {};
+    for (const type of POST_TYPES) {
+      const need = post.need[type] | 0;
+      if (!need) continue;
+      let on = 0, out2 = 0;
+      for (const u of postUnits(sim, side, post, type)) { out2++; if (onStation(sim, side, post, u)) on++; }
+      out[type] = { need, on, assigned: out2 };
+    }
+    return out;
+  }
+  // Send ready units to any post that is short, highest priority first.
+  function postTick(sim, side) {
+    const S = sim.sides[side];
+    if (!S.posts.length || sim.over) return;
+    for (const p of byPri(S.posts)) {
+      for (const type of POST_TYPES) {
+        const need = p.need[type] | 0;
+        if (!need) continue;
+        let on = 0;
+        for (const u of postUnits(sim, side, p, type)) if (onStation(sim, side, p, u)) on++;
+        if (on >= need) continue;
+        const so = launch(sim, side, type, need - on, [{ x: p.x, y: p.y }], { post: p.id, label: 'Post', stance: 'quiet' });
+        if (so) sim.events.push({ k: 'postSent', side, post: p.id, type, n: so.n, x: p.x, y: p.y });
+      }
+    }
+  }
+  // What the posts are short of, beyond what is ready or queued. Glints and Decoys keep one spare per post for relief;
+  // a Warden on its way home or rearming does not count, so the hive builds a spare to cover it.
+  function postShort(sim, side) {
+    const S = sim.sides[side], want = {}, order = [];
+    for (const p of byPri(S.posts)) for (const type of POST_TYPES) {
+      const n = p.need[type] | 0;
+      if (!n) continue;
+      want[type] = (want[type] || 0) + n + (type === 'warden' ? 0 : 1);
+      if (!order.includes(type)) order.push(type);
+    }
+    const out = [];
+    for (const type of order) {
+      let have = 0;
+      for (const u of sim.units) {
+        if (u.side !== side || u.type !== type || u.hp <= 0) continue;
+        if (u.parked) { if (!(u.rearmT > 0)) have++; continue; }
+        const so = sim.sorties.get(u.sortie);
+        if (!so || !so.post) continue;                       // busy on your own orders
+        const p = S.posts.find(q => q.id === so.post);
+        if (p && onStation(sim, side, p, u)) have++;
+      }
+      for (const q of S.queue) if (q.type === type) have += BUILD[type].n;
+      if (have < want[type]) out.push([type, want[type] - have]);
+    }
+    return out;
+  }
+  // The list auto build works through: what posts are short of first, then the plan.
+  function planList(sim, side) {
+    const S = sim.sides[side], rows = [];
+    for (const [type, short] of postShort(sim, side)) rows.push([type, forceCount(sim, side, type) + short, 'post']);
+    for (const r of S.plan) rows.push([r.type, r.want, 'plan']);
+    return rows;
+  }
+  // The first row below its target: what auto build will queue next (it saves up for it rather than skipping ahead).
+  function autoNext(sim, side) {
+    const S = sim.sides[side], skip = S.autoSkip && S.autoSkip.until > sim.t ? S.autoSkip.type : null;
+    for (const [type, want, from] of planList(sim, side)) {
+      if (type === skip) continue;
+      const have = forceCount(sim, side, type);
+      if (have < want) return { type, cost: BUILD[type].cost, have, want, from };
+    }
+    return null;
+  }
+  function autoTick(sim, side) {
+    const S = sim.sides[side];
+    if (!S.auto || sim.over || S.queue.length >= AUTO_QUEUE) return null;
+    const nx = autoNext(sim, side);
+    if (!nx || S.nectar < nx.cost) return null;
+    const q = build(sim, side, nx.type, null, { auto: true });
+    if (q && S.autoSkip && S.autoSkip.type !== nx.type) S.autoSkip = null;
+    return q;
+  }
+  function cleanNeed(need) {
+    const out = {};
+    for (const t of POST_TYPES) out[t] = Math.max(0, Math.min(POST_CAP[t], (need && need[t]) | 0));
+    return out;
+  }
+  function addPost(sim, side, x, y, need, pri, name) {
+    const S = sim.sides[side];
+    if (S.posts.length >= POST_MAX) return null;
+    const p = { id: S.postSeq++, x: clamp(x, 10, W - 10), y: clamp(y, 10, H - 10), need: cleanNeed(need), pri: clamp(pri == null ? 1 : pri | 0, 0, 2), name: name || '' };
+    S.posts.push(p);
+    return p;
+  }
+  function editPost(sim, side, id, patch) {
+    const p = sim.sides[side].posts.find(q => q.id === id);
+    if (!p) return null;
+    if (patch.need) p.need = cleanNeed(Object.assign({}, p.need, patch.need));
+    if (patch.pri != null) p.pri = clamp(patch.pri | 0, 0, 2);
+    if (patch.name != null) p.name = patch.name;
+    if (patch.x != null && patch.y != null) {
+      p.x = clamp(patch.x, 10, W - 10); p.y = clamp(patch.y, 10, H - 10);
+      for (const so of sim.sorties.values()) if (so.side === side && so.post === id) { so.route = [{ x: p.x, y: p.y }]; for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } } }
+    }
+    // drop units the post no longer needs: Wardens go home, Glints and Decoys stay where they are until their batteries fade
+    for (const type of POST_TYPES) {
+      const list = postUnits(sim, side, p, type), extra = list.length - p.need[type];
+      for (let i = 0; i < extra; i++) {
+        const so = sim.sorties.get(list[i].sortie);
+        if (so && so.post === id) { so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; } }
+      }
+    }
+    return p;
+  }
+  function removePost(sim, side, id) {
+    const S = sim.sides[side], i = S.posts.findIndex(q => q.id === id);
+    if (i < 0) return false;
+    S.posts.splice(i, 1);
+    for (const so of sim.sorties.values()) {
+      if (so.side !== side || so.post !== id) continue;
+      so.post = 0;
+      if (TYPES[so.type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
+    }
+    return true;
   }
 
   // ---------- rival hive ----------
@@ -1845,16 +2163,18 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
   root.DS = {
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
+    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT,
     createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
+    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
 <script>
-/* Drone Season · rendering, input, sound and overlays (milestone 2). */
+/* Drone Season · rendering, input, sound and overlays (milestone 2.5, Command). */
 (function () {
   'use strict';
   const DS = window.DS, W = DS.W, H = DS.H, TAU = Math.PI * 2, T = DS.TYPES;
@@ -1867,8 +2187,24 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const FONT_D = '"Chakra Petch", "Bahnschrift", "Segoe UI", sans-serif';
   const FONT_M = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
-  const LAUNCH = ['glint', 'sting', 'decoy', 'warden', 'raider'];
-  const COUNTS = { sting: [1, 4, 'all'], decoy: [1, 2, 'all'], warden: [1, 2, 'all'], raider: [1, 2, 'all'] };
+  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider'];
+  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3 };
+  const SQUAD_STEP = { sting: 2 };
+  const DEFAULT_SQUADS = [
+    { name: 'Scout', mix: { glint: 1 } },
+    { name: 'Strike', mix: { sting: 4 } },
+    { name: 'Swarm', mix: { sting: 8, decoy: 2 } },
+    { name: 'Bomb run', mix: { raider: 1, decoy: 2 } },
+    { name: 'Patrol', mix: { warden: 1 } },
+  ];
+  const PRESETS = {
+    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['sting', 28]],
+    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['glint', 2], ['sting', 36]],
+    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
+    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['sting', 16], ['warden', 3], ['glint', 2], ['sting', 28]],
+  };
+  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6 };
+  const PRI = ['Low', 'Normal', 'High'];
   const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
   const nameN = (type, n) => (n === 1 ? T[type].name : PLURAL[type]);
   const units = (n, type) => `${n} ${nameN(type, n)}`;
@@ -1881,11 +2217,27 @@ svg.i { width: 1em; height: 1em; flex: none; }
     set(k, v) { try { localStorage.setItem('ds1.' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
   };
   const randSeed = () => 1000 + Math.floor(Math.random() * 9000);
+  const copySquads = list => list.map(q => ({ name: q.name, mix: Object.assign({}, q.mix) }));
+  function cleanSquads(v) {
+    if (!Array.isArray(v) || v.length !== DEFAULT_SQUADS.length) return copySquads(DEFAULT_SQUADS);
+    return v.map((q, i) => {
+      const mix = {};
+      for (const t of SQUAD_TYPES) { const n = q && q.mix ? q.mix[t] | 0 : 0; if (n > 0) mix[t] = Math.min(SQUAD_MAX[t], n); }
+      const name = q && typeof q.name === 'string' && q.name.trim() ? q.name.trim().slice(0, 12) : DEFAULT_SQUADS[i].name;
+      return { name, mix };
+    });
+  }
+  function cleanPlan(v) {
+    if (!Array.isArray(v)) return PRESETS.Balanced.map(([type, want]) => ({ type, want }));
+    return v.filter(r => r && DS.PLAN_TYPES.includes(r.type)).slice(0, DS.PLAN_MAX_ROWS).map(r => ({ type: r.type, want: clamp(r.want | 0, 0, PLAN_MAX[r.type]) }));
+  }
 
   const G = {
     sim: null, mode: 'title', paused: false,
     seed: store.get('seed', randSeed()), diff: store.get('diff', 'normal'), round: store.get('round', 'short'), muted: store.get('muted', false),
-    armed: null, group: [], pkgSeq: 1, stance: 'quiet', counts: { sting: 4, decoy: 2, warden: 1, raider: 1 }, sel: null, placing: false,
+    squads: cleanSquads(store.get('squads', null)), plan: cleanPlan(store.get('plan', null)), auto: store.get('auto', true) !== false,
+    tab: 'build', sheet: null, menu: null, again: null, mix: {}, armedSq: [], placingPost: false, movingPost: 0, listKeys: {},
+    armed: null, group: [], pkgSeq: 1, stance: 'quiet', sel: null, placing: false,
     focus: false, meter: 1, acc: 0, last: 0, now: 0,
     terrain: null, terrainSeed: -1, vis: [], visT: -1, fx: [], trails: new Map(), shake: 0,
     hover: null, rateHist: [], hudT: 0, raidT: -99, thr: {}, ctxKey: '', qKey: '', endShown: false, overT: 0,
@@ -2434,7 +2786,18 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const sim = G.sim, s = scale(), h = sim.hearts[0], S0 = sim.sides[0];
     if (G.mode === 'play' && S0.guard) {
       ctx.strokeStyle = 'rgba(245,165,36,0.14)'; ctx.lineWidth = 1 / s; ctx.setLineDash([3 / s, 7 / s]);
-      ring(h.x, h.y, DS.GUARD_R); ctx.stroke(); ctx.setLineDash([]);
+      ring(h.x, h.y, DS.GUARD_R); ctx.stroke();
+      for (const b of DS.basesOf(sim, 0)) if (b.type === 'nest') { ring(b.x, b.y, DS.NEST_GUARD_R); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+    // posts: the Warden patrol ring, strong when the post is selected
+    if (G.mode === 'play') {
+      const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+      for (const p of S0.posts) {
+        if (!p.need.warden && p.id !== selP) continue;
+        ctx.strokeStyle = p.id === selP ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.13)'; ctx.lineWidth = 1 / s;
+        ctx.setLineDash([2 / s, 6 / s]); ring(p.x, p.y, p.need.warden ? DS.WARDEN_ENGAGE : 90); ctx.stroke(); ctx.setLineDash([]);
+      }
     }
     // where a Nest may grow
     if (G.placing) {
@@ -2475,7 +2838,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const pts = so.route.slice(lead.wp);
       const end = so.route[so.route.length - 1];
       if (pts.length) {
-        ctx.strokeStyle = sel ? 'rgba(255,200,103,0.9)' : so.mode === 'raid' ? 'rgba(255,94,77,0.4)' : 'rgba(245,165,36,0.34)';
+        ctx.strokeStyle = sel ? 'rgba(255,200,103,0.9)' : so.mode === 'raid' ? 'rgba(255,94,77,0.4)' : so.post ? 'rgba(245,165,36,0.16)' : 'rgba(245,165,36,0.34)';
         ctx.lineWidth = (sel ? 1.7 : 1.1) / s;
         ctx.setLineDash([6 / s, 6 / s]); ctx.lineDashOffset = -G.now * 24 / s;
         ctx.beginPath(); ctx.moveTo(lead.x, lead.y);
@@ -2483,7 +2846,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
         ctx.beginPath(); ctx.arc(end.x, end.y, 3.5 / s, 0, TAU); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
       }
-      if (so.type === 'warden' && end) {
+      if (so.type === 'warden' && end && (!so.post || sel)) {
         ctx.strokeStyle = sel ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.16)'; ctx.lineWidth = 1 / s;
         ctx.setLineDash([2 / s, 6 / s]); ring(end.x, end.y, DS.WARDEN_ENGAGE); ctx.stroke(); ctx.setLineDash([]);
       }
@@ -2594,7 +2957,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const sim = G.sim, m = sim.map, s = scale(), k = uk(), C = sim.cfg;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     // canopy names: strong while learning the map or giving orders, quiet otherwise
-    const loud = G.mode === 'play' && (sim.phase === 0 || G.armed || G.placing || (gest && gest.kind === 'route'));
+    const loud = G.mode === 'play' && (sim.phase === 0 || G.armed || G.placing || G.placingPost || (gest && gest.kind === 'route'));
     ctx.font = `600 ${8.5 * k}px ${FONT_D}`;
     ctx.fillStyle = loud ? 'rgba(127,209,164,0.75)' : 'rgba(127,209,164,0.32)';
     for (const pa of m.patches) { const p = S2(pa.x, pa.y); ctx.fillText('CANOPY', p.x, p.y - 4); }
@@ -2618,6 +2981,41 @@ svg.i { width: 1em; height: 1em; flex: none; }
     ctx.fillStyle = 'rgba(160,205,200,0.42)';
     for (const pk of m.peaks) { const p = S2(pk.x, pk.y); ctx.fillText('▲' + pk.elev, p.x, p.y - 5); }
     ctx.textBaseline = 'alphabetic';
+  }
+  // A post: a flag-like diamond with one pip per unit it keeps (filled when that unit is on station).
+  function postMark(x, y, k, col, alpha) {
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = 'rgba(6,9,12,0.8)'; ctx.strokeStyle = col; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x, y - 9 * k); ctx.lineTo(x + 7 * k, y); ctx.lineTo(x, y + 9 * k); ctx.lineTo(x - 7 * k, y); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 2.2 * k, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function drawPosts() {
+    const sim = G.sim, k = uk(), S0 = sim.sides[0];
+    if (G.mode !== 'play' || !S0.posts.length) return;
+    const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+    for (const p of S0.posts) {
+      const q = S2(p.x, p.y), st = staffOf(p), short = isShort(st), moving = G.movingPost === p.id;
+      if (p.id === selP) { ctx.strokeStyle = COL.amberHi; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 15 * k, 0, TAU); ctx.stroke(); }
+      postMark(q.x, q.y, k, short ? COL.lock : COL.amberHi, moving ? 0.4 : 1);
+      // pips
+      const pips = [];
+      for (const t of DS.POST_TYPES) if (st[t]) for (let i = 0; i < st[t].need; i++) pips.push(i < st[t].on);
+      const pw = 5 * k, gap = 2 * k, total = pips.length * pw + (pips.length - 1) * gap;
+      let x0 = q.x - total / 2;
+      const y0 = q.y + 12 * k;
+      for (const on of pips) {
+        ctx.fillStyle = on ? COL.amber : 'rgba(6,9,12,0.8)'; ctx.strokeStyle = on ? COL.amber : short ? COL.lock : COL.dim; ctx.lineWidth = 1;
+        ctx.fillRect(x0, y0, pw, pw); ctx.strokeRect(x0 + 0.5, y0 + 0.5, pw - 1, pw - 1);
+        x0 += pw + gap;
+      }
+      const bloomNamed = sim.map.fields.some(f => (f.centre ? 'Crown' : f.name) === p.name);
+      ctx.font = `700 ${8.5 * k}px ${FONT_D}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = short ? 'rgba(255,94,77,0.9)' : 'rgba(255,200,103,0.9)';
+      ctx.fillText(bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`, q.x, q.y - 11 * k);
+      ctx.textBaseline = 'alphabetic';
+    }
   }
   function routeOrigin(pt) {
     const sim = G.sim;
@@ -2660,6 +3058,14 @@ svg.i { width: 1em; height: 1em; flex: none; }
       }
     }
     if (!G.hover || !G.hover.mouse || (gest && gest.kind === 'route')) return;
+    if (G.placingPost || G.movingPost) {
+      const w = toWorld(G.hover.x, G.hover.y);
+      postMark(G.hover.x, G.hover.y, uk(), COL.amberHi, 0.8);
+      ctx.strokeStyle = 'rgba(255,200,103,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.arc(G.hover.x, G.hover.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      label(G.hover.x, G.hover.y - 20, `POST: ${postName(w.x, w.y).toUpperCase()}`, COL.amberHi);
+      return;
+    }
     if (G.placing) {
       const w = toWorld(G.hover.x, G.hover.y), err = DS.nestSiteError(sim, 0, w.x, w.y);
       drawNest(w.x, w.y, 0, uk(), err ? 0.4 : 0.85, null, true);
@@ -2692,9 +3098,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function tooltip(X, Y) {
     const sim = G.sim;
-    const c = hitContact(X, Y);
+    const c = hitContact(X, Y), post = hitPost(X, Y);
     let text = '';
-    if (c) {
+    if (post) text = `Post ${post.name} · ${PRI[post.pri].toLowerCase()} priority · ${staffText(post)}`;
+    else if (c) {
       if (c.type === 'heart') text = `Cobalt Heart · ${sim.hearts[1].hp} left`;
       else if (c.type === 'nest') { const e = sim.byId.get(c.id); text = c.grade >= 2 && e ? `Cobalt Nest · ${e.hp} left` : 'Cobalt Nest · last seen here'; }
       else {
@@ -2738,6 +3145,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     drawWorldOverlays();
     setScreen();
     drawLabels();
+    drawPosts();
     drawUnits();
     drawFx();
     if (G.mode === 'play') drawPreview();
@@ -2836,7 +3244,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         break;
       case 'fizzle':
         fx('fizzle', e.x, e.y, { life: 0.6 });
-        if (live && e.side === 0 && e.type === 'glint') toastOnce('fz', 'A Glint ran out of battery.', '', 4);
+        if (live && e.side === 0 && e.type === 'glint' && !e.post) toastOnce('fz', 'A Glint ran out of battery.', '', 4);
         if (live && e.side === 0 && (e.type === 'raider' || e.type === 'warden')) toast(`A ${T[e.type].name} ran out of battery before it got home.`, 'lock');
         break;
       case 'flak':
@@ -2874,7 +3282,13 @@ svg.i { width: 1em; height: 1em; flex: none; }
         if (live && e.side === 0) toastOnce('nh', `Your Nest is under attack. ${e.hp} left.`, 'lock', 4);
         break;
       case 'guard':
-        if (live && e.side === 0) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your Heart.`, 'amber', 8);
+        if (live && e.side === 0) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your ${e.at === 'nest' ? 'Nest' : 'Heart'}.`, 'amber', 8);
+        break;
+      case 'postSent':
+        if (live && e.side === 0) {
+          const p = postById(e.post);
+          if (p && e.type !== 'glint') toastOnce('ps' + e.post + e.type, `${units(e.n, e.type)} on the way to the ${p.name} post.`, '', 25);
+        }
         break;
       case 'built':
         if (e.side !== 0) break;
@@ -2919,16 +3333,37 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function onScreen(x, y) { const p = S2(x, y); return p.x > -20 && p.y > -20 && p.x < VW + 20 && p.y < VH + 20; }
   function flashTile(type) {
-    const t = $('arm-' + type) || $('buy-' + type);
-    if (!t) return;
-    t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+    const els = [];
+    G.squads.forEach((q, i) => { if (q.mix[type]) els.push($('sq-' + i)); });
+    if (!els.length && $('buy-' + type)) els.push($('buy-' + type));
+    for (const t of els) { t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); }
   }
 
   // ---------- orders ----------
   const readyOf = type => DS.parkedCount(G.sim, 0, type);
-  // Armed launch tiles form a group: G.group lists them, G.armed is the one added last.
-  function setArm(list) { G.group = list; G.armed = list.length ? list[list.length - 1] : null; }
-  // The selected sorties: one sortie, or every sortie launched together as a group.
+  const mixTypes = mix => SQUAD_TYPES.filter(t => mix[t] > 0);
+  const mixSize = mix => mixTypes(mix).reduce((n, t) => n + mix[t], 0);
+  const MIX_ORDER = ['sting', 'raider', 'warden', 'glint', 'decoy'];
+  const mixText = (mix, sep) => MIX_ORDER.filter(t => mix[t] > 0).map(t => units(mix[t], t)).join(sep || ' + ');
+  function mixReady(mix) {
+    let r = 0;
+    for (const t of mixTypes(mix)) r += Math.min(mix[t], readyOf(t));
+    return r;
+  }
+  // The armed squads' units, merged into one mix: G.group lists its types, G.armed is set while anything is armed.
+  function setMix(mix) {
+    G.mix = mix; G.group = mixTypes(mix);
+    G.armed = G.group.length ? G.group[G.group.length - 1] : null;
+    if (!G.armed) G.armedSq = [];
+  }
+  function rebuildMix() {
+    const mix = {};
+    for (const i of G.armedSq) for (const t of mixTypes(G.squads[i].mix)) mix[t] = (mix[t] || 0) + G.squads[i].mix[t];
+    setMix(mix);
+  }
+  const armName = () => G.armedSq.map(i => G.squads[i].name).join(' + ') || 'Squad';
+  function disarm() { G.armedSq = []; setMix({}); }
+  // The selected sorties: one sortie, or every sortie launched together as a package.
   function selSorties() {
     if (!G.sel || G.sel.kind !== 'sortie') return [];
     const sim = G.sim, out = [];
@@ -2938,19 +3373,22 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const selSet = () => new Set(selSorties().map(so => so.id));
   const activeTypes = () => (G.armed ? G.group.slice() : [...new Set(selSorties().map(so => so.type))]);
   const isStriker = t => t === 'sting' || t === 'raider';
-  function arm(type) {
-    if (G.mode !== 'play' || G.paused) return;
-    G.placing = false;
-    if (G.group.includes(type)) { setArm(G.group.filter(t => t !== type)); play('tick'); return; }
-    if (!readyOf(type)) {
+  const busy = () => G.mode !== 'play' || G.paused || !!G.sheet;
+  function armSquad(i) {
+    if (busy()) return;
+    const sq = G.squads[i];
+    G.placing = false; G.placingPost = false; G.movingPost = 0; closeMenu();
+    if (G.armedSq.includes(i)) { G.armedSq = G.armedSq.filter(k => k !== i); rebuildMix(); play('tick'); return; }
+    if (!mixSize(sq.mix)) { openSquadSheet(i); return; }
+    if (!mixReady(sq.mix)) {
       play('deny');
-      const re = DS.rearmingCount(G.sim, 0, type);
-      toastOnce('nr' + type, re ? `${units(re, type)} rearming. Ready in a few seconds.` : `No ${PLURAL[type]} ready. Build ${type === 'raider' || type === 'warden' || type === 'glint' ? 'one' : 'some'} in the Build row.`, '', 2);
+      const t = mixTypes(sq.mix)[0], re = DS.rearmingCount(G.sim, 0, t);
+      toastOnce('nr' + i, re ? `${sq.name}: ${units(re, t)} rearming. Ready in a few seconds.` : `${sq.name}: nothing ready. Build ${PLURAL[t]} in the Build tab, or turn on Auto.`, '', 2);
       return;
     }
-    setArm(G.group.concat([type])); G.sel = null; play('tick');
+    G.armedSq = G.armedSq.concat([i]); rebuildMix(); G.sel = null; play('tick');
   }
-  function cancel() { setArm([]); G.sel = null; G.placing = false; }
+  function cancel() { disarm(); G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; closeMenu(); }
   function contactWorld(c) {
     const e = G.sim.byId.get(c.id);
     if (c.static) return { x: c.x, y: c.y };
@@ -2996,25 +3434,46 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const route = pts.length ? pts : [end];
     return { route, opts: {}, what: type === 'glint' ? `scouting ${placeOf(end.x, end.y)}` : `drawing fire ${placeOf(end.x, end.y)}` };
   }
-  // Launch every armed type along the same gesture. A mixed group shares a package id so it can be selected and retasked as one.
-  function launchGroup(planFor) {
-    const sim = G.sim, types = G.group.slice();
+  // Launch a mix of units along one gesture as one package, so it can be selected and retasked as one.
+  function launchMix(mix, planFor, name) {
+    const sim = G.sim, types = mixTypes(mix);
     const strike = types.some(isStriker), lead = strike && types.includes('decoy');
-    const pkg = types.length > 1 ? G.pkgSeq++ : 0;
+    const pkg = G.pkgSeq++;
     const sent = [];
-    let what = '';
+    let what = '', want = 0, got = 0;
     for (const t of types) {
+      want += mix[t];
       const p = planFor(t);
       if (!p) continue;
-      const so = DS.launch(sim, 0, t, t === 'glint' ? 1 : G.counts[t], p.route, Object.assign({ stance: t === 'decoy' && lead ? 'dash' : G.stance, pkg }, p.opts));
+      const so = DS.launch(sim, 0, t, mix[t], p.route, Object.assign({ stance: t === 'decoy' && lead ? 'dash' : G.stance, pkg, label: name }, p.opts));
       if (!so) continue;
+      got += so.n;
       sent.push(units(so.n, t));
       if (!what || isStriker(t)) what = p.what;
     }
-    if (!sent.length) { play('deny'); toastOnce('nrg', 'Nothing armed is ready to fly.', '', 2); return; }
+    if (!sent.length) { play('deny'); toastOnce('nrg', `${name}: nothing ready to fly.`, '', 2); return false; }
     play('launch');
-    toast(`${sent.join(' + ')} away: ${what}${lead ? '. Decoys lead.' : ''}`, 'amber');
-    setArm(G.group.filter(t => readyOf(t) > 0));
+    toast(`${name}: ${sent.join(' + ')} away, ${what}${got < want ? ` (${got} of ${want} were ready)` : ''}${lead ? '. Decoys lead.' : ''}`, 'amber');
+    return true;
+  }
+  // g is a gesture: a list of route points, or a contact.
+  function sendMix(mix, g, name) {
+    const ok = launchMix(mix, t => plan(t, g.pts, g.c), name);
+    if (ok) G.again = { mix: Object.assign({}, mix), name, pts: g.pts.slice(), cid: g.c ? g.c.id : 0, cpos: g.c ? contactWorld(g.c) : null, stance: G.stance };
+    return ok;
+  }
+  function fireArmed(g) { if (sendMix(G.mix, g, armName())) disarm(); }
+  function again() {
+    const a = G.again;
+    if (!a || busy()) return;
+    const sim = G.sim, cc = a.cid ? sim.sides[0].pic.get(a.cid) : null;
+    const c = cc && sim.byId.get(cc.id) ? cc : null;
+    const pts = c ? [] : a.pts.length ? a.pts : a.cpos ? [a.cpos] : [];
+    if (!c && !pts.length) return;
+    const st = G.stance;
+    G.stance = a.stance;
+    launchMix(a.mix, t => plan(t, pts, c), a.name);
+    G.stance = st;
   }
   function retaskSel(planFor) {
     const list = selSorties();
@@ -3033,26 +3492,36 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const sim = G.sim;
     if (G.armed && pts.length > 1) { const b = DS.nearestBase(sim, 0, pts[0].x, pts[0].y); if (Math.hypot(pts[0].x - b.x, pts[0].y - b.y) < 70) pts.shift(); }
     if (!pts.length) return;
-    if (G.armed) { launchGroup(t => plan(t, pts, null)); return; }
+    if (G.armed) { fireArmed({ pts, c: null }); return; }
     if (G.sel && G.sel.kind === 'sortie') retaskSel(t => plan(t, pts, null));
   }
   function placeNest(w) {
     const sim = G.sim, err = DS.nestSiteError(sim, 0, w.x, w.y);
-    if (err) { play('deny'); toastOnce('ne', err, 'lock', 1.2); return; }
-    if (sim.sides[0].nectar < DS.BUILD.nest.cost) { play('deny'); toast(`Need ◆${DS.BUILD.nest.cost} nectar for a Nest.`, ''); G.placing = false; return; }
-    if (DS.build(sim, 0, 'nest', w)) { play('tick'); toast('Nest queued. It grows when it reaches the front of the queue.', 'amber'); G.placing = false; }
+    if (err) { play('deny'); toastOnce('ne', err, 'lock', 1.2); return false; }
+    if (sim.sides[0].nectar < DS.BUILD.nest.cost) { play('deny'); toast(`Need ◆${DS.BUILD.nest.cost} nectar for a Nest.`, ''); G.placing = false; return false; }
+    if (DS.build(sim, 0, 'nest', w)) { play('tick'); toast('Nest queued. It grows when it reaches the front of the queue.', 'amber'); G.placing = false; return true; }
+    return false;
   }
   function tapAt(X, Y) {
     const sim = G.sim, w = toWorld(X, Y);
     if (G.placing) { placeNest(w); return; }
+    if (G.placingPost) { G.placingPost = false; openPostSheet(null, w); return; }
+    if (G.movingPost) {
+      const p = postById(G.movingPost);
+      G.movingPost = 0;
+      if (p) { DS.editPost(sim, 0, p.id, { x: w.x, y: w.y, name: postName(w.x, w.y) }); G.sel = { kind: 'post', id: p.id }; play('tick'); toast(`Post moved to ${p.name}.`, 'amber'); }
+      return;
+    }
     const c = hitContact(X, Y);
-    if (G.armed) { launchGroup(t => plan(t, c ? [] : [w], c)); return; }
+    if (G.armed) { fireArmed({ pts: c ? [] : [w], c }); return; }
     if (G.sel && G.sel.kind === 'sortie') {
       const set = selSet();
       if (!set.size) { G.sel = null; return; }
       const own = hitOwn(X, Y);
       if (own && own.sortie && !set.has(own.sortie)) { selectSortie(own.sortie); play('tick'); return; }
+      const posted = selSorties().some(so => so.post);
       retaskSel(t => { const useC = c && t !== 'glint' && t !== 'decoy' ? c : null; return plan(t, useC ? [] : [c ? contactWorld(c) : w], useC); });
+      if (posted) toastOnce('rel', 'Released from its post. The hive will send another.', '', 3);
       return;
     }
     if (G.sel && G.sel.kind === 'forager') {
@@ -3066,6 +3535,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
         return;
       }
     }
+    const post = hitPost(X, Y);
+    if (post) { G.sel = { kind: 'post', id: post.id }; play('tick'); return; }
+    if (c) { contactMenu(X, Y, c); return; }
     const u = hitOwn(X, Y);
     if (u) {
       if (u.type === 'forager') G.sel = { kind: 'forager', id: u.id };
@@ -3109,22 +3581,22 @@ svg.i { width: 1em; height: 1em; flex: none; }
     return best;
   }
   function pickForager() {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     const list = G.sim.units.filter(u => u.side === 0 && u.type === 'forager' && u.hp > 0).sort((a, b) => a.id - b.id);
-    if (!list.length) { toastOnce('nof', 'No Foragers. Build one in the Build row.', '', 2); return; }
-    setArm([]); G.placing = false;
+    if (!list.length) { toastOnce('nof', 'No Foragers. Build one in the Build tab.', '', 2); return; }
+    disarm(); G.placing = false; G.placingPost = false; closeMenu();
     const cur = G.sel && G.sel.kind === 'forager' ? list.findIndex(u => u.id === G.sel.id) : -1;
     G.sel = { kind: 'forager', id: list[(cur + 1) % list.length].id };
     play('tick');
   }
   function buy(type) {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     const sim = G.sim, S0 = sim.sides[0], b = DS.BUILD[type];
     if (S0.queue.length >= DS.QUEUE_MAX) { play('deny'); toastOnce('qf', `The queue is full at ${DS.QUEUE_MAX}. Tap an item in it to cancel.`, '', 2); return; }
     if (S0.nectar < b.cost) { play('deny'); toastOnce('nn', `Need ◆${b.cost} nectar. Foragers bring it home from the blooms.`, '', 2); return; }
     if (type === 'nest') {
       if (DS.nestCount(sim, 0) >= DS.NEST_MAX) { play('deny'); toastOnce('nm', 'You can have two Nests at a time.', '', 2); return; }
-      G.placing = !G.placing; setArm([]); G.sel = null; play('tick');
+      G.placing = !G.placing; G.placingPost = false; G.movingPost = 0; disarm(); G.sel = null; closeMenu(); play('tick');
       return;
     }
     if (DS.build(sim, 0, type)) play('tick');
@@ -3134,10 +3606,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (!q) return;
     const b = DS.BUILD[q.type];
     play('refund');
-    toast(`Cancelled ${b.n > 1 ? units(b.n, q.type) : T[q.type].name}. ◆${b.cost} refunded.`, '');
+    toast(`Cancelled ${b.n > 1 ? units(b.n, q.type) : T[q.type].name}. ◆${b.cost} refunded.${q.auto ? ' Auto skips it for now.' : ''}`, '');
   }
   function toggleFocus() {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     if (!G.focus && G.meter < 0.12) { play('deny'); return; }
     G.focus = !G.focus;
     play('tick');
@@ -3145,6 +3617,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function toggleGuard() {
     if (G.mode !== 'play') return;
     DS.setGuard(G.sim, 0, !G.sim.sides[0].guard);
+    play('tick');
+  }
+  function setAuto(on) {
+    G.auto = !!on; store.set('auto', G.auto);
+    if (G.sim && G.mode === 'play') DS.setAuto(G.sim, 0, G.auto);
     play('tick');
   }
   function setStance(st) {
@@ -3159,32 +3636,121 @@ svg.i { width: 1em; height: 1em; flex: none; }
     toast(`${done.map(so => units(so.units.length, so.type)).join(' + ')} heading home${done.some(so => T[so.type].reuse) ? ' to rearm' : ''}.`, 'amber');
     play('tick'); G.sel = null;
   }
-  function cycleCount() {
-    const type = G.armed;
-    if (!type || !COUNTS[type]) return;
-    const opts = COUNTS[type], i = opts.indexOf(G.counts[type]);
-    G.counts[type] = opts[(i + 1) % opts.length];
+
+  // ---------- posts ----------
+  const postById = id => (G.sim ? G.sim.sides[0].posts.find(p => p.id === id) : null);
+  function postName(x, y) {
+    const sim = G.sim, m = sim.map;
+    let best = null, bd = 160;
+    for (const f of m.fields) { const d = Math.hypot(f.x - x, f.y - y); if (d < bd) { bd = d; best = f; } }
+    if (best) return best.centre ? 'Crown' : best.name;
+    for (const pk of m.peaks) if (Math.hypot(pk.x - x, pk.y - y) < 90) return `Ridge ▲${pk.elev}`;
+    if (DS.ridgeAt(m, x, y)) return 'Ridge';
+    if (DS.canopyAt(m, x, y)) return 'Canopy';
+    for (const b of DS.basesOf(sim, 0)) if (Math.hypot(b.x - x, b.y - y) < 200) return b.type === 'heart' ? 'Heart' : 'Nest';
+    if (Math.hypot(x - W / 2, y - H / 2) < 260) return 'Midfield';
+    bd = 340; best = null;
+    for (const f of m.fields) { const d = Math.hypot(f.x - x, f.y - y); if (d < bd) { bd = d; best = f; } }
+    return best ? `${best.centre ? 'Crown' : best.name} approach` : 'Open ground';
+  }
+  function staffOf(p) { return DS.postStaff(G.sim, 0, p); }
+  const isShort = st => Object.values(st).some(v => v.on < v.need);
+  function staffText(p, sep) {
+    const st = staffOf(p);
+    return DS.POST_TYPES.filter(t => st[t]).map(t => `${st[t].need === 1 ? T[t].name : PLURAL[t]} ${st[t].on}/${st[t].need}`).join(sep || ' · ');
+  }
+  function hitPost(X, Y) {
+    if (!G.sim) return null;
+    let best = null, bd = 16;
+    for (const p of G.sim.sides[0].posts) { const q = S2(p.x, p.y), d = Math.hypot(q.x - X, q.y - Y); if (d < bd) { bd = d; best = p; } }
+    return best;
+  }
+  function startPost() {
+    if (busy()) return;
+    if (G.sim.sides[0].posts.length >= DS.POST_MAX) { play('deny'); toastOnce('pm', `You can keep ${DS.POST_MAX} posts. Remove one first.`, '', 2); return; }
+    disarm(); G.sel = null; G.placing = false; G.movingPost = 0; closeMenu();
+    G.placingPost = !G.placingPost; play('tick');
+  }
+  function removePostSel(id) {
+    const p = postById(id);
+    if (!p) return;
+    DS.removePost(G.sim, 0, id);
+    if (G.sel && G.sel.kind === 'post' && G.sel.id === id) G.sel = null;
+    toast(`${p.name} post removed. Its Wardens head home.`, '');
     play('tick');
+  }
+
+  // ---------- quick menus ----------
+  function openMenu(X, Y, title, items) {
+    const el = $('qmenu');
+    el.innerHTML = `<div class="qm-h">${title}</div>` + items.map((it, i) =>
+      `<button role="menuitem" data-i="${i}"${it.off ? ' disabled' : ''}><svg class="i"><use href="#g-${it.icon}"/></svg><span class="qm-l">${it.label}</span><span class="qm-s">${it.sub || ''}</span></button>`).join('');
+    el.hidden = false;
+    const r = el.getBoundingClientRect(), top = $('top').offsetHeight + 4, bot = VH - $('dock').offsetHeight - 4;
+    let x = X + 14, y = Y - r.height / 2;
+    if (x + r.width > VW - 8) x = X - 14 - r.width;
+    x = clamp(x, 8, Math.max(8, VW - r.width - 8)); y = clamp(y, top, Math.max(top, bot - r.height));
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    G.menu = { items, X, Y };
+    play('tick');
+  }
+  function closeMenu() { if (!G.menu) return; G.menu = null; $('qmenu').hidden = true; }
+  const readyLine = (n, t) => `${units(n, t)} · ${readyOf(t)} ready`;
+  function contactMenu(X, Y, c) {
+    const st = !!c.static, look = c.known ? c.type : null;
+    const k = st ? 6 : look && T[look].hp >= 2 ? 3 : 2;
+    const g = { pts: [], c }, items = [];
+    items.push({ icon: 'sting', label: st ? 'Raid' : 'Strike', sub: readyLine(k, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: k }, g, st ? 'Raid' : 'Strike') });
+    if (st || look === 'forager' || look === 'nest' || !look) items.push({ icon: 'raider', label: 'Bomb', sub: readyLine(1, 'raider'), off: !readyOf('raider'), run: () => sendMix({ raider: 1 }, g, 'Bomb run') });
+    if (!st) items.push({ icon: 'warden', label: 'Intercept', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Intercept') });
+    openMenu(X, Y, cname(c), items);
+  }
+  function groundMenu(X, Y) {
+    const sim = G.sim, w = toWorld(X, Y), g = { pts: [w], c: null }, S0 = sim.sides[0];
+    const nestErr = DS.nestSiteError(sim, 0, w.x, w.y) || (S0.nectar < DS.BUILD.nest.cost ? `Need ◆${DS.BUILD.nest.cost}` : '');
+    const items = [
+      { icon: 'glint', label: 'Scout here', sub: readyLine(1, 'glint'), off: !readyOf('glint'), run: () => sendMix({ glint: 1 }, g, 'Scout') },
+      { icon: 'sting', label: 'Hunt here', sub: readyLine(4, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: 4 }, g, 'Hunt') },
+      { icon: 'warden', label: 'Patrol here', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Patrol') },
+      { icon: 'post', label: 'Post here', sub: S0.posts.length >= DS.POST_MAX ? `${DS.POST_MAX} posts already` : 'the hive keeps it staffed', off: S0.posts.length >= DS.POST_MAX, run: () => openPostSheet(null, w) },
+      { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
+    ];
+    openMenu(X, Y, postName(w.x, w.y), items);
   }
 
   // ---------- input ----------
   const ptrs = new Map();
   let gest = null;
   function local(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  const LONG_PRESS = 480;
+  function clearHold() { if (gest && gest.hold) { clearTimeout(gest.hold); gest.hold = 0; } }
   cv.addEventListener('pointerdown', e => {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     audioInit();
+    if (G.menu) { closeMenu(); return; }
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
     const p = local(e);
     ptrs.set(e.pointerId, p);
     computeM(false);
     if (ptrs.size === 2) {
+      clearHold();
       const [a, b] = [...ptrs.values()], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       gest = { kind: 'pinch', d0: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), z0: cam.z, mid, wmid: toWorld(mid.x, mid.y) };
       return;
     }
     if (e.button === 1 || e.button === 2) { gest = { kind: 'pan', lx: p.x, ly: p.y }; return; }
-    gest = { kind: 'press', sx: p.x, sy: p.y, lx: p.x, ly: p.y, pts: [toWorld(p.x, p.y)], cur: null };
+    gest = { kind: 'press', sx: p.x, sy: p.y, lx: p.x, ly: p.y, pts: [toWorld(p.x, p.y)], cur: null, hold: 0 };
+    // press and hold with nothing armed or selected: quick orders for that spot or contact
+    if (!G.armed && !G.sel && !G.placing && !G.placingPost && !G.movingPost) {
+      const g0 = gest;
+      g0.hold = setTimeout(() => {
+        if (gest !== g0 || g0.kind !== 'press' || ptrs.size !== 1 || busy()) return;
+        g0.kind = 'held'; g0.hold = 0;
+        computeM(false);
+        const c = hitContact(g0.sx, g0.sy);
+        if (c) contactMenu(g0.sx, g0.sy, c); else groundMenu(g0.sx, g0.sy);
+      }, LONG_PRESS);
+    }
   });
   cv.addEventListener('pointermove', e => {
     const p = local(e);
@@ -3202,7 +3768,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       return;
     }
     if (gest.kind === 'press' && Math.hypot(p.x - gest.sx, p.y - gest.sy) > 9) {
-      gest.kind = !G.placing && (G.armed || (G.sel && G.sel.kind === 'sortie')) ? 'route' : 'pan';
+      clearHold();
+      gest.kind = !G.placing && !G.placingPost && (G.armed || (G.sel && G.sel.kind === 'sortie')) ? 'route' : 'pan';
     }
     if (gest.kind === 'pan') { panBy(p.x - gest.lx, p.y - gest.ly); gest.lx = p.x; gest.ly = p.y; return; }
     if (gest.kind === 'route') {
@@ -3215,6 +3782,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (!gest) return;
+    clearHold();
     if (gest.kind === 'pinch') { if (!ptrs.size) gest = null; return; }
     const p = local(e);
     computeM(false);
@@ -3241,21 +3809,31 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }, { passive: false });
 
   const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'nest' };
-  const ARM_KEYS = { q: 'glint', w: 'sting', e: 'decoy', r: 'warden', t: 'raider' };
+  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4 };
   window.addEventListener('keydown', e => {
-    if (e.target && e.target.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
+    const tg = e.target && e.target.tagName;
+    if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
+    if (tg === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
     if (G.mode === 'title') { if (e.key === 'Enter') startRound(); return; }
     if (G.mode !== 'play') return;
-    if (e.key === 'Escape') { if (G.paused) resume(); else if (G.armed || G.sel || G.placing) cancel(); else pause(); return; }
+    if (G.sheet) { if (e.key === 'Escape') closeSheet(); return; }
+    if (e.key === 'Escape') {
+      if (G.menu) closeMenu();
+      else if (G.paused) resume();
+      else if (G.armed || G.sel || G.placing || G.placingPost || G.movingPost) cancel();
+      else pause();
+      return;
+    }
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (k === 'p') { G.paused ? resume() : pause(); return; }
     if (G.paused) return;
     if (BUILD_KEYS[k]) buy(BUILD_KEYS[k]);
-    else if (ARM_KEYS[k]) arm(ARM_KEYS[k]);
+    else if (k in SQUAD_KEYS) armSquad(SQUAD_KEYS[k]);
+    else if (k === 'a') again();
+    else if (k === 'b') setAuto(!G.auto);
     else if (k === 'f') pickForager();
     else if (k === 'd') setStance(G.stance === 'dash' ? 'quiet' : 'dash');
-    else if (k === 'c') cycleCount();
     else if (k === 'x') recallSel();
     else if (k === 'g') toggleGuard();
     else if (e.key === ' ') { e.preventDefault(); toggleFocus(); }
@@ -3263,11 +3841,44 @@ svg.i { width: 1em; height: 1em; flex: none; }
   });
 
   // dock and overlay buttons
-  for (const t of LAUNCH) $('arm-' + t).addEventListener('click', () => arm(t));
+  for (let i = 0; i < DEFAULT_SQUADS.length; i++) {
+    const el = $('sq-' + i);
+    let hold = 0, held = false;
+    el.addEventListener('click', () => { if (held) { held = false; return; } armSquad(i); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); if (!busy()) openSquadSheet(i); });
+    el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      held = false; clearTimeout(hold);
+      hold = setTimeout(() => { if (!busy()) { held = true; openSquadSheet(i); } }, 520);
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, () => clearTimeout(hold));
+  }
   for (const t of DS.BUILD_ORDER) $('buy-' + t).addEventListener('click', () => buy(t));
   $('queue').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) cancelQueued(+b.dataset.q); });
   $('btn-focus').addEventListener('click', toggleFocus);
   $('btn-guard').addEventListener('click', toggleGuard);
+  $('btn-auto').addEventListener('click', () => { if (G.mode === 'play') setAuto(!G.auto); });
+  $('btn-plan').addEventListener('click', () => { if (!busy()) openPlanSheet(); });
+  for (const t of ['build', 'posts', 'flying']) $('tab-' + t).addEventListener('click', () => setTab(t));
+  $('body-posts').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || busy()) return;
+    if (b.dataset.act === 'addpost') { startPost(); return; }
+    if (b.dataset.post) { const id = +b.dataset.post; disarm(); G.placing = false; G.sel = G.sel && G.sel.kind === 'post' && G.sel.id === id ? null : { kind: 'post', id }; play('tick'); }
+  });
+  $('body-flying').addEventListener('click', e => {
+    const b = e.target.closest('[data-so]');
+    if (!b || busy()) return;
+    disarm(); G.placing = false; G.placingPost = false; selectSortie(+b.dataset.so); play('tick');
+  });
+  app.addEventListener('pointerdown', e => { if (G.menu && e.target !== cv && !e.target.closest('#qmenu')) closeMenu(); }, true);
+  $('qmenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]');
+    if (!b || !G.menu) return;
+    const it = G.menu.items[+b.dataset.i];
+    closeMenu();
+    if (it && !it.off) it.run();
+  });
   $('btn-sound').addEventListener('click', () => { audioInit(); setMuted(!G.muted); });
   $('btn-pause').addEventListener('click', () => (G.paused ? resume() : pause()));
   $('ctx-main').addEventListener('click', e => {
@@ -3277,7 +3888,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (a === 'cancel') { cancel(); play('tick'); }
     else if (a === 'recall') recallSel();
     else if (a === 'quiet' || a === 'dash') setStance(a);
-    else if (a && a[0] === 'n' && G.armed) { const v = a.slice(1); G.counts[G.armed] = v === 'all' ? 'all' : +v; play('tick'); }
+    else if (a === 'again') again();
+    else if (a === 'edit-sq' && G.armedSq.length) openSquadSheet(G.armedSq[G.armedSq.length - 1]);
+    else if (a === 'post-edit' && G.sel && G.sel.kind === 'post') openPostSheet(G.sel.id);
+    else if (a === 'post-move' && G.sel && G.sel.kind === 'post') { G.movingPost = G.sel.id; G.sel = null; play('tick'); }
+    else if (a === 'post-del' && G.sel && G.sel.kind === 'post') removePostSel(G.sel.id);
   });
   $('seg-diff').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -3298,89 +3913,315 @@ svg.i { width: 1em; height: 1em; flex: none; }
   $('btn-next').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); startRound(); });
   $('btn-title').addEventListener('click', toTitle);
 
+  // ---------- dock tabs ----------
+  function setTab(t) {
+    G.tab = t;
+    for (const k of ['build', 'posts', 'flying']) {
+      $('tab-' + k).setAttribute('aria-selected', String(k === t));
+      $('body-' + k).hidden = k !== t;
+    }
+    G.listKeys = {};
+    play('tick');
+  }
+
+  // ---------- sheets: the plan, a squad, a post (the round pauses while one is open) ----------
+  const glyph = t => `<svg class="i"><use href="#g-${t}"/></svg>`;
+  function stepper(act, idx, val, lo, hi) {
+    return `<span class="step"><button data-act="${act}-" data-r="${idx}" aria-label="Fewer"${val <= lo ? ' disabled' : ''}>&minus;</button><b>${val}</b><button data-act="${act}+" data-r="${idx}" aria-label="More"${val >= hi ? ' disabled' : ''}>+</button></span>`;
+  }
+  function openSheet(sheet) {
+    closeMenu(); G.focus = false; gest = null; ptrs.clear();
+    G.sheet = sheet; G.sheetAt = performance.now();
+    $('sheet').hidden = false;
+    app.classList.add('sheet-on');
+    renderSheet();
+    $('sheet-done').focus({ preventScroll: true });
+  }
+  function closeSheet() {
+    const sh = G.sheet;
+    if (!sh) return;
+    if (sh.kind === 'post' && sh.isNew) {
+      if (DS.POST_TYPES.some(t => sh.need[t] > 0)) {
+        const p = DS.addPost(G.sim, 0, sh.x, sh.y, sh.need, sh.pri, sh.name);
+        if (p) { G.sel = { kind: 'post', id: p.id }; toast(`Post set at ${p.name}: ${staffText(p, ', ')}. The hive keeps it staffed.`, 'amber'); }
+      } else toast('No post set: it needed at least one unit.', '');
+    }
+    G.sheet = null;
+    $('sheet').hidden = true;
+    app.classList.remove('sheet-on');
+    G.last = 0; G.ctxKey = ''; G.listKeys = {};
+    if (sh.kind === 'squad') G.sqKey = '';
+  }
+  function openPlanSheet() { openSheet({ kind: 'plan' }); }
+  function openSquadSheet(i) { disarm(); openSheet({ kind: 'squad', i }); }
+  function openPostSheet(id, w) {
+    if (id) { const p = postById(id); if (!p) return; openSheet({ kind: 'post', id }); return; }
+    if (G.sim.sides[0].posts.length >= DS.POST_MAX) { play('deny'); return; }
+    disarm(); G.sel = null;
+    const near = Math.hypot(w.x - W / 2, w.y - H / 2) < 160;
+    openSheet({ kind: 'post', isNew: true, x: w.x, y: w.y, name: postName(w.x, w.y), need: near ? { glint: 1, warden: 2, decoy: 0 } : { glint: 1, warden: 1, decoy: 0 }, pri: near ? 2 : 1 });
+  }
+  function savePlan() {
+    store.set('plan', G.plan);
+    if (G.sim && G.mode === 'play') DS.setPlan(G.sim, 0, G.plan);
+  }
+  function renderSheet() {
+    const sh = G.sheet, sim = G.sim;
+    if (!sh) return;
+    let k = 'Paused while you plan', h = '', body = '', done = 'Done';
+    if (sh.kind === 'plan') {
+      h = 'Production plan';
+      const rows = G.plan.map((r, i) => {
+        const now = DS.forceCount(sim, 0, r.type), step = DS.BUILD[r.type].n;
+        return `<li${now >= r.want ? ' class="met"' : ''}><span class="pr-i">${i + 1}</span><span class="pr-mv"><button data-act="up" data-r="${i}" aria-label="Move up"${i ? '' : ' disabled'}>&#9650;</button><button data-act="down" data-r="${i}" aria-label="Move down"${i < G.plan.length - 1 ? '' : ' disabled'}>&#9660;</button></span>${glyph(r.type)}<span class="pr-n">${PLURAL[r.type]}<small>up to</small></span>${stepper('w', i, r.want, 0, PLAN_MAX[r.type]).replace(/data-act="w([-+])"/g, (m, sg) => `data-act="w${sg}" data-s="${step}"`)}<span class="pr-now">have ${now}</span><button class="pr-x" data-act="del" data-r="${i}" aria-label="Remove row">&times;</button></li>`;
+      }).join('');
+      body = `<div class="sh-row"><span class="sh-l">Auto build</span><div class="seg" role="group" aria-label="Auto build"><button data-act="auto1" aria-pressed="${G.auto}">On</button><button data-act="auto0" aria-pressed="${!G.auto}">Off</button></div></div>
+        <div class="sh-row"><span class="sh-l">Start from</span><div class="chips">${Object.keys(PRESETS).map(n => `<button class="chip" data-act="preset" data-k="${n}">${n}</button>`).join('')}</div></div>
+        <p class="sh-note">With Auto on, the hive keeps two items queued: the first row below its target, saving up for it rather than skipping ahead. Units in the air count, so losses are rebuilt. A type can appear twice to build in stages. Posts add what they need above these rows.</p>
+        <ol class="plan-rows">${rows || '<li class="empty">No rows. Add a type below or start from a preset.</li>'}</ol>
+        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
+    } else if (sh.kind === 'squad') {
+      const sq = G.squads[sh.i];
+      h = `Squad ${sh.i + 1}: ${sq.name}`;
+      body = `<div class="sh-row"><label class="sh-l" for="sq-name">Name</label><input id="sq-name" maxlength="12" value="${sq.name.replace(/"/g, '&quot;')}" autocomplete="off" spellcheck="false"></div>
+        <ul class="mix-rows">${SQUAD_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('m', t, sq.mix[t] || 0, 0, SQUAD_MAX[t])}<span class="pr-now">${readyOf(t)} ready</span></li>`).join('')}</ul>
+        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERT'[sh.i]} arms it from the keyboard.</p>
+        <div class="btn-row"><button class="btn" data-act="sq-reset">Reset to ${DEFAULT_SQUADS[sh.i].name}</button></div>`;
+    } else if (sh.kind === 'post') {
+      const p = sh.isNew ? null : postById(sh.id);
+      if (!sh.isNew && !p) { closeSheet(); return; }
+      const need = sh.isNew ? sh.need : p.need, pri = sh.isNew ? sh.pri : p.pri, st = p ? staffOf(p) : {};
+      h = sh.isNew ? `New post: ${sh.name}` : `Post: ${p.name}`;
+      done = sh.isNew ? 'Set post' : 'Done';
+      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint or Decoy before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>
+        <ul class="mix-rows">${DS.POST_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('n', t, need[t] || 0, 0, DS.POST_CAP[t])}<span class="pr-now">${st[t] ? `${st[t].on} on station` : `${readyOf(t)} ready`}</span></li>`).join('')}</ul>
+        <div class="sh-row"><span class="sh-l">Priority</span><div class="seg" role="group" aria-label="Priority">${[2, 1, 0].map(v => `<button data-act="pri" data-v="${v}" aria-pressed="${pri === v}">${PRI[v]}</button>`).join('')}</div></div>
+        <div class="btn-row">${sh.isNew ? '<button class="btn" data-act="post-cancel">Cancel</button>' : '<button class="btn" data-act="post-move">Move</button><button class="btn danger" data-act="post-del">Remove post</button>'}</div>`;
+      k = 'Paused while you set it';
+    }
+    setText('sheet-k', k); setText('sheet-h', h); setText('sheet-done', done);
+    $('sheet-body').innerHTML = body;
+  }
+  // A long-press that opened the sheet can end with a stray tap on whatever now sits under the finger.
+  const sheetFresh = () => performance.now() - (G.sheetAt || 0) < 350;
+  $('sheet-done').addEventListener('click', () => { if (!sheetFresh()) closeSheet(); });
+  $('sheet').addEventListener('click', e => { if (e.target === $('sheet') && !sheetFresh()) closeSheet(); });
+  $('sheet-body').addEventListener('input', e => {
+    if (e.target.id !== 'sq-name' || !G.sheet || G.sheet.kind !== 'squad') return;
+    G.squads[G.sheet.i].name = e.target.value.trim().slice(0, 12) || DEFAULT_SQUADS[G.sheet.i].name;
+    store.set('squads', G.squads); G.sqKey = '';
+    setText('sheet-h', `Squad ${G.sheet.i + 1}: ${G.squads[G.sheet.i].name}`);
+  });
+  $('sheet-body').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    const sh = G.sheet;
+    if (!b || !sh || b.disabled || sheetFresh()) return;
+    const a = b.dataset.act, r = b.dataset.r;
+    if (sh.kind === 'plan') {
+      const i = +r, P = G.plan;
+      if (a === 'auto1' || a === 'auto0') setAuto(a === 'auto1');
+      else if (a === 'preset') { G.plan = PRESETS[b.dataset.k].map(([type, want]) => ({ type, want })); toast(`Plan set to ${b.dataset.k}.`, 'amber'); }
+      else if (a === 'up' && i > 0) [P[i - 1], P[i]] = [P[i], P[i - 1]];
+      else if (a === 'down' && i < P.length - 1) [P[i + 1], P[i]] = [P[i], P[i + 1]];
+      else if (a === 'del') P.splice(i, 1);
+      else if (a === 'w-' || a === 'w+') { const st = +b.dataset.s || 1; P[i].want = clamp(P[i].want + (a === 'w+' ? st : -st), 0, PLAN_MAX[P[i].type]); }
+      else if (a === 'add' && P.length < DS.PLAN_MAX_ROWS) { const t = b.dataset.t, have = DS.forceCount(G.sim, 0, t), st = DS.BUILD[t].n; P.push({ type: t, want: clamp(Math.ceil((have + st) / st) * st, st, PLAN_MAX[t]) }); }
+      else return;
+      savePlan();
+    } else if (sh.kind === 'squad') {
+      const sq = G.squads[sh.i];
+      if (a === 'm-' || a === 'm+') { const st = SQUAD_STEP[r] || 1; sq.mix[r] = clamp((sq.mix[r] || 0) + (a === 'm+' ? st : -st), 0, SQUAD_MAX[r]); if (!sq.mix[r]) delete sq.mix[r]; }
+      else if (a === 'sq-reset') G.squads[sh.i] = copySquads([DEFAULT_SQUADS[sh.i]])[0];
+      else return;
+      store.set('squads', G.squads); G.sqKey = '';
+    } else if (sh.kind === 'post') {
+      const p = sh.isNew ? null : postById(sh.id);
+      if (a === 'n-' || a === 'n+') {
+        const cur = sh.isNew ? sh.need : p.need, v = clamp((cur[r] || 0) + (a === 'n+' ? 1 : -1), 0, DS.POST_CAP[r]);
+        if (sh.isNew) sh.need[r] = v; else DS.editPost(G.sim, 0, p.id, { need: { [r]: v } });
+      } else if (a === 'pri') { const v = +b.dataset.v; if (sh.isNew) sh.pri = v; else DS.editPost(G.sim, 0, p.id, { pri: v }); }
+      else if (a === 'post-cancel') { sh.isNew = false; G.sheet = null; $('sheet').hidden = true; app.classList.remove('sheet-on'); G.last = 0; G.ctxKey = ''; return; }
+      else if (a === 'post-move' && p) { closeSheet(); G.movingPost = p.id; G.sel = null; toast('Tap the map where the post should move.', ''); return; }
+      else if (a === 'post-del' && p) { closeSheet(); removePostSel(p.id); return; }
+      else return;
+    }
+    play('tick');
+    renderSheet();
+  });
+
   // ---------- HUD ----------
   const setText = (id, v) => { const el = $(id); const s = String(v); if (el && el.textContent !== s) el.textContent = s; };
   function clockStr(t) { const s = Math.max(0, Math.ceil(t)); return `${(s / 60) | 0}:${String(s % 60).padStart(2, '0')}`; }
   const TIPS = [
-    'Build a <b>Forager</b> or two early. Nectar buys everything else.',
-    'Tap <b>Glint</b>, then drag a route. Perch it on a ridge to see further.',
-    'Tap <b>Stings</b>, then tap a blue contact to strike it.',
-    '<b>Raiders</b> bomb what they find along a route, then fly home to rearm.',
-    '<b>Wardens</b> patrol where you tap and net drones that come close.',
+    'Tap a <b>squad</b>, then tap the map or drag a route. Tap two squads to send them together.',
+    '<b>Auto</b> keeps the queue full from your plan. Tap <b>Plan</b> to set what it builds.',
+    'Tap a blue contact for quick orders: <b>Strike</b>, <b>Bomb</b> or <b>Intercept</b>.',
+    'Press and hold open ground to scout, hunt, patrol, set a <b>post</b> or grow a Nest there.',
+    'A <b>post</b> is a spot the hive keeps staffed. Put one on the Crown before Last Light.',
+    'Long-press or right-click a squad to change its mix.',
+    'Perch a <b>Glint</b> on a ridge to see further. Canopy hides what sits under it.',
     '<b>Decoys</b> look like Raiders to the rival and draw its fire.',
-    'A <b>Nest</b> is a forward base: drones launch from the nearest one.',
-    'Green dashed edges mark canopy. Drones under it are hard to see.',
-    'Tap a queued item in the Build row to cancel it for a full refund.',
-    'Tap two launch tiles to form a group, such as Raiders with Decoys. One route for all.',
+    'A <b>Nest</b> is a forward base. Parked Stings guard it as well as the Heart.',
     'Tap a Forager on the map, then a bloom, to move your harvest.',
   ];
   function ctxKey() {
-    const sim = G.sim;
     const sel = selSorties().map(so => so.type + so.units.length + so.stance).join(',');
-    return [G.group.join(','), G.group.map(t => G.counts[t] + ':' + readyOf(t)).join(','), G.placing, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, G.tipI].join('|');
+    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri : '';
+    return [G.armedSq.join(','), G.group.map(t => G.mix[t] + ':' + readyOf(t)).join(','), G.placing, G.placingPost, G.movingPost, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, post, G.again ? G.again.name : '', G.tipI].join('|');
   }
   function stanceSeg(st) {
     return `<div class="seg" role="group" aria-label="Stance"><button data-act="quiet" aria-pressed="${st === 'quiet'}">Quiet</button><button data-act="dash" aria-pressed="${st === 'dash'}">Dash</button></div>`;
   }
   function cancelBtn(word) { return `<button class="chip cancel" data-act="cancel" aria-label="${word}"><span class="x" aria-hidden="true">&times;</span><span class="w">${word}</span></button>`; }
-  function countSeg(type) {
-    return `<div class="seg" role="group" aria-label="How many">${COUNTS[type].map(v => `<button data-act="n${v}" aria-pressed="${G.counts[type] === v}">${v === 'all' ? 'All' : v}</button>`).join('')}</div>`;
+  function armHint(types) {
+    const one = types.length === 1 ? types[0] : null;
+    if (one === 'glint') return 'Tap a point or drag a route.';
+    if (one === 'warden') return 'Tap where to patrol, or a contact to intercept.';
+    if (one === 'decoy') return 'They read as Raiders. Drag a route.';
+    if (one === 'raider') return 'Drag a bombing route or tap a target.';
+    return types.some(isStriker) ? 'Tap a contact or drag a route.' : 'Tap a point or drag a route.';
   }
-  const ARM_TEXT = {
-    glint: 'Drag a route or tap a point.',
-    sting: 'Tap a contact or drag a route.',
-    decoy: 'They read as Raiders. Drag a route.',
-    warden: 'Tap where to patrol, or a contact.',
-    raider: 'Drag a bombing route or tap a target.',
-  };
   function renderCtx() {
     const key = ctxKey();
     if (key === G.ctxKey) return;
     G.ctxKey = key;
-    const sim = G.sim;
     let html = '';
     if (G.placing) {
       html = `<span class="ctx-text"><b>Placing a Nest.</b> Tap inside the amber rings.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
+    } else if (G.placingPost || G.movingPost) {
+      html = `<span class="ctx-text"><b>${G.movingPost ? 'Moving a post.' : 'Setting a post.'}</b> Tap where the hive should keep watch: a ridge, a bloom, the Crown.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
     } else if (G.armed) {
-      const nOf = t => { const r = readyOf(t), c = G.counts[t]; return t === 'glint' ? 1 : c === 'all' ? r : Math.min(c, r); };
-      const t = G.armed, gs = G.group;
-      if (gs.length > 1) {
-        const lead = gs.includes('decoy') && gs.some(isStriker);
-        html = `<span class="ctx-text"><b>Group: ${gs.map(x => units(nOf(x), x)).join(' + ')}.</b> One route for all${lead ? '; Decoys lead' : ''}.</span><span class="ctx-ctl">${COUNTS[t] ? `<span class="seg-l">${PLURAL[t]}</span>${countSeg(t)}` : ''}${stanceSeg(G.stance)}${cancelBtn('Cancel')}</span>`;
-      } else {
-        const more = isStriker(t) && readyOf('decoy') ? ' Tap Decoys to add them.' : '';
-        html = `<span class="ctx-text"><b>${units(nOf(t), t)} armed.</b> ${ARM_TEXT[t]}${more}</span><span class="ctx-ctl">${COUNTS[t] ? countSeg(t) : ''}${t === 'warden' ? '' : stanceSeg(G.stance)}${cancelBtn('Cancel')}</span>`;
-      }
+      const n = mixReady(G.mix), tot = mixSize(G.mix), lead = G.group.includes('decoy') && G.group.some(isStriker);
+      html = `<span class="ctx-text"><b>${armName()}: ${mixText(G.mix)}${n < tot ? ` (${n} ready)` : ''}.</b> ${armHint(G.group)}${lead ? ' Decoys lead.' : ''}</span><span class="ctx-ctl">${G.group.length === 1 && G.group[0] === 'warden' ? '' : stanceSeg(G.stance)}${G.armedSq.length === 1 ? '<button class="chip" data-act="edit-sq">Edit</button>' : ''}${cancelBtn('Cancel')}</span>`;
     } else if (G.sel && G.sel.kind === 'sortie') {
       const list = selSorties();
       if (list.length) {
         const types = list.map(so => so.type), one = list.length === 1 ? list[0] : null;
         const canRecall = types.some(t => t === 'sting' || T[t].reuse);
         const hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
-        const name = list.map(so => units(so.units.length, so.type)).join(' + ');
-        html = `<span class="ctx-text"><b>${one ? name : 'Group: ' + name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
+        const name = list.slice().sort((a, b) => MIX_ORDER.indexOf(a.type) - MIX_ORDER.indexOf(b.type)).map(so => units(so.units.length, so.type)).join(' + ');
+        const lbl = list[0].post ? `${(postById(list[0].post) || {}).name || 'Post'} post: ` : list[0].label && list[0].label !== 'Guard' ? `${list[0].label}: ` : one ? '' : 'Group: ';
+        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
       } else G.sel = null;
     } else if (G.sel && G.sel.kind === 'forager') {
       html = `<span class="ctx-text"><b>Forager selected.</b> Tap a bloom to send it there.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
+    } else if (G.sel && G.sel.kind === 'post') {
+      const p = postById(G.sel.id);
+      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
+      else G.sel = null;
     }
-    if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>`;
+    if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>${G.again ? `<span class="ctx-ctl"><button class="chip again" data-act="again" title="Send ${G.again.name} again the same way (A)">Again: ${G.again.name}</button></span>` : ''}`;
     $('ctx-main').innerHTML = html;
+  }
+  function renderSquads() {
+    const key = G.squads.map(q => q.name + JSON.stringify(q.mix)).join('|');
+    if (key !== G.sqKey) {
+      G.sqKey = key;
+      G.squads.forEach((q, i) => {
+        const types = mixTypes(q.mix), main = ['raider', 'warden', 'sting', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
+        const el = $('sq-' + i);
+        el.innerHTML = `<svg class="i gly"><use href="#g-${main}"/></svg><span class="nm">${q.name}</span><span class="sub">${types.length ? mixText(q.mix, ' · ') : 'empty: tap to set'}</span><span class="ct" id="sqr-${i}">0</span><span class="meter"><i id="sqm-${i}"></i></span>`;
+        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERT'[i]}). Long-press or right-click to edit.`;
+        el.setAttribute('aria-label', `${q.name}: ${types.length ? mixText(q.mix) : 'empty'}. Long-press or right-click to edit.`);
+      });
+    }
+    G.squads.forEach((q, i) => {
+      const tot = mixSize(q.mix), r = tot ? mixReady(q.mix) : 0;
+      setText('sqr-' + i, r);
+      $('sq-' + i).classList.toggle('part', r > 0 && r < tot);
+      $('sqm-' + i).style.setProperty('--m', tot ? (r / tot).toFixed(3) : '0');
+      const el = $('sq-' + i);
+      el.classList.toggle('armed', G.armedSq.includes(i));
+      el.classList.toggle('empty', !r);
+    });
   }
   function renderQueue() {
     const S0 = G.sim.sides[0], q = S0.queue;
-    const key = q.map(x => x.id).join(',');
+    const key = q.map(x => x.id + (x.auto ? 'a' : '')).join(',');
     const box = $('queue');
     if (key !== G.qKey) {
       G.qKey = key;
       box.innerHTML = q.map((it, i) => {
-        const b = DS.BUILD[it.type];
-        return `<button class="qchip${i === 0 ? ' head' : ''}" data-q="${it.id}" aria-label="Cancel ${b.n > 1 ? units(b.n, it.type) : T[it.type].name}, refund ${b.cost} nectar" title="Cancel and refund ◆${b.cost}"><svg class="i"><use href="#g-${it.type}"/></svg>${b.n > 1 ? `<span class="n">×${b.n}</span>` : ''}<span class="x" aria-hidden="true">×</span><i class="qp"></i></button>`;
+        const b = DS.BUILD[it.type], nm = b.n > 1 ? units(b.n, it.type) : T[it.type].name;
+        return `<button class="qchip${i === 0 ? ' head' : ''}${it.auto ? ' auto' : ''}" data-q="${it.id}" aria-label="Cancel ${nm}${it.auto ? ' (auto)' : ''}, refund ${b.cost} nectar" title="${it.auto ? 'Queued by Auto. ' : ''}Cancel and refund ◆${b.cost}"><svg class="i"><use href="#g-${it.type}"/></svg>${b.n > 1 ? `<span class="n">×${b.n}</span>` : ''}<span class="x" aria-hidden="true">×</span><i class="qp"></i></button>`;
       }).join('');
-      $('q-empty').hidden = q.length > 0;
-      setText('q-count', q.length ? `${q.length}/${DS.QUEUE_MAX}` : '');
+      setText('q-count', q.length > 2 ? `${q.length}/${DS.QUEUE_MAX}` : '');
     }
     const head = box.firstElementChild;
     if (head && q[0]) head.style.setProperty('--p', (1 - q[0].t / q[0].total).toFixed(3));
+    // what auto build is doing
+    let st = '', warn = false;
+    if (!S0.auto) st = q.length ? '' : 'Queue empty. Tap a button below, or turn on Auto.';
+    else {
+      const nx = DS.autoNext(G.sim, 0);
+      if (!nx) st = q.length ? 'Auto: plan met' : 'Auto: plan met. Raise a target in Plan to build more.';
+      else {
+        const nm = DS.BUILD[nx.type].n > 1 ? PLURAL[nx.type] : T[nx.type].name;
+        if (q.length >= DS.AUTO_QUEUE) st = `Auto, next: ${nm}${nx.from === 'post' ? ' for a post' : ''}`;
+        else {
+          const rate = G.rateNow || 0, short = nx.cost - S0.nectar;
+          st = `Auto: saving for ${nm} ◆${nx.cost}${rate > 0.2 ? `, about ${Math.ceil(short / rate)} s` : ''}`;
+          warn = true;
+        }
+      }
+    }
+    setText('q-status', st);
+    $('q-status').classList.toggle('wait', warn);
+  }
+  const SO_STATE = so => {
+    const sim = G.sim;
+    let lead = null;
+    for (const id of so.units) { const u = sim.byId.get(id); if (u) { lead = u; break; } }
+    if (!lead) return '';
+    if (lead.homing || so.mode === 'home') return 'heading home';
+    if (lead.diving) return 'diving';
+    if (so.mode === 'raid') return 'raiding';
+    if (so.mode === 'strike') return 'striking';
+    if (so.mode === 'guard') return 'intercepting';
+    if (lead.wp < so.route.length) return 'en route';
+    if (so.type === 'warden') return 'patrolling';
+    if (so.mode === 'hunt' || so.type === 'sting') return 'hunting';
+    if (so.type === 'raider') return 'bombing';
+    return so.type === 'glint' ? 'watching' : 'loitering';
+  };
+  function renderLists() {
+    const sim = G.sim, S0 = sim.sides[0];
+    // posts
+    const posts = S0.posts;
+    let short = 0;
+    const pinfo = posts.map(p => { const st = staffOf(p), sh = isShort(st); if (sh) short++; return { p, st, sh }; });
+    const tbp = $('tb-posts');
+    tbp.textContent = posts.length ? String(posts.length) : '';
+    tbp.className = 'tb' + (short ? ' warn' : '');
+    // flying: packages in the air on your orders (not guard or posts)
+    const pk = new Map();
+    for (const so of sim.sorties.values()) {
+      if (so.side !== 0 || !so.units.length || so.label === 'Guard' || so.post) continue;
+      const k = so.pkg ? 'p' + so.pkg : 's' + so.id;
+      if (!pk.has(k)) pk.set(k, { id: so.id, label: so.label, mix: {}, born: so.born, list: [] });
+      const e = pk.get(k);
+      e.mix[so.type] = (e.mix[so.type] || 0) + so.units.length; e.list.push(so);
+    }
+    const fl = [...pk.values()].sort((a, b) => b.born - a.born);
+    setText('tb-flying', fl.length ? String(fl.length) : '');
+    if (G.tab === 'posts') {
+      const sel = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+      const key = pinfo.map(({ p, st, sh }) => p.id + p.name + p.pri + JSON.stringify(st) + sh).join('|') + sel + G.placingPost;
+      if (key !== G.listKeys.posts) {
+        G.listKeys.posts = key;
+        const add = `<button class="dcard add${G.placingPost ? ' on' : ''}" data-act="addpost"${posts.length >= DS.POST_MAX ? ' disabled' : ''}><span class="c-n">+ Post</span><span class="c-s">${posts.length >= DS.POST_MAX ? `${DS.POST_MAX} at most` : 'then tap the map'}</span></button>`;
+        const cards = pinfo.map(({ p, st, sh }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
+        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens or Decoys. Press and hold the map for <b>Post here</b>.</p>');
+      }
+    } else if (G.tab === 'flying') {
+      const sel = selSet();
+      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + e.list.some(so => sel.has(so.id))).join('|');
+      if (key !== G.listKeys.flying) {
+        G.listKeys.flying = key;
+        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
+          : '<p class="cards-note">Nothing in the air on your orders. Tap a squad, then the map. Guard and post flights are not listed here.</p>';
+      }
+    }
   }
   function hud() {
     const sim = G.sim;
@@ -3390,25 +4231,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
     G.rateHist.push({ t: sim.t, h: S0.harvested });
     while (G.rateHist.length > 2 && sim.t - G.rateHist[0].t > 30) G.rateHist.shift();
     const h0 = G.rateHist[0], dt = sim.t - h0.t;
-    setText('rate', `+${dt > 2 ? ((S0.harvested - h0.h) / dt).toFixed(1) : '0.0'}/s`);
+    G.rateNow = dt > 2 ? (S0.harvested - h0.h) / dt : 0;
+    setText('rate', `+${G.rateNow.toFixed(1)}/s`);
     setText('clock', clockStr(C.round - sim.t));
     setText('phase', sim.phases[sim.phase].name);
     $('clockbox').classList.toggle('late', sim.phase === 3);
     setText('sc0', Math.floor(S0.score)); setText('sc1', Math.floor(sim.sides[1].score));
     $('hold').className = 'hold' + (sim.t >= C.bloomScore && sim.holder >= 0 ? ' h' + sim.holder : '');
-    // launch row
-    for (const t of LAUNCH) {
-      const r = readyOf(t), out = DS.outCount(sim, 0, t), re = DS.rearmingCount(sim, 0, t);
-      setText('ct-' + t, r);
-      const bits = [];
-      if (out) bits.push(`${out} out`);
-      if (re) bits.push(`${re} rearming`);
-      setText('sub-' + t, bits.length ? bits.join(' · ') : r ? 'ready' : 'none');
-      const el = $('arm-' + t);
-      el.classList.toggle('armed', G.group.includes(t));
-      el.classList.toggle('empty', !r);
-    }
-    // build row
+    renderSquads();
+    // build tab
     let nF = 0;
     for (const u of sim.units) if (u.side === 0 && u.type === 'forager' && u.hp > 0) nF++;
     setText('bk-forager', nF);
@@ -3419,6 +4250,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (t === 'nest') el.classList.toggle('armed', G.placing);
     }
     renderQueue();
+    const ab = $('btn-auto');
+    ab.classList.toggle('on', S0.auto); ab.setAttribute('aria-pressed', String(S0.auto));
+    renderLists();
     $('m-focus').style.setProperty('--m', G.meter.toFixed(3));
     $('btn-focus').classList.toggle('on', G.focus);
     $('btn-focus').setAttribute('aria-pressed', String(G.focus));
@@ -3432,7 +4266,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     flushAgg();
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
-      toast('Last Light in 20 seconds. Get drones onto the Crown bloom.', 'bloom');
+      const onCrown = S0.posts.some(p => Math.hypot(p.x - W / 2, p.y - H / 2) < DS.HOLD_R);
+      toast(onCrown ? 'Last Light in 20 seconds. Your Crown post is staffed; add Stings to hold it.' : 'Last Light in 20 seconds. Get drones onto the Crown bloom, or set a post there.', 'bloom');
       play('chime');
     }
     // raid warning
@@ -3453,7 +4288,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function newSim(mode) {
     G.sim = DS.createSim({ seed: G.seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1] });
     G.fx = []; G.trails.clear(); G.acc = 0; G.vis = []; G.visT = -1;
-    setArm([]); G.pkgSeq = 1; G.sel = null; G.placing = false; G.focus = false; G.meter = 1; G.rateHist = []; G.endShown = false; G.ctxKey = ''; G.qKey = '-';
+    disarm(); G.pkgSeq = 1; G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; G.again = null; closeMenu();
+    G.focus = false; G.meter = 1; G.rateHist = []; G.rateNow = 0; G.endShown = false; G.ctxKey = ''; G.qKey = '-'; G.sqKey = ''; G.listKeys = {};
+    if (mode === 'play') { DS.setPlan(G.sim, 0, G.plan); DS.setAuto(G.sim, 0, G.auto); }
     G.agg = { mine: {}, theirs: {}, t: 0, val: 0 }; G.thr = {}; G.raidT = -99; G.overT = 0; G.warnedLL = false; G.firstNest = true;
     if (G.terrainSeed !== G.seed) { G.terrain = renderTerrain(G.sim.map); G.terrainSeed = G.seed; }
   }
@@ -3471,9 +4308,14 @@ svg.i { width: 1em; height: 1em; flex: none; }
     banner('Pollination', G.sim.phases[0].line);
     play('chime');
     setTimeout(() => { if (G.mode === 'play') toast(`Your Heart is amber, on the ${cam.portrait ? 'bottom' : 'left'}. Cobalt is ${cam.portrait ? 'at the top' : 'on the right'}.`, 'amber'); }, 900);
+    if (G.auto && !store.get('autoTold', false)) {
+      store.set('autoTold', true);
+      setTimeout(() => { if (G.mode === 'play') toast('Auto build is on: the hive keeps your plan topped up. Tap Plan to change it.', 'amber'); }, 3200);
+    }
     store.set('seed', G.seed);
   }
   function toTitle() {
+    if (G.sheet) closeSheet();
     hideOverlays();
     G.mode = 'title'; G.paused = false;
     app.className = 'mode-title';
@@ -3485,6 +4327,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function pause() {
     if (G.mode !== 'play' || G.paused) return;
+    if (G.sheet) closeSheet();
+    closeMenu();
     G.paused = true; G.focus = false; gest = null; ptrs.clear();
     setText('pause-k', `Paused at ${clockStr(G.sim.cfg.round - G.sim.t)} left`);
     $('ov-pause').hidden = false;
@@ -3580,7 +4424,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     G.now = now;
     const sim = G.sim;
     if (sim) {
-      const running = !G.paused && !sim.over && (G.mode === 'play' || G.mode === 'title');
+      const running = !G.paused && !G.sheet && !sim.over && (G.mode === 'play' || G.mode === 'title');
       if (running) {
         if (G.mode === 'play') {
           if (G.focus) { G.meter -= rdt / 8; if (G.meter <= 0) { G.meter = 0; G.focus = false; } }
