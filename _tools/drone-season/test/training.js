@@ -7,7 +7,7 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-train-');
   const browser = await chromium.launch();
   const errors = [], checks = [];
   const ok = (name, cond, info) => { const l = (cond ? 'PASS ' : 'FAIL ') + name + (info ? '  ' + info : ''); checks.push(l); if (process.env.V) console.log(l); };
-  for (const [label, vp, mobile] of [['desk', { width: 1366, height: 820 }, false], ['phone', { width: 390, height: 844 }, true]]) {
+  for (const [label, vp, mobile] of [['desk', { width: 1366, height: 820 }, false], ['phone', { width: 390, height: 844 }, true], ['small phone', { width: 375, height: 667 }, true]]) {
     const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: mobile ? 2 : 1, isMobile: mobile, hasTouch: mobile });
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(label + ': ' + e.message));
@@ -86,7 +86,10 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-train-');
     await page.screenshot({ path: SP + label + '-11.png' });
     ok(label + ' the raid is beaten off', await until(11, 40), await title());
     const hp = await page.evaluate(() => window.__ds.G.sim.hearts[0].hp);
-    // 12 hold the Crown
+    // 12 hold the Crown: the coach card must stay put while the step is showing (it used to flip top and bottom)
+    const spots = [];
+    for (let i = 0; i < 12; i++) { spots.push(await page.evaluate(() => Math.round(document.getElementById('coach').getBoundingClientRect().top))); await page.waitForTimeout(110); }
+    ok(label + ' the coach card holds still on the Crown step', new Set(spots).size === 1, spots.join(','));
     await tap('#sq-2'); await tapXY(await markXY()); await page.waitForTimeout(200);
     await page.screenshot({ path: SP + label + '-12.png' });
     ok(label + ' holding the Crown passes', await until(12, 40), await title());

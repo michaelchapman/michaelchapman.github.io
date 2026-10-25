@@ -473,7 +473,8 @@
       u.parked = false; u.state = 'fly'; u.sortie = so.id; u.wp = 0; u.diving = false; u.homing = false;
       u.x = base.x + (sim.rnd() - 0.5) * 18; u.y = base.y + (sim.rnd() - 0.5) * 18; u.px = u.x; u.py = u.y;
       u.hdg = datan2(anchor.y - u.y, anchor.x - u.x);
-      u.dash = so.stance === 'dash'; u.target = so.target; u.loiter = 0; u.cool = 0;
+      u.dash = so.stance === 'dash'; u.loiter = 0; u.cool = 0;
+      u.target = type === 'raider' && so.mode === 'raid' ? 0 : so.target;   // a Raider flies its route before it bombs
       if (!T.reuse) u.battery = T.battery;
       so.units.push(u.id); so.cost += T.cost;
     }
@@ -489,7 +490,7 @@
     for (const id of so.units) {
       const u = sim.byId.get(id);
       if (!u || u.hp <= 0) continue;
-      u.wp = 0; u.target = so.target; u.diving = false; u.state = 'fly'; u.dash = so.stance === 'dash';
+      u.wp = 0; u.target = u.type === 'raider' && so.mode === 'raid' ? 0 : so.target; u.diving = false; u.state = 'fly'; u.dash = so.stance === 'dash';
       u.homing = false; u.loiter = 0;
     }
     return true;

@@ -1967,20 +1967,24 @@
     if (st.hi) { TR.hiEl = document.querySelector(st.hi); if (TR.hiEl) TR.hiEl.classList.add('coach-hi'); }
     requestAnimationFrame(placeCoach);
   }
-  // Keep the card off the spot the lesson points at: if the mark would sit under it, move it to the foot of the map.
+  // Keep the card off the spot the lesson points at. Work out whether the mark would sit under the card at the top
+  // of the map and at its foot, and pick: the top unless only the foot is clear. Deciding from both positions (rather
+  // than moving whenever the mark is covered) keeps the card still when the mark is under it in either place.
   function placeCoach() {
     const el = $('coach');
     if (el.hidden) return;
-    app.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
+    const dockH = $('dock').offsetHeight;
+    app.style.setProperty('--dock-h', `${dockH}px`);
     const st = TSTEPS[TR.i], m = st && st.mark ? st.mark(TR.d) : null;
+    let low = false;
     if (m) {
-      const p = S2(m.x, m.y), r = el.getBoundingClientRect(), a = app.getBoundingClientRect(), pad = 34 + (m.r || 0) * scale();
-      const x = p.x + a.left, y = p.y + a.top;
-      const under = x > r.left - pad && x < r.right + pad && y > r.top - pad && y < r.bottom + pad;
-      if (under) app.classList.toggle('coach-low');
-    } else app.classList.remove('coach-low');
-    const r = el.getBoundingClientRect(), a = app.getBoundingClientRect();
-    app.style.setProperty('--coach-b', `${Math.round((app.classList.contains('coach-low') ? 46 : r.bottom - a.top))}px`);
+      const p = S2(m.x, m.y), h = el.offsetHeight, x0 = el.offsetLeft, x1 = x0 + el.offsetWidth, pad = 24 + (m.r || 0) * scale();
+      const topY = VW <= 640 ? 52 : 56, lowY = VH - dockH - 8 - h;
+      const under = y0 => p.x > x0 - pad && p.x < x1 + pad && p.y > y0 - pad && p.y < y0 + h + pad;
+      low = under(topY) && !under(lowY);
+    }
+    if (app.classList.contains('coach-low') !== low) app.classList.toggle('coach-low', low);
+    app.style.setProperty('--coach-b', `${low ? 46 : (VW <= 640 ? 52 : 56) + el.offsetHeight}px`);
   }
   function trainTick() {
     if (!G.training || G.mode !== 'play' || G.paused || G.sheet) return;
