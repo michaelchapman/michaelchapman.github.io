@@ -100,6 +100,14 @@
 
   <div class="qmenu" id="qmenu" role="menu" hidden></div>
 
+  <section class="coach" id="coach" hidden aria-live="polite" aria-labelledby="coach-h">
+    <div class="coach-k"><span id="coach-n">Training</span><button class="coach-skip" id="coach-skip">Skip training</button></div>
+    <h3 id="coach-h"></h3>
+    <p id="coach-p"></p>
+    <p class="coach-hint" id="coach-hint" hidden></p>
+    <div class="coach-btns" id="coach-btns"></div>
+  </section>
+
   <section class="sheet-wrap" id="sheet" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h">
       <div class="sheet-head">
@@ -128,7 +136,11 @@
         <div class="field-l"><span>Round</span><div class="seg" id="seg-round" role="group" aria-label="Round length"><button data-r="short">12 min</button><button data-r="duel">Duel 6</button></div></div>
         <div class="field-l"><span>Map</span><div class="mapno"><b id="mapno">0000</b><button class="chip" id="btn-newmap">New map</button></div></div>
       </div>
-      <button class="go" id="btn-go">Launch round</button>
+      <div class="go-row">
+        <button class="go" id="btn-go">Launch round</button>
+        <button class="btn train" id="btn-train">Training</button>
+      </div>
+      <p class="train-hint" id="train-hint">New here? Training takes about five minutes and shows you every control.</p>
       <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Space slow time &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
     </div>
   </section>

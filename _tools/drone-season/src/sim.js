@@ -19,6 +19,8 @@
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
     duel:  { key: 'duel',  name: 'Duel',       minutes: 6,  round: 360, bloomOpen: 150, bloomScore: 270, nectar: 150, phases: [0, 60, 150, 270, 360] },
+    // training: no clock pressure, the Crown open from the start; the lesson switches Crown scoring on when it gets there
+    training: { key: 'training', name: 'Training', minutes: 30, round: 1800, bloomOpen: 0, bloomScore: 1e9, nectar: 200, phases: [0, 1800, 1800, 1800, 1800] },
   };
   const PHASE_INFO = [
     { key: 'pollination', name: 'Pollination', line: 'Scout the valley and claim your blooms' },
@@ -294,7 +296,7 @@
     const seed = (opts.seed >>> 0) || 1;
     const diff = DIFF[opts.diff] ? opts.diff : 'normal';
     const mode = MODES[opts.mode] ? opts.mode : 'short';
-    const cfg = MODES[mode];
+    const cfg = Object.assign({}, MODES[mode]);   // a copy, so a round (training) can change its own timings
     const map = genMap(seed);
     const sim = {
       seed, diff, mode, cfg, phases: phasesFor(mode), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
@@ -1515,5 +1517,6 @@
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
     setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
+    spawnUnit: addUnit,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
