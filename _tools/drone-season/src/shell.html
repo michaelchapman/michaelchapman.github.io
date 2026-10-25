@@ -1,0 +1,169 @@
+<title>Drone Season</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/*__CSS__*/
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="g-hex" viewBox="0 0 24 24"><path d="M12 2l8.66 5v10L12 22l-8.66-5V7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8l3.46 2v4L12 16l-3.46-2v-4z" fill="currentColor"/></symbol>
+    <symbol id="g-forager" viewBox="0 0 24 24"><path d="M12 4l6.93 4v8L12 20l-6.93-4V8z" fill="currentColor"/><circle cx="12" cy="12" r="2.6" fill="#0b1115"/></symbol>
+    <symbol id="g-glint" viewBox="0 0 24 24"><path d="M12 3l7 9-7 9-7-9z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></symbol>
+    <symbol id="g-sting" viewBox="0 0 24 24"><path d="M21 12L5 4.5 8.5 12 5 19.5z" fill="currentColor"/></symbol>
+    <symbol id="g-raider" viewBox="0 0 24 24"><path d="M23 12L7.6 2.4l2.8 6.6L2.6 12l7.8 3-2.8 6.6z" fill="currentColor"/><circle cx="12.6" cy="12" r="2.3" fill="#0b1115"/></symbol>
+    <symbol id="g-warden" viewBox="0 0 24 24"><path d="M21 12L9 4.5v15z" fill="currentColor"/><rect x="3.5" y="4" width="2.8" height="16" fill="currentColor"/></symbol>
+    <symbol id="g-decoy" viewBox="0 0 24 24"><path d="M20 12L9.5 5.6l2 4.4L6 12l5.5 2-2 4.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.6"/></symbol>
+    <symbol id="g-nest" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4l-8.1-4.7V7.3z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="8.4" r="1.9" fill="currentColor"/><circle cx="8.7" cy="14" r="1.9" fill="currentColor"/><circle cx="15.3" cy="14" r="1.9" fill="currentColor"/></symbol>
+    <symbol id="g-canopy" viewBox="0 0 24 24"><g fill="#4f9a76"><circle cx="8" cy="9" r="3.4"/><circle cx="12.5" cy="7" r="3.4"/><circle cx="15.5" cy="11.5" r="3.4"/><circle cx="10" cy="14" r="3.4"/><circle cx="15" cy="16.5" r="3"/></g><path d="M3 12c1-6 6-9.5 11-9 5 .6 8 5 7.5 10-.6 5.5-6 9-11.5 8.4C5 20.8 2.4 16.5 3 12z" fill="none" stroke="#7fd1a4" stroke-width="1.4" stroke-dasharray="2.2 2"/></symbol>
+    <symbol id="g-focus" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7.5 3c0 5.5 9 5 9 9s-9 3.5-9 9M16.5 3c0 5.5-9 5-9 9s9 3.5 9 9" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="g-guard" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.3-7 10-3.8-1.7-7-5-7-10V6z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="g-crown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.6"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/></symbol>
+    <symbol id="g-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="g-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="g-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></symbol>
+    <symbol id="g-ghost" viewBox="0 0 40 40"><defs><radialGradient id="rg-ghost"><stop offset="0" stop-color="#5b8cff" stop-opacity=".75"/><stop offset="1" stop-color="#5b8cff" stop-opacity="0"/></radialGradient></defs><circle cx="20" cy="20" r="16" fill="url(#rg-ghost)"/></symbol>
+    <symbol id="g-track" viewBox="0 0 40 40"><path d="M10 15v-5h5M25 10h5v5M30 25v5h-5M15 30h-5v-5" fill="none" stroke="#a3bdff" stroke-width="2"/><path d="M28 20L14 13.5 17 20 14 26.5z" fill="#5b8cff"/></symbol>
+    <symbol id="g-lock" viewBox="0 0 40 40"><path d="M9 15V9h6M25 9h6v6M31 25v6h-6M15 31H9v-6" fill="none" stroke="#ff5e4d" stroke-width="2.4"/><path d="M28 20L14 13.5 17 20 14 26.5z" fill="#5b8cff"/></symbol>
+  </defs>
+</svg>
+
+<div id="app" class="mode-title">
+  <canvas id="cv" aria-label="Battle map. Draw routes and tap contacts to give orders."></canvas>
+
+  <header id="top">
+    <div class="top-l">
+      <div class="brand"><svg class="i"><use href="#g-hex"/></svg><span>Drone Season</span></div>
+      <div class="ro"><span class="ro-l">Nectar</span><span class="ro-v"><b class="nect" id="nectar">250</b><small id="rate">+0.0/s</small></span></div>
+    </div>
+    <div class="clock" id="clockbox"><b id="clock">12:00</b><span id="phase">Pollination</span></div>
+    <div class="top-r">
+      <div class="ro score"><span class="ro-l">Crown</span><span class="ro-v"><span class="a" id="sc0">0</span><span class="sep">:</span><span class="c" id="sc1">0</span><i class="hold" id="hold"></i></span></div>
+      <button class="icon-btn" id="btn-sound" aria-label="Mute sound" aria-pressed="false"><svg class="i"><use href="#g-sound"/></svg></button>
+      <button class="icon-btn" id="btn-pause" aria-label="Pause"><svg class="i"><use href="#g-pause"/></svg></button>
+    </div>
+  </header>
+
+  <div id="toasts" aria-live="polite"></div>
+  <div id="banner" aria-hidden="true"><b></b><span></span></div>
+  <div id="slow" hidden>Slow time</div>
+
+  <footer id="dock">
+    <div class="dock-in">
+      <div class="ctx">
+        <div class="ctx-main" id="ctx-main"></div>
+        <button class="chip on" id="btn-guard" aria-pressed="true" title="Parked Stings intercept drones near your Heart"><svg class="i"><use href="#g-guard"/></svg><span id="guard-l">Guard on</span></button>
+      </div>
+      <div class="launch" role="group" aria-label="Launch">
+        <button class="ltile" id="arm-glint" aria-label="Arm a Glint scout"><svg class="i gly"><use href="#g-glint"/></svg><span class="nm">Glint</span><span class="sub" id="sub-glint">ready</span><span class="ct" id="ct-glint">1</span></button>
+        <button class="ltile" id="arm-sting" aria-label="Arm Stings"><svg class="i gly"><use href="#g-sting"/></svg><span class="nm">Stings</span><span class="sub" id="sub-sting">ready</span><span class="ct" id="ct-sting">4</span></button>
+        <button class="ltile" id="arm-decoy" aria-label="Arm Decoys"><svg class="i gly"><use href="#g-decoy"/></svg><span class="nm">Decoys</span><span class="sub" id="sub-decoy">none</span><span class="ct" id="ct-decoy">0</span></button>
+        <button class="ltile" id="arm-warden" aria-label="Arm a Warden"><svg class="i gly"><use href="#g-warden"/></svg><span class="nm">Wardens</span><span class="sub" id="sub-warden">none</span><span class="ct" id="ct-warden">0</span></button>
+        <button class="ltile" id="arm-raider" aria-label="Arm a Raider"><svg class="i gly"><use href="#g-raider"/></svg><span class="nm">Raiders</span><span class="sub" id="sub-raider">none</span><span class="ct" id="ct-raider">0</span></button>
+        <button class="ltile ftile" id="btn-focus" aria-pressed="false" aria-label="Slow time"><svg class="i gly"><use href="#g-focus"/></svg><span class="nm">Slow</span><span class="sub" id="sub-focus">time</span><span class="meter"><i id="m-focus"></i></span></button>
+      </div>
+      <div class="build">
+        <div class="bq">
+          <span class="bq-l">Build</span>
+          <div class="queue" id="queue" role="group" aria-label="Build queue. Tap an item to cancel it and get the nectar back."></div>
+          <span class="q-empty" id="q-empty">Queue empty. Tap a button below to build.</span>
+          <span class="q-count" id="q-count"></span>
+        </div>
+        <div class="bbtns" role="group" aria-label="Build">
+          <button class="bbtn" id="buy-forager" aria-label="Build a Forager for 25 nectar"><svg class="i"><use href="#g-forager"/></svg><span class="bn">Forager</span><span class="bc">&#9670;25</span><span class="bk" id="bk-forager">2</span></button>
+          <button class="bbtn" id="buy-glint" aria-label="Build a Glint for 10 nectar"><svg class="i"><use href="#g-glint"/></svg><span class="bn">Glint</span><span class="bc">&#9670;10</span></button>
+          <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings &times;4</span><span class="bc">&#9670;24</span></button>
+          <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys &times;2</span><span class="bc">&#9670;10</span></button>
+          <button class="bbtn" id="buy-warden" aria-label="Build a Warden for 35 nectar"><svg class="i"><use href="#g-warden"/></svg><span class="bn">Warden</span><span class="bc">&#9670;35</span></button>
+          <button class="bbtn" id="buy-raider" aria-label="Build a Raider for 40 nectar"><svg class="i"><use href="#g-raider"/></svg><span class="bn">Raider</span><span class="bc">&#9670;40</span></button>
+          <button class="bbtn" id="buy-nest" aria-label="Place a Nest for 80 nectar"><svg class="i"><use href="#g-nest"/></svg><span class="bn">Nest</span><span class="bc">&#9670;80</span><span class="bk" id="bk-nest">0/2</span></button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <section class="overlay" id="ov-title" aria-labelledby="ttl">
+    <div class="title-panel">
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2</div>
+      <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
+      <div class="scale" aria-hidden="true"></div>
+      <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
+      <ul class="rules">
+        <li><svg style="color:var(--amber)"><use href="#g-glint"/></svg><span><b>Scout</b>Glints see far and quietly. Perch one on a ridge to see further. Canopy hides what sits under it.</span></li>
+        <li><svg style="color:var(--amber)"><use href="#g-raider"/></svg><span><b>Strike</b>Stings are cheap and spent on impact. Raiders bomb what they find, then fly home to rearm.</span></li>
+        <li><svg style="color:var(--amber)"><use href="#g-warden"/></svg><span><b>Protect</b>Wardens patrol and net drones. Decoys look like Raiders to the rival and draw its fire.</span></li>
+        <li><svg style="color:var(--bloom)"><use href="#g-crown"/></svg><span><b>Hold</b>In Last Light, the Crown bloom at the centre scores for whichever hive has more drones on it.</span></li>
+      </ul>
+      <p class="win">Win at frost on <b>Crown score</b>, or end it early by <b>destroying the Cobalt Heart</b>.</p>
+      <div class="setup">
+        <div class="field-l"><span>Rival hive</span><div class="seg" id="seg-diff" role="group" aria-label="Rival difficulty"><button data-d="easy">Easy</button><button data-d="normal">Normal</button><button data-d="hard">Hard</button></div></div>
+        <div class="field-l"><span>Round</span><div class="seg" id="seg-round" role="group" aria-label="Round length"><button data-r="short">12 min</button><button data-r="duel">Duel 6</button></div></div>
+        <div class="field-l"><span>Map</span><div class="mapno"><b id="mapno">0000</b><button class="chip" id="btn-newmap">New map</button></div></div>
+      </div>
+      <button class="go" id="btn-go">Launch round</button>
+      <p class="keys">Keys: 1&ndash;7 build &middot; Q W E R T arm Glint, Stings, Decoys, Wardens, Raiders &middot; D dash &middot; C how many &middot; X recall &middot; F forager &middot; G guard &middot; Space slow time &middot; Esc cancel &middot; P pause &middot; scroll to zoom</p>
+    </div>
+  </section>
+
+  <section class="overlay" id="ov-pause" hidden aria-labelledby="pause-h">
+    <div class="card">
+      <div class="kicker" id="pause-k">Paused</div>
+      <h2 id="pause-h">Read the picture</h2>
+      <div class="legend">
+        <div><svg><use href="#g-ghost"/></svg><b>Ghost</b><span>Something is there. Type unknown, position rough. Fades in seconds.</span></div>
+        <div><svg><use href="#g-track"/></svg><b>Track</b><span>Type and position known while a sensor holds it.</span></div>
+        <div><svg><use href="#g-lock"/></svg><b>Lock</b><span>A firing solution. Holds about 3 seconds after the sensor loses it.</span></div>
+      </div>
+      <table class="sigtable">
+        <tbody>
+          <tr><td>Dashing</td><td>louder, +2</td></tr>
+          <tr><td>Forager working a bloom</td><td>flares, +3</td></tr>
+          <tr><td>Standing on a ridge</td><td>sees 30% further, +1</td></tr>
+          <tr><td><span class="lf"><svg class="i"><use href="#g-canopy"/></svg>Under canopy (green dashed edge)</span></td><td>hidden, &minus;1 moving, &minus;2 still</td></tr>
+          <tr><td>Diving on a target</td><td>loud, +4</td></tr>
+          <tr><td>Decoy</td><td>reads as 6 until seen close</td></tr>
+        </tbody>
+      </table>
+      <p>Ridges block sight unless you stand on them. A red ring on your drone means the rival tracks it; a green ring means it is hidden under canopy.</p>
+      <h3 class="sub-h">Your hive</h3>
+      <table class="units">
+        <tbody>
+          <tr><td><svg class="i"><use href="#g-forager"/></svg></td><th>Forager</th><td class="c">&#9670;25</td><td>Harvests nectar and brings it to the nearest base.</td></tr>
+          <tr><td><svg class="i"><use href="#g-glint"/></svg></td><th>Glint</th><td class="c">&#9670;10</td><td>Quiet scout with long sight. 75-second battery.</td></tr>
+          <tr><td><svg class="i"><use href="#g-sting"/></svg></td><th>Sting</th><td class="c">&#9670;6</td><td>Hits the first thing its seeker finds. Spent on impact.</td></tr>
+          <tr><td><svg class="i"><use href="#g-decoy"/></svg></td><th>Decoy</th><td class="c">&#9670;5</td><td>Reads as a Raider to the rival and draws its fire.</td></tr>
+          <tr><td><svg class="i"><use href="#g-warden"/></svg></td><th>Warden</th><td class="c">&#9670;35</td><td>Patrols where you tap and nets drones. Three nets, then home.</td></tr>
+          <tr><td><svg class="i"><use href="#g-raider"/></svg></td><th>Raider</th><td class="c">&#9670;40</td><td>Three bombs for clustered or still targets. Rearms at home.</td></tr>
+          <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base.</td></tr>
+        </tbody>
+      </table>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-resume">Resume</button>
+        <button class="btn" id="btn-restart">Restart</button>
+        <button class="btn" id="btn-quit">Title screen</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="overlay" id="ov-end" hidden aria-labelledby="end-h">
+    <div class="card">
+      <div class="kicker" id="end-k">Frost</div>
+      <h2 id="end-h">Amber holds the valley</h2>
+      <p id="end-p"></p>
+      <dl class="stats" id="end-stats"></dl>
+      <div class="btn-row">
+        <button class="btn primary" id="btn-again">Play this map again</button>
+        <button class="btn" id="btn-next">New map</button>
+        <button class="btn" id="btn-title">Title screen</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/*__SIM__*/
+</script>
+<script>
+/*__GAME__*/
+</script>
