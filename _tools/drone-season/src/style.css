@@ -109,12 +109,6 @@ svg.i { width: 1em; height: 1em; flex: none; }
 #banner span { display: block; margin-top: 4px; font-size: 15px; color: var(--ink-dim); text-shadow: 0 0 12px rgba(0, 0, 0, 0.95); }
 #banner.bloom b { color: var(--bloom); }
 
-#slow {
-  position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); top: 56px;
-  font-family: var(--f-display); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--amber-hi); padding: 3px 10px; background: rgba(8, 12, 16, 0.8); pointer-events: none;
-}
-
 /* ---------- dock ---------- */
 #dock {
   position: absolute; inset: auto 0 0 0; z-index: 5;
@@ -144,7 +138,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .chip.cancel { color: var(--ink); }
 
 /* squads: what is ready to fly */
-.launch { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.launch { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .ltile {
   position: relative; min-width: 0; text-align: left;
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center;
@@ -162,8 +156,6 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .ltile.armed::before, .ltile.on::before { box-shadow: inset 0 0 0 1.5px var(--amber); }
 .ltile.flash::before { animation: flash 0.6s ease-out; }
 @keyframes flash { from { box-shadow: inset 0 0 0 2px var(--amber-hi), inset 0 0 18px rgba(245, 165, 36, 0.35); } }
-.ftile .sub { grid-row: 1; grid-column: 3; justify-self: end; }
-.ftile .meter { grid-row: 2; grid-column: 2 / span 2; }
 .sq { grid-template-rows: auto auto 3px; padding-bottom: 5px; }
 .sq .meter { grid-row: 3; grid-column: 1 / -1; margin-top: 3px; height: 2px; }
 .sq.part .ct { color: var(--amber-hi); }
@@ -190,7 +182,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .tab-body { height: 77px; min-width: 0; }
 .tab-body.build { display: grid; grid-template-rows: 30px 42px; gap: 5px; }
 .tab-body.build[hidden] { display: none; }
-.cards { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: stretch; padding-bottom: 2px; }
+.cards { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; align-items: stretch; padding-bottom: 2px; box-sizing: border-box; }
 .cards::-webkit-scrollbar { display: none; }
 .dcard {
   flex: none; min-width: 112px; max-width: 190px; display: grid; align-content: center; gap: 4px; text-align: left;
@@ -268,6 +260,22 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .go-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .btn.train { min-height: 52px; padding: 12px 22px; }
 .train-hint { margin: -8px 0 0; font-size: 13px; color: var(--amber-hi); }
+
+/* ---------- two players ---------- */
+.lobby { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--rule-hi); border-left: 3px solid var(--amber); background: rgba(10, 15, 19, 0.92); max-width: 520px; }
+.lobby .kicker { color: var(--amber-hi); }
+.lobby-h { margin: 0; font-family: var(--f-display); font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.lobby-p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink-dim); }
+.lobby-p b { color: var(--ink); }
+.invite { display: grid; gap: 10px; }
+#invite-url { font: 500 14px var(--f-data); color: var(--ink); background: var(--panel); border: 1px solid var(--rule-hi); padding: 10px 12px; width: 100%; box-sizing: border-box; }
+#ov-title.lobby-on .setup, #ov-title.lobby-on .go-row, #ov-title.lobby-on .train-hint, #ov-title.lobby-on .rules, #ov-title.lobby-on .win { display: none; }
+#wait {
+  position: absolute; z-index: 6; left: 50%; top: 40%; transform: translate(-50%, -50%); pointer-events: none;
+  font-family: var(--f-display); font-weight: 700; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber-hi); background: rgba(6, 9, 12, 0.88); border: 1px solid var(--rule-hi); padding: 10px 18px;
+}
+#ov-net { background: rgba(5, 8, 11, 0.9); }
 
 /* ---------- quick orders menu ---------- */
 .qmenu {
@@ -405,7 +413,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .c-ink { color: var(--cobalt); }
 
 /* modes */
-#app.overlay-on #top, #app.overlay-on #dock, #app.overlay-on #toasts, #app.overlay-on #banner, #app.overlay-on #slow { visibility: hidden; }
+#app.overlay-on #top, #app.overlay-on #dock, #app.overlay-on #toasts, #app.overlay-on #banner { visibility: hidden; }
 #app.mode-title #top, #app.mode-title #dock, #app.mode-title #toasts { display: none; }
 #app.mode-title #cv { cursor: default; }
 @media (hover: none) {
@@ -436,8 +444,6 @@ svg.i { width: 1em; height: 1em; flex: none; }
   .ltile .ct { grid-row: 1; grid-column: 2; justify-self: end; font-size: 17px; line-height: 1; }
   .ltile .nm { grid-row: 2; grid-column: 1 / span 2; font-size: 9px; letter-spacing: 0; }
   .ltile .sub { display: none; }
-  .ftile .meter { grid-row: 2; grid-column: 1 / span 2; align-self: end; margin-bottom: 3px; }
-  .ftile .nm { grid-row: 1; grid-column: 2; justify-self: end; }
   .bbtns { gap: 4px; }
   .panel { padding-top: 4px; gap: 4px; }
   .tabs { min-height: 28px; }

@@ -18,7 +18,6 @@
     <symbol id="g-nest" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4l-8.1-4.7V7.3z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="8.4" r="1.9" fill="currentColor"/><circle cx="8.7" cy="14" r="1.9" fill="currentColor"/><circle cx="15.3" cy="14" r="1.9" fill="currentColor"/></symbol>
     <symbol id="g-post" viewBox="0 0 24 24"><path d="M12 2.5l7 9.5-7 9.5-7-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
     <symbol id="g-canopy" viewBox="0 0 24 24"><g fill="#4f9a76"><circle cx="8" cy="9" r="3.4"/><circle cx="12.5" cy="7" r="3.4"/><circle cx="15.5" cy="11.5" r="3.4"/><circle cx="10" cy="14" r="3.4"/><circle cx="15" cy="16.5" r="3"/></g><path d="M3 12c1-6 6-9.5 11-9 5 .6 8 5 7.5 10-.6 5.5-6 9-11.5 8.4C5 20.8 2.4 16.5 3 12z" fill="none" stroke="#7fd1a4" stroke-width="1.4" stroke-dasharray="2.2 2"/></symbol>
-    <symbol id="g-focus" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7.5 3c0 5.5 9 5 9 9s-9 3.5-9 9M16.5 3c0 5.5-9 5-9 9s9 3.5 9 9" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="g-guard" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.3-7 10-3.8-1.7-7-5-7-10V6z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="g-crown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.6"/><circle cx="12" cy="12" r="3.6" fill="currentColor"/></symbol>
     <symbol id="g-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
@@ -48,7 +47,6 @@
 
   <div id="toasts" aria-live="polite"></div>
   <div id="banner" aria-hidden="true"><b></b><span></span></div>
-  <div id="slow" hidden>Slow time</div>
 
   <footer id="dock">
     <div class="dock-in">
@@ -62,7 +60,6 @@
         <button class="ltile sq" id="sq-2" data-sq="2"></button>
         <button class="ltile sq" id="sq-3" data-sq="3"></button>
         <button class="ltile sq" id="sq-4" data-sq="4"></button>
-        <button class="ltile ftile" id="btn-focus" aria-pressed="false" aria-label="Slow time"><svg class="i gly"><use href="#g-focus"/></svg><span class="nm">Slow</span><span class="sub" id="sub-focus">time</span><span class="meter"><i id="m-focus"></i></span></button>
       </div>
       <div class="panel">
         <div class="tabs">
@@ -120,7 +117,7 @@
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2.5</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2.6</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -139,9 +136,20 @@
       <div class="go-row">
         <button class="go" id="btn-go">Launch round</button>
         <button class="btn train" id="btn-train">Training</button>
+        <button class="btn train" id="btn-friend">Play a friend</button>
       </div>
       <p class="train-hint" id="train-hint">New here? Training takes about five minutes and shows you every control.</p>
-      <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Space slow time &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
+      <div class="lobby" id="lobby" hidden aria-live="polite">
+        <div class="kicker" id="lobby-k">Two players</div>
+        <h2 class="lobby-h" id="lobby-h">Invite a player</h2>
+        <p class="lobby-p" id="lobby-p"></p>
+        <div class="invite" id="invite" hidden>
+          <input id="invite-url" readonly aria-label="Invite link" spellcheck="false">
+          <div class="btn-row"><button class="btn primary" id="btn-copy">Copy link</button><button class="btn" id="btn-share" hidden>Share</button></div>
+        </div>
+        <div class="btn-row"><button class="btn" id="btn-lobby-alt" hidden>Play against the computer</button><button class="btn" id="btn-lobby-cancel">Cancel</button></div>
+      </div>
+      <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
     </div>
   </section>
 
@@ -194,6 +202,17 @@
     </div>
   </section>
 
+  <section class="overlay" id="ov-net" hidden aria-labelledby="net-h">
+    <div class="card">
+      <div class="kicker" id="net-k">Two players</div>
+      <h2 id="net-h">Your rival left</h2>
+      <p id="net-p"></p>
+      <div class="btn-row" id="net-btns"></div>
+    </div>
+  </section>
+
+  <div id="wait" hidden>Waiting for your rival&hellip;</div>
+
   <section class="overlay" id="ov-end" hidden aria-labelledby="end-h">
     <div class="card">
       <div class="kicker" id="end-k">Frost</div>
@@ -203,6 +222,7 @@
       <div class="btn-row">
         <button class="btn primary" id="btn-again">Play this map again</button>
         <button class="btn" id="btn-next">New map</button>
+        <button class="btn primary" id="btn-rematch" hidden>Rematch</button>
         <button class="btn" id="btn-title">Title screen</button>
       </div>
     </div>
