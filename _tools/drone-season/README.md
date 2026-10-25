@@ -2,7 +2,7 @@
 
 Source, build scripts and tests for the game at `/drone-season/`. Jekyll does not publish folders whose names start with `_`, so nothing here appears on the site.
 
-The game is built in milestones; the design doc lives in Claude Docs. Milestone 2.5 ("Command") is the current build: the milestone 2 skirmish (a 12-minute short game or a 6-minute duel with Glints, Stings, Decoys, Wardens, Raiders and Nests) plus tools that let the hive carry out standing orders:
+The game is built in milestones; the design doc lives in Claude Docs. Milestone 2.6 is the current build: two-player games (below), a training round, and milestone 2.5's command tools on the milestone 2 skirmish (a 12-minute short game or a 6-minute duel with Glints, Stings, Decoys, Wardens, Raiders and Nests) plus tools that let the hive carry out standing orders:
 
 - **Squads**: five editable unit mixes in the dock, armed with one tap; **Again** resends the last one the same way.
 - **Production plan and Auto**: a priority list of unit targets; Auto keeps two items queued from it, saving up rather than skipping ahead.
@@ -10,13 +10,15 @@ The game is built in milestones; the design doc lives in Claude Docs. Milestone 
 - **Quick orders**: tap a contact for Strike, Bomb or Intercept; press and hold open ground for Scout, Hunt, Patrol, Post or Nest.
 - Parked Stings guard Nests against inbound Stings and Raiders, as well as the Heart.
 
-The plan, squad and post sheets pause the round while open. The plan, squads and the Auto setting are remembered in the browser.
+The plan, squad and post sheets pause a round against the computer while open. There is no slow time. The plan, squads and the Auto setting are remembered in the browser.
+
+**Two players** (the title screen's Play a friend button). The host gets an invite link (`?join=<id>`); the friend who opens it plays the cobalt hive and the round starts for both. There is no computer on either side and no joining a round already under way. Both browsers run the same deterministic battle in lockstep: every 0.1 s turn each sends the orders its player gave (everything that changes the battle goes through `act()` in `game.js`), to be applied two turns later by both, and a browser only steps a turn once it holds both players' orders for it. They compare a hash of the battle every 2 s. The second player is side 1 in the simulation but sees the map turned half round (`cam.flip`), in amber, so the game code refers to `ME` and `OP` rather than to sides 0 and 1. Pause stops both; either can resume. If a player leaves, the other can finish against the computer. Rematch starts a new map for both. PeerJS (loaded from jsDelivr only when needed) and its free public server introduce the two browsers, with its STUN and TURN servers for awkward networks; the link only works on the site, not in the Claude artifact preview. Tests can point it at a local PeerServer with `?peerhost=127.0.0.1&peerport=9123`.
 
 **Training** (the title screen's Training button) is a guided round of 14 steps on a fixed map (7729) with no rival commander: scouting from a ridge, a contact to strike, building, Auto and the plan, a Strike squad on a route, a post on the Crown, a raid beaten off by the guard, and holding the Crown in Last Light. Each step waits for the player to do it, highlights the control and marks the spot on the map; training tops up units rather than making you wait. The steps live in `TSTEPS` in `game.js`; the `training` round mode in `sim.js` opens the Crown from the start and lets the lesson switch Crown scoring on.
 
 - `src/shell.html`: the page markup, with three markers where the stylesheet and scripts go.
 - `src/style.css`: the stylesheet.
-- `src/sim.js`: the simulation. Pure logic, no DOM, deterministic for a given map number. Map, detection, units, combat and the rival hive's AI all live here.
+- `src/sim.js`: the simulation. Pure logic, no DOM, deterministic for a given map number and the same in every browser: it uses its own sine, cosine, arctangent and distance built from basic arithmetic, because `Math.sin` and friends can differ in the last bit between Chrome and Safari. Map, detection, units, combat and the rival hive's AI all live here.
 - `src/game.js`: drawing, input, sound, the dock and the overlays.
 - `drone-season.html`: the assembled single-file fragment. This is the file published as the Claude artifact.
 - `build/build.py`: assembles `src/` into `drone-season.html`.
@@ -50,6 +52,7 @@ The browser tests drive the built page in headless Chromium, so build the site p
 
 - `node test/controls.js`: on desktop and phone sizes, the Auto chip, builds, cancels from the queue, places a Nest, edits a squad, and launches, retasks and recalls squads.
 - `node test/groups.js`: squad launches (a Raider with Decoys as one package, Again, two squads at once), and that the map never flips orientation or rescales on a small phone unless the phone is turned.
+- `node test/twoplayer.js`: a desktop host and a phone guest in two browsers, through a local PeerServer: invite, join, the turned-round view, orders reaching both battles, shared pause, ten seconds of matching hashes, both ending at the same tick, rematch, and leaving (the host finishes against the computer). Needs `npm install peer peerjs` as well.
 - `node test/training.js`: plays the whole training round through the real controls on desktop and phone sizes.
 - `node test/command.js`: Auto and the production plan sheet (it pauses the round), a post set from the hold menu and staffed by the hive, quick orders on a contact, and the Flying list.
 

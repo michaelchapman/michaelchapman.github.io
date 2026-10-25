@@ -1,4 +1,4 @@
-/* Drone Season · simulation core (milestone 2.5, Command). Pure logic, no DOM, deterministic per seed. */
+/* Drone Season · simulation core (milestone 2.6). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -81,8 +81,36 @@
       return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
     };
   }
+  // ---------- deterministic maths ----------
+  // Two players' browsers run the same battle from the same orders, so every result must match to the last bit.
+  // Math.sin, cos, atan2 and hypot may differ between engines (Chrome, Safari), so the simulation uses these,
+  // built from + - * / and sqrt only, which IEEE 754 fixes exactly. Accurate to about 1e-11.
+  const PI = Math.PI, TWO_PI = 2 * PI, HALF_PI = PI / 2;
+  const S3 = -1 / 6, S5 = 1 / 120, S7 = -1 / 5040, S9 = 1 / 362880, S11 = -1 / 39916800, S13 = 1 / 6227020800, S15 = -1 / 1307674368000, S17 = 1 / 355687428096000;
+  function dsin(x) {
+    x -= TWO_PI * Math.floor((x + PI) / TWO_PI);            // to [-pi, pi)
+    if (x > HALF_PI) x = PI - x; else if (x < -HALF_PI) x = -PI - x;   // to [-pi/2, pi/2]
+    const x2 = x * x;
+    return x * (1 + x2 * (S3 + x2 * (S5 + x2 * (S7 + x2 * (S9 + x2 * (S11 + x2 * (S13 + x2 * (S15 + x2 * S17))))))));
+  }
+  const dcos = x => dsin(x + HALF_PI);
+  function datanUnit(t) {                                   // atan(t) for 0 <= t <= 1
+    const y = t / (1 + Math.sqrt(1 + t * t)), y2 = y * y;   // atan(t) = 2 atan(y), with y <= tan(pi/8)
+    let s = 1 / 25;
+    for (let k = 23; k >= 1; k -= 2) s = 1 / k - y2 * s;
+    return 2 * y * s;
+  }
+  function datan2(y, x) {
+    if (x === 0 && y === 0) return 0;
+    const ax = x < 0 ? -x : x, ay = y < 0 ? -y : y;
+    let a = ax >= ay ? datanUnit(ay / ax) : HALF_PI - datanUnit(ax / ay);
+    if (x < 0) a = PI - a;
+    return y < 0 ? -a : a;
+  }
+  const dhypot = (x, y) => Math.sqrt(x * x + y * y);
+
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const dist = (ax, ay, bx, by) => Math.hypot(bx - ax, by - ay);
+  const dist = (ax, ay, bx, by) => dhypot(bx - ax, by - ay);
   function angDiff(a, b) {
     let d = a - b;
     while (d > Math.PI) d -= 2 * Math.PI;
@@ -93,7 +121,7 @@
     const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
     let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
     t = clamp(t, 0, 1);
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+    return dhypot(px - (ax + t * dx), py - (ay + t * dy));
   }
   function shuffle(a, rnd) {
     for (let i = a.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -123,7 +151,7 @@
     // ridges on the amber half, mirrored onto the cobalt half (point symmetry about the centre)
     const rid = [];
     const addRidge = (cx, cy, len, ang, w) => {
-      const c = Math.cos(ang), s = Math.sin(ang), bend = R(-0.35, 0.35) * len * 0.35;
+      const c = dcos(ang), s = dsin(ang), bend = R(-0.35, 0.35) * len * 0.35;
       rid.push({
         pts: [
           { x: cx - c * len / 2, y: cy - s * len / 2 },
@@ -143,7 +171,7 @@
       const n = 3 + ((rnd() * 2) | 0);
       for (let i = 0; i < n; i++) {
         const a = rnd() * Math.PI * 2, d = rnd() * r * 0.65;
-        can.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, r: r * R(0.5, 0.8) });
+        can.push({ x: cx + dcos(a) * d, y: cy + dsin(a) * d, r: r * R(0.5, 0.8) });
       }
     };
     const hf = fields[0];
@@ -239,7 +267,7 @@
   // A ridge blocks sight unless one end of the line stands on it.
   function los(m, ax, ay, bx, by) {
     const ra = ridgeAt(m, ax, ay), rb = ridgeAt(m, bx, by);
-    const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 8);
+    const d = dhypot(bx - ax, by - ay), n = Math.ceil(d / 8);
     for (let k = 1; k < n; k++) {
       const t = k / n, r = ridgeAt(m, ax + (bx - ax) * t, ay + (by - ay) * t);
       if (r && r !== ra && r !== rb) return false;
@@ -250,7 +278,7 @@
   function visPoly(m, x, y, R, rays) {
     const rs = ridgeAt(m, x, y), pts = new Float32Array(rays * 2);
     for (let i = 0; i < rays; i++) {
-      const a = (i / rays) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      const a = (i / rays) * Math.PI * 2, c = dcos(a), s = dsin(a);
       let len = R, inR = 0;
       for (let d = 6; d <= R; d += 6) {
         const px = x + c * d, py = y + s * d;
@@ -444,7 +472,7 @@
       const u = avail[i];
       u.parked = false; u.state = 'fly'; u.sortie = so.id; u.wp = 0; u.diving = false; u.homing = false;
       u.x = base.x + (sim.rnd() - 0.5) * 18; u.y = base.y + (sim.rnd() - 0.5) * 18; u.px = u.x; u.py = u.y;
-      u.hdg = Math.atan2(anchor.y - u.y, anchor.x - u.x);
+      u.hdg = datan2(anchor.y - u.y, anchor.x - u.x);
       u.dash = so.stance === 'dash'; u.target = so.target; u.loiter = 0; u.cool = 0;
       if (!T.reuse) u.battery = T.battery;
       so.units.push(u.id); so.cost += T.cost;
@@ -522,24 +550,24 @@
 
   // ---------- movement ----------
   function moveTo(u, tx, ty, spd, turn, dt) {
-    const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy);
+    const dx = tx - u.x, dy = ty - u.y, d = dhypot(dx, dy);
     if (d < 0.6) { u.moving = false; return d; }
-    const want = Math.atan2(dy, dx), diff = angDiff(want, u.hdg), mt = turn * dt;
+    const want = datan2(dy, dx), diff = angDiff(want, u.hdg), mt = turn * dt;
     u.hdg += clamp(diff, -mt, mt);
     let s = spd;
     if (d < 40) s = Math.max(spd * 0.22, (spd * d) / 40);
     const step = Math.min(s * dt, d);
     if (Math.abs(diff) > 1.1 && d < 70) { u.x += (dx / d) * step * 0.6; u.y += (dy / d) * step * 0.6; }
-    else { u.x += Math.cos(u.hdg) * step; u.y += Math.sin(u.hdg) * step; }
+    else { u.x += dcos(u.hdg) * step; u.y += dsin(u.hdg) * step; }
     u.moving = step / dt > 10;
     return d;
   }
   function homeIn(u, tx, ty, spd, dt) {
-    const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy);
+    const dx = tx - u.x, dy = ty - u.y, d = dhypot(dx, dy);
     if (d < 0.01) return 0;
     const step = Math.min(spd * dt, d);
     u.x += (dx / d) * step; u.y += (dy / d) * step;
-    u.hdg = Math.atan2(dy, dx); u.moving = true;
+    u.hdg = datan2(dy, dx); u.moving = true;
     return d - step;
   }
   // Follow the sortie's route; hover in a loose ring at the end. Returns true once at the end.
@@ -548,9 +576,9 @@
     if (u.wp < rt.length) {
       const p = rt[u.wp];
       const prev = u.wp > 0 ? rt[u.wp - 1] : { x: so.ox, y: so.oy };
-      const a = Math.atan2(p.y - prev.y, p.x - prev.x) + Math.PI / 2;
+      const a = datan2(p.y - prev.y, p.x - prev.x) + Math.PI / 2;
       const spread = so.units.length > 1 ? 12 : 0;
-      const tx = p.x + Math.cos(a) * u.off * spread, ty = p.y + Math.sin(a) * u.off * spread;
+      const tx = p.x + dcos(a) * u.off * spread, ty = p.y + dsin(a) * u.off * spread;
       const d = moveTo(u, tx, ty, spd, T.turn, dt);
       if (d < Math.max(14, spd * 0.18) && u.wp < rt.length - 1) u.wp++;
       else if (d < 6) u.wp++;
@@ -558,7 +586,7 @@
     }
     const end = rt.length ? rt[rt.length - 1] : { x: u.x, y: u.y };
     const ang = u.off * Math.PI, rad = so.units.length > 1 ? 10 + Math.abs(u.off) * 8 : 0;
-    moveTo(u, end.x + Math.cos(ang) * rad, end.y + Math.sin(ang) * rad, spd * 0.5, T.turn, dt);
+    moveTo(u, end.x + dcos(ang) * rad, end.y + dsin(ang) * rad, spd * 0.5, T.turn, dt);
     return true;
   }
   function land(sim, u, b) {
@@ -749,7 +777,7 @@
   }
 
   function seekerSees(sim, u, e) {
-    const d = Math.max(1, Math.hypot(e.x - u.x, e.y - u.y));
+    const d = Math.max(1, dhypot(e.x - u.x, e.y - u.y));
     return (TYPES.sting.reach * sigOf(sim, e)) / 5 / d >= 1 && los(sim.map, u.x, u.y, e.x, e.y);
   }
 
@@ -775,7 +803,7 @@
     if (mode === 'raid') {
       const tgt = sim.byId.get(so.target);
       if (tgt && tgt.hp > 0) {
-        const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
+        const d = dhypot(tgt.x - u.x, tgt.y - u.y);
         if (d < 380) u.dash = true;
         if (d < 120) { u.diving = true; u.diveT = 3; u.target = tgt.id; return; }
       } else { so.mode = 'hunt'; so.target = 0; }
@@ -785,7 +813,7 @@
     if (mode === 'strike' || mode === 'guard') {
       const tgt = sim.byId.get(u.target);
       const est = u.target ? estimate(sim, u.side, u.target) : null;
-      if (!tgt || tgt.hp <= 0 || tgt.parked || !est || (est.stale && Math.hypot(est.x - u.x, est.y - u.y) < 24)) {
+      if (!tgt || tgt.hp <= 0 || tgt.parked || !est || (est.stale && dhypot(est.x - u.x, est.y - u.y) < 24)) {
         u.target = 0;
         if (mode === 'guard') so.mode = 'home';
         else { so.mode = 'hunt'; so.route = [{ x: u.x, y: u.y }]; u.wp = 0; }
@@ -802,7 +830,7 @@
         if (e.side === u.side || e.parked || e.hp <= 0 || e.type === 'heart') continue;
         const dx = e.x - u.x, dy = e.y - u.y;
         if (dx * dx + dy * dy > 230 * 230) continue;
-        const d = Math.max(1, Math.hypot(dx, dy));
+        const d = Math.max(1, dhypot(dx, dy));
         const q = (T.reach * sigOf(sim, e)) / 5 / d;
         if (q < 1) continue;
         const taken = targetedBy(sim, u.side, e.id);
@@ -867,7 +895,7 @@
     if (u.wp < rt.length) { followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt); return; }
     u.orb += dt * 1.25 * (u.off >= 0 ? 1 : -1);
     const r = 46 + Math.abs(u.off) * 16;
-    moveTo(u, end.x + Math.cos(u.orb) * r, end.y + Math.sin(u.orb) * r, T.speed * 0.75, T.turn, dt);
+    moveTo(u, end.x + dcos(u.orb) * r, end.y + dsin(u.orb) * r, T.speed * 0.75, T.turn, dt);
   }
 
   function raiderSees(sim, u, e) {
@@ -944,7 +972,7 @@
     if (u.state === 'toField') {
       const f = m.fields[u.field];
       const a = (u.side ? Math.PI : 0) + (u.slot - 1) * 1.0 + Math.PI / 2, r = f.r * 0.5;
-      const d = moveTo(u, f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, T.speed, T.turn, dt);
+      const d = moveTo(u, f.x + dcos(a) * r, f.y + dsin(a) * r, T.speed, T.turn, dt);
       if (d < 3) { u.state = 'harvest'; u.moving = false; }
       return;
     }
@@ -1000,7 +1028,7 @@
         if (c.grade < 2 || c.static) continue;
         const e = sim.byId.get(c.id);
         if (!e || e.hp <= 0 || e.parked || isStructure(e)) continue;
-        const d = Math.hypot(e.x - h.x, e.y - h.y);
+        const d = dhypot(e.x - h.x, e.y - h.y);
         if (d < bd) { bd = d; best = e; }
       }
       if (best) {
@@ -1318,6 +1346,11 @@
     [['forager', 5], ['glint', 1], ['sting', 10], ['warden', 2], ['raider', 2], ['decoy', 4], ['sting', 18], ['glint', 2]],
     [['glint', 1], ['sting', 10], ['warden', 2], ['raider', 1], ['decoy', 2], ['sting', 22]],
   ];
+  // Hand a side to the computer (diff) or take it away (null). A side without an AI earns at the standard rate.
+  function setAI(sim, side, diff) {
+    sim.ai[side] = diff ? createAI(sim, side, diff) : null;
+    if (!diff) sim.sides[side].mult = 1;
+  }
   function createAI(sim, s, diff) {
     const cfg = DIFF[diff] || DIFF.normal;
     sim.sides[s].mult = cfg.income;
@@ -1347,8 +1380,8 @@
   }
   function aiRoute(ai, from, to, wob) {
     const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
-    const a = Math.atan2(to.y - from.y, to.x - from.x) + Math.PI / 2, off = (ai.rnd() - 0.5) * 260 * (wob == null ? 1 : wob);
-    return [{ x: mx + Math.cos(a) * off, y: my + Math.sin(a) * off }, { x: to.x, y: to.y }];
+    const a = datan2(to.y - from.y, to.x - from.x) + Math.PI / 2, off = (ai.rnd() - 0.5) * 260 * (wob == null ? 1 : wob);
+    return [{ x: mx + dcos(a) * off, y: my + dsin(a) * off }, { x: to.x, y: to.y }];
   }
   function aiNestSite(sim, ai) {
     const s = ai.side, h = sim.hearts[s], m = sim.map;
@@ -1476,7 +1509,7 @@
       if (ai.holdT <= 0 && sim.presence[s] < cfg.hold && spare() >= 4) {
         ai.holdT = 8;
         const a = ai.rnd() * Math.PI * 2;
-        if (launch(sim, s, 'sting', 4, [{ x: cf.x + Math.cos(a) * 30, y: cf.y + Math.sin(a) * 30 }], { stance: 'quiet', mode: 'hunt', label: 'Hold' })) take('sting', 4);
+        if (launch(sim, s, 'sting', 4, [{ x: cf.x + dcos(a) * 30, y: cf.y + dsin(a) * 30 }], { stance: 'quiet', mode: 'hunt', label: 'Hold' })) take('sting', 4);
       }
       ai.glintHoldT -= 0.5;
       if (ai.glintHoldT <= 0 && parked.glint.length) {
@@ -1517,6 +1550,6 @@
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
     setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
-    spawnUnit: addUnit,
+    spawnUnit: addUnit, setAI, dsin, dcos, datan2, dhypot,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
