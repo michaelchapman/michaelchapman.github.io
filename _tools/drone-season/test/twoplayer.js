@@ -1,24 +1,22 @@
 // Two players in two browsers: a desktop host invites, a phone guest opens the link, and both play in lockstep.
-// Needs Playwright, plus a local PeerServer and the PeerJS client: npm install playwright peer peerjs
-// and a built page: python3 _tools/drone-season/build/site.py
+// Needs Playwright and ws (npm install playwright ws) and a built page: python3 _tools/drone-season/build/site.py
+// The two browsers meet through a local Nostr relay (nostr-relay.js) instead of the public ones.
 const path = require('path');
 const { chromium } = require('playwright');
-const { PeerServer } = require('peer');
-const PEERJS = require.resolve('peerjs/dist/peerjs.min.js');
+const relay = require('./nostr-relay.js');
 const SP = path.join(require('os').tmpdir(), 'drone-season-2p-');
 const PORT = 9123;
 (async () => {
-  const server = PeerServer({ port: PORT, path: '/', host: '127.0.0.1' });
+  const server = relay(PORT);
   const browser = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const errors = [], checks = [];
   const ok = (name, cond, info) => { const l = (cond ? 'PASS ' : 'FAIL ') + name + (info ? '  ' + info : ''); checks.push(l); if (process.env.V) console.log(l); };
-  const page0 = 'file://' + path.join(__dirname, '..', '..', '..', 'drone-season', 'index.html') + `?debug&peerhost=127.0.0.1&peerport=${PORT}`;
+  const page0 = 'file://' + path.join(__dirname, '..', '..', '..', 'drone-season', 'index.html') + `?debug&relays=ws://127.0.0.1:${PORT}`;
   const open = async (label, vp, mobile) => {
     const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: mobile ? 2 : 1, isMobile: mobile, hasTouch: mobile });
     const page = await ctx.newPage();
     page.on('pageerror', e => errors.push(label + ': ' + e.message));
     await page.route('**/fonts.googleapis.com/**', r => r.abort());
-    await page.route('**/peerjs@*/dist/peerjs.min.js', r => r.fulfill({ path: PEERJS, contentType: 'application/javascript' }));
     return { ctx, page, mobile, tap: sel => (mobile ? page.tap(sel) : page.click(sel)), tapXY: p => (mobile ? page.touchscreen.tap(p.x, p.y) : page.mouse.click(p.x, p.y)) };
   };
   const st = p => p.evaluate(() => { const d = window.__ds, s = d.G.sim; return { mode: d.G.mode, me: d.ME, flip: d.cam.flip, live: d.NET.live, role: d.NET.role, tick: s.tick, paused: d.G.paused, ai: [!!s.ai[0], !!s.ai[1]], seed: s.seed,
@@ -30,7 +28,7 @@ const PORT = 9123;
   await H.tap('#btn-friend');
   await H.page.waitForFunction(() => document.getElementById('invite-url').value.includes('join='), null, { timeout: 15000 });
   const url = await H.page.inputValue('#invite-url');
-  ok('the host gets an invite link', /\?join=ds-[a-z0-9]{10}/.test(url), url.replace(/^.*\?/, '?'));
+  ok('the host gets an invite link', /\?join=[a-z0-9]{12}/.test(url), url.replace(/^.*\?/, '?'));
   await H.page.screenshot({ path: SP + 'host-lobby.png' });
 
   const Gs = await open('guest', { width: 390, height: 844 }, true);
@@ -45,6 +43,17 @@ const PORT = 9123;
   ok('both battles are running', h.tick > 20 && g.tick > 20 && Math.abs(h.tick - g.tick) < 20, `ticks ${h.tick} / ${g.tick}`);
   const gh = await Gs.page.evaluate(() => { const { S2, computeM, G } = window.__ds; computeM(false); const a = G.sim.hearts[1], b = G.sim.hearts[0]; return { mine: S2(a.x, a.y), theirs: S2(b.x, b.y) }; });
   ok('the guest sees their own Heart at the bottom of the phone', gh.mine.y > gh.theirs.y + 200, JSON.stringify(gh));
+
+  // a third person with the link is told the game is full, and the game carries on
+  const X = await open('third', { width: 390, height: 844 }, true);
+  await X.page.goto(url);
+  await X.page.waitForFunction(() => !document.getElementById('btn-lobby-alt').hidden, null, { timeout: 20000 });
+  const xt = await X.page.textContent('#lobby-p');
+  ok('a third person with the link is told the game is full', /already has two players/.test(xt), xt);
+  await X.ctx.close();
+  await H.page.waitForTimeout(500);
+  h = await st(H.page);
+  ok('and the two-player game is unaffected', h.live && !h.net);
 
   // orders from each side reach both battles
   await H.tap('#sq-1'); await H.tapXY(await scr(H.page, 600, 400)); await H.page.waitForTimeout(150);
@@ -108,6 +117,16 @@ const PORT = 9123;
   await H.page.click('#net-btns [data-act="net-ai"]'); await H.page.waitForTimeout(800);
   h = await st(H.page);
   ok('and can finish against the computer', h.mode === 'play' && !h.paused && h.ai[1] && !h.live);
+
+  // no relay reachable: a clear message instead of waiting forever
+  const N = await open('norelay', { width: 1366, height: 820 }, false);
+  await N.page.goto(page0.replace(/relays=[^&]+/, 'relays=ws://127.0.0.1:9'));
+  await N.page.waitForTimeout(500);
+  await N.tap('#btn-friend');
+  await N.page.waitForFunction(() => !document.getElementById('btn-lobby-alt').hidden, null, { timeout: 25000 });
+  const nt = await N.page.textContent('#lobby-p');
+  ok('with no relay reachable, the host is told within seconds', /Could not reach any of the services/.test(nt), nt);
+  await N.ctx.close();
 
   await browser.close();
   server.close && server.close();

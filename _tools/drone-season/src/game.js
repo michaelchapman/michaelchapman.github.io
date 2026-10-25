@@ -1177,40 +1177,47 @@
   // The two browsers run the same deterministic battle. Only orders travel: each side sends, every turn of three ticks,
   // what its player ordered, to be applied DELAY turns later by both. A browser steps a turn only once it holds both
   // players' orders for it, so the two stay in lockstep; every few seconds they compare a hash of the battle.
-  // PeerJS's free public server introduces the two browsers; after that they talk directly (or through its relay).
+  // Trystero introduces the two browsers through public Nostr relays (several at once, so any one that answers will
+  // do); after that they talk directly over WebRTC, or through a TURN relay when their networks will not allow it.
   const PROTO = 1, TURN = 3, DELAY = 2, HASH_EVERY = 20;
-  const PEERJS = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js';
-  const NET = { role: '', live: false, peer: null, conn: null, out: [], mine: new Map(), theirs: new Map(), hashes: new Map(),
-    acc: 0, waiting: false, waitT: 0, lastMsg: 0, round: 'short', seed: 0, rivalPaused: false, rematchAsked: false, lostShown: false };
+  const NET_LIB = 'trystero-0.26.0.js';   // bundled next to the page by build/vendor-trystero.sh
+  const APP_ID = 'drone-season.michaelchapman.me';
+  // From Trystero's own list of relays that carry its messages. Both players must use the same list.
+  const RELAYS = ['nos.lol', 'nostr.robosats.org', 'cdn.satellite.earth', 'relay.layer.systems', 'relay.degmods.com',
+    'nostr.stakey.net', 'relay.routstr.com', 'relay.nostr.dev.br', 'relay.flashapp.me', 'relay.piazza.today'].map(h => 'wss://' + h);
+  // PeerJS's public TURN servers, for networks that block a direct link between the two browsers
+  const TURN_SERVERS = [{ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }];
+  const NET = { role: '', live: false, room: null, chan: null, peerId: '', code: '', out: [], mine: new Map(), theirs: new Map(), hashes: new Map(),
+    acc: 0, waiting: false, waitT: 0, lastMsg: 0, round: 'short', seed: 0, rivalPaused: false, rematchAsked: false, lostShown: false, timers: [] };
   const QS = new URLSearchParams(location.search);
-  function peerOpts() {   // a local PeerServer for tests: ?peerhost=localhost&peerport=9000
-    const o = { debug: 0 }, h = QS.get('peerhost');
-    if (h) Object.assign(o, { host: h, port: +(QS.get('peerport') || 9000), path: QS.get('peerpath') || '/', secure: false });
-    return o;
+  function netConfig() {   // tests point it at a local relay: ?relays=ws://127.0.0.1:7777
+    const r = QS.get('relays');
+    return { appId: APP_ID, relayConfig: { urls: r ? r.split(',') : RELAYS, warnOnRelayFailure: false }, turnConfig: r ? [] : TURN_SERVERS };
   }
-  let peerLoad = null;
-  function loadPeer() {
-    if (window.Peer) return Promise.resolve();
-    if (!peerLoad) peerLoad = new Promise((res, rej) => {
+  let netLoad = null;
+  function loadNet() {
+    if (window.Trystero) return Promise.resolve();
+    if (!netLoad) netLoad = new Promise((res, rej) => {
       const el = document.createElement('script');
-      el.src = PEERJS; el.async = true;
-      el.onload = () => (window.Peer ? res() : rej(new Error('no Peer')));
-      el.onerror = () => { peerLoad = null; rej(new Error('blocked')); };
+      el.src = NET_LIB; el.async = true;
+      el.onload = () => (window.Trystero ? res() : rej(new Error('no Trystero')));
+      el.onerror = () => { netLoad = null; rej(new Error('blocked')); };
       document.head.appendChild(el);
     });
-    return peerLoad;
+    return netLoad;
   }
-  const randId = () => 'ds-' + Array.from(crypto.getRandomValues(new Uint8Array(10)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
-  const send = m => { try { if (NET.conn && NET.conn.open) NET.conn.send(m); } catch (e) { /* a dropped link shows up as close */ } };
+  const randId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+  const send = m => { if (NET.chan && NET.peerId) { try { NET.chan.send(m, { target: NET.peerId }).catch(() => {}); } catch (e) { /* a dropped link shows up as a leave */ } } };
+  const later = (ms, f) => NET.timers.push(setTimeout(f, ms));
   function netClose() {
     NET.live = false;
-    try { if (NET.conn) NET.conn.close(); } catch (e) { /* already closed */ }
-    try { if (NET.peer) NET.peer.destroy(); } catch (e) { /* already gone */ }
-    NET.conn = null; NET.peer = null;
+    NET.timers.forEach(clearTimeout); NET.timers = [];
+    try { if (NET.room) NET.room.leave(); } catch (e) { /* already left */ }
+    NET.room = null; NET.chan = null; NET.peerId = '';
   }
   function netReset() {
     netClose();
-    Object.assign(NET, { role: '', out: [], mine: new Map(), theirs: new Map(), hashes: new Map(), acc: 0, waiting: false, waitT: 0, rivalPaused: false, rematchAsked: false, lostShown: false });
+    Object.assign(NET, { role: '', code: '', out: [], mine: new Map(), theirs: new Map(), hashes: new Map(), acc: 0, waiting: false, waitT: 0, rivalPaused: false, rematchAsked: false, lostShown: false });
   }
   function dropJoinParam() {
     if (!QS.has('join')) return;
@@ -1234,74 +1241,73 @@
     $('ov-title').classList.remove('lobby-on');
     $('lobby').hidden = true;
   }
-  const modeLine = round => `${DS.MODES[round].name.toLowerCase()}, ${DS.MODES[round].minutes} minutes`;
-  // The Claude artifact preview runs in a sandbox that cannot hand out a link or reach the connection service.
+  // The Claude artifact preview runs in a sandbox that cannot hand out a link or reach the relays.
   const IN_PREVIEW = !!window.claude || /claudeusercontent|claude\.ai/.test(location.hostname);
+  const NO_LIB = 'The two-player connection could not load here. Open the game at <b>michaelchapman.me/drone-season</b> in a normal browser tab and try again.';
+  const NO_RELAY = 'Could not reach any of the services that introduce the two players. Check your connection and try again; some work or school networks block them.';
+  const NO_LINK = 'Found your friend, but your two networks would not let the browsers connect. Try again, or try on mobile data or another Wi-Fi.';
+  // Join the room both players meet in. The invite link carries its name.
+  function openRoom(code) {
+    const room = NET.room = window.Trystero.joinRoom(netConfig(), 'ds-' + code, {
+      onJoinError: () => { if (!NET.live && NET.role) lobbyFail(NO_LINK); },
+    });
+    const chan = NET.chan = room.makeAction('ds');
+    chan.onMessage = (m, meta) => onNet(m, meta && meta.peerId);
+    room.onPeerJoin = id => {
+      // a guest says hello to everyone in the room; only the host answers, and only the first guest gets a game
+      if (NET.role === 'guest' && !NET.live) chan.send({ t: 'hello', v: PROTO }, { target: id }).catch(() => {});
+    };
+    room.onPeerLeave = id => { if (id === NET.peerId) netLost('left'); };
+    // if no relay has answered after a while, say so rather than wait forever
+    later(12000, () => {
+      if (!NET.role || NET.live || NET.peerId) return;
+      const socks = Object.values(window.Trystero.getRelaySockets() || {});
+      if (!socks.some(ws => ws && ws.readyState === 1)) lobbyFail(NO_RELAY);
+    });
+  }
   async function hostGame() {
     if (IN_PREVIEW) { lobbyFail('Two-player games need the full page at <b>michaelchapman.me/drone-season</b>: this preview cannot connect two browsers.', 'Play a friend on the site'); return; }
     netReset();
     NET.role = 'host';
     lobby('Invite a player', 'Setting up an invite&hellip;');
-    try { await loadPeer(); } catch (e) { lobbyFail('The two-player connection could not load here. Open the game at <b>michaelchapman.me/drone-season</b> and try again.'); return; }
+    try { await loadNet(); } catch (e) { lobbyFail(NO_LIB); return; }
     if (NET.role !== 'host') return;
-    const peer = NET.peer = new window.Peer(randId(), peerOpts());
-    peer.on('open', id => {
-      if (NET.role !== 'host') return;
-      const url = location.origin + location.pathname + '?join=' + encodeURIComponent(id) + (QS.get('peerhost') ? '&' + ['peerhost', 'peerport', 'peerpath', 'debug'].filter(k => QS.has(k)).map(k => k + '=' + encodeURIComponent(QS.get(k) || '')).join('&') : '');
-      NET.url = url;
-      lobby('Invite a player', `Send this link to a friend. They play the cobalt hive; the round starts as soon as they open it.<br><b>${DS.MODES[G.round].name}</b>, ${DS.MODES[G.round].minutes} minutes, on map ${G.seed}.`, { url });
-    });
-    peer.on('connection', conn => {
-      if (NET.conn) { conn.on('open', () => { conn.send({ t: 'nope', why: 'full' }); setTimeout(() => conn.close(), 400); }); return; }
-      NET.conn = conn; wire(conn);
-    });
-    peer.on('error', e => { if (!NET.live) lobbyFail(netErrText(e)); });
-    peer.on('disconnected', () => { try { if (NET.peer && !NET.peer.destroyed) NET.peer.reconnect(); } catch (e) { /* the game link is separate */ } });
+    NET.code = randId();
+    openRoom(NET.code);
+    const extra = ['relays', 'debug'].filter(k => QS.has(k)).map(k => '&' + k + '=' + encodeURIComponent(QS.get(k) || '')).join('');
+    const url = location.origin + location.pathname + '?join=' + NET.code + extra;
+    lobby('Invite a player', `Send this link to a friend. They play the cobalt hive; the round starts as soon as they open it.<br><b>${DS.MODES[G.round].name}</b>, ${DS.MODES[G.round].minutes} minutes, on map ${G.seed}.`, { url });
   }
-  async function joinGame(hostId) {
+  async function joinGame(code) {
     netReset();
     NET.role = 'guest';
-    lobby('Joining a game', 'Connecting to your friend. This can take a few seconds&hellip;');
-    clearTimeout(NET.joinTimer);
-    NET.joinTimer = setTimeout(() => { if (NET.role === 'guest' && !NET.live) lobbyFail('Could not reach your friend\'s game. Some networks block direct connections between browsers: try again, or try on mobile data or another Wi-Fi.'); }, 25000);
-    try { await loadPeer(); } catch (e) { lobbyFail('The two-player connection could not load here. Open the invite link in a normal browser tab and try again.'); return; }
+    lobby('Joining a game', 'Looking for your friend. This can take a few seconds&hellip;');
+    try { await loadNet(); } catch (e) { lobbyFail(NO_LIB); return; }
     if (NET.role !== 'guest') return;
-    const peer = NET.peer = new window.Peer(peerOpts());
-    peer.on('open', () => {
-      if (NET.role !== 'guest') return;
-      const conn = peer.connect(hostId, { reliable: true, serialization: 'json' });
-      NET.conn = conn; wire(conn);
-    });
-    peer.on('error', e => { if (!NET.live) lobbyFail(e && e.type === 'peer-unavailable' ? 'Your friend may have left the title screen or made a new invite. Ask them for a fresh link.' : netErrText(e), e && e.type === 'peer-unavailable' ? 'That invite has closed' : null); });
-  }
-  function netErrText(e) {
-    const t = e && e.type;
-    if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return 'Could not reach the service that connects the two players. Check your connection and try again.';
-    if (t === 'browser-incompatible') return 'This browser cannot make the direct connection two-player games need.';
-    return 'The connection failed. Try again with a fresh invite.';
+    openRoom(String(code).replace(/[^a-z0-9]/gi, '').slice(0, 32));
+    later(30000, () => { if (NET.role === 'guest' && !NET.live) lobbyFail('Could not find your friend\'s game. They may have left the title screen or made a new invite: ask them for a fresh link.', 'That invite may have closed'); });
   }
   function lobbyFail(text, heading) {
-    clearTimeout(NET.joinTimer);
     netReset(); dropJoinParam();
     if (G.mode !== 'title') toTitle();
     lobby(heading || 'Could not connect', text, { alt: true });
   }
-  function wire(conn) {
-    conn.on('open', () => { NET.lastMsg = G.now; if (NET.role === 'guest') { send({ t: 'hello', v: PROTO }); lobby('Joining a game', 'Connected. Starting&hellip;'); } });
-    conn.on('data', onNet);
-    conn.on('close', () => netLost('left'));
-    conn.on('error', () => netLost('error'));
-  }
-  function onNet(m) {
-    NET.lastMsg = G.now;
+  function onNet(m, from) {
     if (!m || typeof m !== 'object') return;
-    if (m.t === 'hello' && NET.role === 'host') {
-      if (m.v !== PROTO) { send({ t: 'nope', why: 'version' }); return; }
+    // before the game: the host takes the first guest's hello; a guest takes the host's answer
+    if (m.t === 'hello') {
+      if (NET.role !== 'host' || NET.live) { if (NET.role === 'host' && from !== NET.peerId) NET.chan.send({ t: 'nope', why: 'full' }, { target: from }).catch(() => {}); return; }
+      NET.peerId = from;
+      if (m.v !== PROTO) { send({ t: 'nope', why: 'version' }); NET.peerId = ''; return; }
       hostStart(false);
-    } else if (m.t === 'nope') {
+      return;
+    }
+    if (NET.role === 'guest' && !NET.live && (m.t === 'start' || m.t === 'nope')) NET.peerId = from;
+    if (from !== NET.peerId) return;
+    NET.lastMsg = G.now;
+    if (m.t === 'nope') {
       lobbyFail(m.why === 'full' ? 'That game already has two players.' : 'You and your friend have different versions of the game. Both reload the page, then make a fresh invite.', 'Could not join');
     } else if (m.t === 'start' && NET.role === 'guest') {
-      clearTimeout(NET.joinTimer);
       netStart(m.seed, m.round, 1);
     } else if (m.t === 'turn') {
       NET.theirs.set(m.k, Array.isArray(m.c) ? m.c : []);
@@ -1326,6 +1332,7 @@
     Object.assign(NET, { live: true, out: [], mine: new Map(), theirs: new Map(), hashes: new Map(), acc: 0, waiting: false, waitT: 0,
       rivalPaused: false, rematchAsked: false, lostShown: false, round: DS.MODES[round] ? round : 'short', seed });
     for (let k = 0; k < DELAY; k++) { NET.mine.set(k, []); NET.theirs.set(k, []); }
+    NET.timers.forEach(clearTimeout); NET.timers = [];
     closeLobby();
     startRound(false, { seed, round: NET.round, me });
   }
@@ -1379,7 +1386,7 @@
   function netLost(why) {
     if (!NET.role) return;
     const inRound = NET.live && G.mode === 'play' && G.sim && !G.sim.over;
-    if (G.mode === 'title') { lobbyFail(NET.role === 'host' && NET.conn ? 'Your friend disconnected before the round started. Make a fresh invite.' : 'The connection closed. Try a fresh invite.'); return; }
+    if (G.mode === 'title') { lobbyFail(NET.role === 'host' ? 'Your friend disconnected before the round started. Make a fresh invite.' : 'The connection closed. Try a fresh invite.'); return; }
     netClose();
     if (inRound) netProblem(why);
     else if (G.mode === 'end') { NET.role = ''; renderEndNet(); }
