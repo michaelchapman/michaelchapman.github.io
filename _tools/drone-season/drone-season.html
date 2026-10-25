@@ -122,7 +122,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   background: linear-gradient(0deg, rgba(6, 9, 12, 0.97), rgba(9, 14, 18, 0.92));
   border-top: 1px solid var(--rule);
 }
-.dock-in { max-width: 980px; margin: 0 auto; display: grid; gap: 6px; }
+.dock-in { max-width: 1040px; margin: 0 auto; display: grid; gap: 6px; }
 .ctx { display: flex; align-items: center; gap: 8px; min-height: 34px; }
 .ctx-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
 .ctx-text { font-size: 13px; line-height: 1.25; color: var(--ink-dim); min-width: 0; }
@@ -144,7 +144,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .chip.cancel { color: var(--ink); }
 
 /* squads: what is ready to fly */
-.launch { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.launch { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .ltile {
   position: relative; min-width: 0; text-align: left;
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center;
@@ -197,6 +197,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .dcard:hover { border-color: var(--ink-faint); }
 .dcard.sel { border-color: var(--amber); background: #1d1a12; }
 .dcard.short { border-color: rgba(255, 94, 77, 0.7); }
+.dcard.cut { border-style: dashed; opacity: 0.8; }
+.dcard.cut em { color: var(--ink-faint); }
 .dcard.add { border-style: dashed; min-width: 96px; color: var(--amber-hi); }
 .dcard.add.on { border-style: solid; border-color: var(--amber); background: var(--amber-wash); }
 .dcard:disabled { opacity: 0.45; cursor: default; }
@@ -225,7 +227,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .qchip .x { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255, 94, 77, 0.88); color: #fff; font-size: 18px; opacity: 0; transition: opacity 0.12s; }
 .qchip:hover .x, .qchip:focus-visible .x { opacity: 1; }
 .q-count { margin-left: auto; font-family: var(--f-data); font-size: 11px; color: var(--ink-faint); flex: none; }
-.bbtns { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.bbtns { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
 .bbtn {
   position: relative; min-width: 0; text-align: left;
   display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 7px;
@@ -234,6 +236,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .bbtn svg { grid-row: 1 / span 2; font-size: 17px; color: var(--amber); }
 .bbtn .bn { font-family: var(--f-display); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bbtn .bc { font-family: var(--f-data); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--bloom); }
+.bbtn .bc small { font-size: 10px; color: var(--ink-faint); }
 .bbtn .bk { position: absolute; top: 3px; right: 5px; font-family: var(--f-data); font-size: 10px; color: var(--ink-faint); }
 .bbtn:hover:not(:disabled) { border-color: var(--bloom); background: rgba(215, 166, 255, 0.12); }
 .bbtn:active:not(:disabled) { transform: translateY(1px); }
@@ -310,6 +313,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .sh-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
 .sh-l { font-family: var(--f-display); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); min-width: 84px; }
 .sh-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-dim); max-width: 62ch; }
+.sh-note.warn { color: #ff8a7d; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips .chip svg { color: var(--amber); }
 .chip:disabled { opacity: 0.45; cursor: default; }
@@ -432,6 +436,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   .bbtn svg { grid-row: 1; font-size: 16px; }
   .bbtn .bn { display: none; }
   .bbtn .bc { font-size: 11px; }
+  .bbtn .bc small { display: none; }
   .bbtn .bk { top: 2px; right: 3px; font-size: 9px; }
 }
 @media (max-width: 640px) {
@@ -510,6 +515,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
     <symbol id="g-raider" viewBox="0 0 24 24"><path d="M23 12L7.6 2.4l2.8 6.6L2.6 12l7.8 3-2.8 6.6z" fill="currentColor"/><circle cx="12.6" cy="12" r="2.3" fill="#0b1115"/></symbol>
     <symbol id="g-warden" viewBox="0 0 24 24"><path d="M21 12L9 4.5v15z" fill="currentColor"/><rect x="3.5" y="4" width="2.8" height="16" fill="currentColor"/></symbol>
     <symbol id="g-decoy" viewBox="0 0 24 24"><path d="M20 12L9.5 5.6l2 4.4L6 12l5.5 2-2 4.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.6"/></symbol>
+    <symbol id="g-relay" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4" fill="currentColor"/><path d="M7.4 7.4a6.5 6.5 0 000 9.2M16.6 7.4a6.5 6.5 0 010 9.2M4.6 4.6a10.4 10.4 0 000 14.8M19.4 4.6a10.4 10.4 0 010 14.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="g-harrier" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 1.8v4M12 18.2v4M1.8 12h4M18.2 12h4M4.8 4.8l2.8 2.8M16.4 16.4l2.8 2.8M4.8 19.2l2.8-2.8M16.4 7.6l2.8-2.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="g-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 010-5.7l3-3a4 4 0 015.7 5.7l-1.5 1.5M14 10a4 4 0 010 5.7l-3 3a4 4 0 01-5.7-5.7l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="g-nest" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4l-8.1-4.7V7.3z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="8.4" r="1.9" fill="currentColor"/><circle cx="8.7" cy="14" r="1.9" fill="currentColor"/><circle cx="15.3" cy="14" r="1.9" fill="currentColor"/></symbol>
     <symbol id="g-post" viewBox="0 0 24 24"><path d="M12 2.5l7 9.5-7 9.5-7-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
     <symbol id="g-canopy" viewBox="0 0 24 24"><g fill="#4f9a76"><circle cx="8" cy="9" r="3.4"/><circle cx="12.5" cy="7" r="3.4"/><circle cx="15.5" cy="11.5" r="3.4"/><circle cx="10" cy="14" r="3.4"/><circle cx="15" cy="16.5" r="3"/></g><path d="M3 12c1-6 6-9.5 11-9 5 .6 8 5 7.5 10-.6 5.5-6 9-11.5 8.4C5 20.8 2.4 16.5 3 12z" fill="none" stroke="#7fd1a4" stroke-width="1.4" stroke-dasharray="2.2 2"/></symbol>
@@ -555,6 +563,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <button class="ltile sq" id="sq-2" data-sq="2"></button>
         <button class="ltile sq" id="sq-3" data-sq="3"></button>
         <button class="ltile sq" id="sq-4" data-sq="4"></button>
+        <button class="ltile sq" id="sq-5" data-sq="5"></button>
       </div>
       <div class="panel">
         <div class="tabs">
@@ -577,10 +586,12 @@ svg.i { width: 1em; height: 1em; flex: none; }
           <div class="bbtns" role="group" aria-label="Build">
             <button class="bbtn" id="buy-forager" aria-label="Build a Forager for 25 nectar"><svg class="i"><use href="#g-forager"/></svg><span class="bn">Forager</span><span class="bc">&#9670;25</span><span class="bk" id="bk-forager">2</span></button>
             <button class="bbtn" id="buy-glint" aria-label="Build a Glint for 10 nectar"><svg class="i"><use href="#g-glint"/></svg><span class="bn">Glint</span><span class="bc">&#9670;10</span></button>
-            <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings &times;4</span><span class="bc">&#9670;24</span></button>
-            <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys &times;2</span><span class="bc">&#9670;10</span></button>
+            <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings</span><span class="bc">&#9670;24 <small>&times;4</small></span></button>
+            <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys</span><span class="bc">&#9670;10 <small>&times;2</small></span></button>
             <button class="bbtn" id="buy-warden" aria-label="Build a Warden for 35 nectar"><svg class="i"><use href="#g-warden"/></svg><span class="bn">Warden</span><span class="bc">&#9670;35</span></button>
             <button class="bbtn" id="buy-raider" aria-label="Build a Raider for 40 nectar"><svg class="i"><use href="#g-raider"/></svg><span class="bn">Raider</span><span class="bc">&#9670;40</span></button>
+            <button class="bbtn" id="buy-relay" aria-label="Build a Relay for 30 nectar"><svg class="i"><use href="#g-relay"/></svg><span class="bn">Relay</span><span class="bc">&#9670;30</span></button>
+            <button class="bbtn" id="buy-harrier" aria-label="Build a Harrier for 45 nectar"><svg class="i"><use href="#g-harrier"/></svg><span class="bn">Harrier</span><span class="bc">&#9670;45</span></button>
             <button class="bbtn" id="buy-nest" aria-label="Place a Nest for 80 nectar"><svg class="i"><use href="#g-nest"/></svg><span class="bn">Nest</span><span class="bc">&#9670;80</span><span class="bk" id="bk-nest">0/2</span></button>
           </div>
         </div>
@@ -612,7 +623,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2.6</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 3</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -620,6 +631,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <li><svg style="color:var(--amber)"><use href="#g-glint"/></svg><span><b>Scout</b>Glints see far and quietly. Perch one on a ridge to see further. Canopy hides what sits under it.</span></li>
         <li><svg style="color:var(--amber)"><use href="#g-raider"/></svg><span><b>Strike</b>Stings are cheap and spent on impact. Raiders bomb what they find, then fly home to rearm.</span></li>
         <li><svg style="color:var(--amber)"><use href="#g-warden"/></svg><span><b>Protect</b>Wardens patrol and net drones. Decoys look like Raiders to the rival and draw its fire.</span></li>
+        <li><svg style="color:var(--amber)"><use href="#g-relay"/></svg><span><b>Link</b>Orders reach drones near your Heart, Nests and Relays. Beyond that they carry on with what they were told. Harriers jam: drones near one fly blind.</span></li>
         <li><svg style="color:var(--bloom)"><use href="#g-crown"/></svg><span><b>Hold</b>In Last Light, the Crown bloom at the centre scores for whichever hive has more drones on it.</span></li>
       </ul>
       <p class="win">Win at frost on <b>Crown score</b>, or end it early by <b>destroying the Cobalt Heart</b>.</p>
@@ -644,7 +656,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         </div>
         <div class="btn-row"><button class="btn" id="btn-lobby-alt" hidden>Play against the computer</button><button class="btn" id="btn-lobby-cancel">Cancel</button></div>
       </div>
-      <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
+      <p class="keys">Keys: Q W E R T Y arm squads &middot; A again &middot; 1&ndash;9 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
     </div>
   </section>
 
@@ -677,7 +689,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
           <tr><td><svg class="i"><use href="#g-decoy"/></svg></td><th>Decoy</th><td class="c">&#9670;5</td><td>Reads as a Raider to the rival and draws its fire.</td></tr>
           <tr><td><svg class="i"><use href="#g-warden"/></svg></td><th>Warden</th><td class="c">&#9670;35</td><td>Patrols where you tap and nets drones. Three nets, then home.</td></tr>
           <tr><td><svg class="i"><use href="#g-raider"/></svg></td><th>Raider</th><td class="c">&#9670;40</td><td>Three bombs for clustered or still targets. Rearms at home.</td></tr>
-          <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base.</td></tr>
+          <tr><td><svg class="i"><use href="#g-relay"/></svg></td><th>Relay</th><td class="c">&#9670;30</td><td>Hovers where you send it and carries your link 300 further. Chains through other Relays in link.</td></tr>
+          <tr><td><svg class="i"><use href="#g-harrier"/></svg></td><th>Harrier</th><td class="c">&#9670;45</td><td>Jams rival drones within 200: they cannot report, take orders or use the hive's picture. Its noise gives it away: you can see one while it jams you.</td></tr>
+          <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base. Carries your link too.</td></tr>
         </tbody>
       </table>
       <h3 class="sub-h">Commanding the hive</h3>
@@ -686,7 +700,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
           <tr><th>Squads</th><td>Tap a squad, then tap the map or drag a route. Tap two to send them together. Long-press or right-click a squad to change its mix. <b>Again</b> resends your last squad the same way.</td></tr>
           <tr><th>Auto</th><td>Keeps two items in the queue from your plan: the first row below its target, saving up for it rather than skipping ahead. Losses are rebuilt. What you build yourself goes first.</td></tr>
           <tr><th>Posts</th><td>A spot the hive keeps staffed with Glints, Wardens or Decoys. It relieves a Glint before its battery fades and replaces Wardens that go home to rearm. Higher priority posts are filled first.</td></tr>
-          <tr><th>Quick</th><td>Tap a blue contact for Strike, Bomb or Intercept. Press and hold open ground to scout, hunt, patrol, set a post or grow a Nest there.</td></tr>
+          <tr><th>Link</th><td>New orders reach only drones in link: near your Heart, a Nest, or a Relay in link. Out of link, a drone keeps its last orders until its battery says home. A post out of link takes a Relay out with it if one is ready.</td></tr>
+          <tr><th>Jamming</th><td>Drones near a rival Harrier are jammed. They cannot report what they see, take new orders or use the hive's picture, so Stings hunt on their own and Decoys fool them. A jammed post gets no relief. Kill the Harrier.</td></tr>
+          <tr><th>Quick</th><td>Tap a blue contact for Strike, Bomb or Intercept. Press and hold open ground to scout, hunt, patrol, jam, place a Relay, set a post or grow a Nest there.</td></tr>
         </tbody>
       </table>
       <div class="btn-row">
@@ -725,7 +741,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 </div>
 
 <script>
-/* Drone Season · simulation core (milestone 2.6). Pure logic, no DOM, deterministic per seed and across browsers. */
+/* Drone Season · simulation core (milestone 3, Links). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -739,9 +755,12 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const QUEUE_MAX = 8, NEST_MAX = 2, NEST_FROM_HEART = 560, NEST_FROM_NEST = 300, NEST_ENEMY_CLEAR = 520;
   const BLAST_R = 30, WARDEN_ENGAGE = 210, WARDEN_LEASH = 320;
   const NEST_GUARD_R = 120, AUTO_QUEUE = 2, POST_MAX = 5, PLAN_MAX_ROWS = 12;
-  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider'];
-  const POST_TYPES = ['glint', 'warden', 'decoy'];
-  const POST_CAP = { glint: 2, warden: 3, decoy: 4 };
+  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier'];
+  const POST_TYPES = ['glint', 'warden', 'decoy', 'harrier'];
+  const POST_CAP = { glint: 2, warden: 3, decoy: 4, harrier: 1 };
+  const BRIDGE_MAX = 3;   // Relays a post beyond link may take with it
+  // Links: your Heart, Nests and Relays carry orders. A Relay passes the link on only while it is linked itself.
+  const LINK_R = { heart: 520, nest: 320, relay: 300 }, JAM_R = 200;
 
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
@@ -766,6 +785,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     decoy:   { name: 'Decoy',   cost: 5,  sig: 2, fake: 6, reach: 0, hp: 1, speed: 80, dash: 120, turn: 4.5, battery: 60 },
     warden:  { name: 'Warden',  cost: 35, sig: 4, reach: 160, hp: 2, speed: 115, dash: 165, turn: 6, battery: 150, nets: 3, rearm: 4, rearmT: 5, reuse: true },
     raider:  { name: 'Raider',  cost: 40, sig: 4, reach: 110, hp: 3, speed: 70, dash: 100, turn: 3.2, battery: 150, charges: 3, rearm: 6, rearmT: 7, reuse: true },
+    relay:   { name: 'Relay',   cost: 30, sig: 4, reach: 80,  hp: 2, speed: 75, dash: 110, turn: 3.5, battery: 240, rearm: 3, rearmT: 4, reuse: true, support: true },
+    harrier: { name: 'Harrier', cost: 45, sig: 5, reach: 100, hp: 2, speed: 80, dash: 120, turn: 3.5, battery: 150, rearm: 5, rearmT: 5, reuse: true, support: true },
   };
   const BUILD = {
     forager: { cost: 25, time: 5, n: 1 },
@@ -774,13 +795,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
     decoy:   { cost: 10, time: 3, n: 2 },
     warden:  { cost: 35, time: 8, n: 1 },
     raider:  { cost: 40, time: 10, n: 1 },
+    relay:   { cost: 30, time: 6, n: 1 },
+    harrier: { cost: 45, time: 9, n: 1 },
     nest:    { cost: 80, time: 12, n: 1, site: true },
   };
-  const BUILD_ORDER = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'nest'];
+  const BUILD_ORDER = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier', 'nest'];
   const DIFF = {
-    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7 },
-    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1 },
-    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2 },
+    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7, jam: false },
+    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1, jam: true },
+    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2, jam: true },
   };
 
   // ---------- helpers ----------
@@ -1028,7 +1051,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       moving: false, dash: false, diving: false, diveT: 0, battery: T.battery || 0,
       charges: T.charges || 0, nets: T.nets || 0, rearmT: 0, rearmPaid: false, homing: false,
       cargo: 0, field: -1, slot: 0, manual: false, wp: 0, off: sim.rnd() * 2 - 1,
-      target: 0, spot: 0, retry: 0, scanPhase: (sim.nextId % 3), cool: 0, loiter: 0, orb: sim.rnd() * 6.28,
+      target: 0, spot: 0, retry: 0, scanPhase: (sim.nextId % 3), cool: 0, loiter: 0, orb: sim.rnd() * 6.28, link: true, jam: false,
     };
     if (extra) Object.assign(u, extra);
     sim.units.push(u); sim.byId.set(u.id, u);
@@ -1057,7 +1080,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       seed, diff, mode, cfg, phases: phasesFor(mode), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
       units: [], byId: new Map(), nextId: 1, sorties: new Map(), nextSortie: 1,
       events: [], rnd: mulberry32((seed ^ 0x5bd1e995) >>> 0), holder: -1, presence: [0, 0],
-      phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false,
+      phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false, links: [[], []],
     };
     sim.sides = [0, 1].map(s => ({
       side: s, nectar: cfg.nectar, harvested: 0, queue: [], qid: 1, guard: true,
@@ -1106,8 +1129,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const T = TYPES[u.type];
     return T.reach * (!T.structure && ridgeAt(sim.map, u.x, u.y) ? 1.3 : 1);
   }
-  function perceivedType(sim, side, e) {
+  // What a drone takes a contact to be. A Decoy passes for a Raider until the hive has seen through it,
+  // and a jammed drone never hears that it has.
+  function perceivedType(sim, side, e, jammed) {
     if (e.type !== 'decoy') return e.type;
+    if (jammed) return 'raider';
     const c = sim.sides[side].pic.get(e.id);
     return c && c.revealed ? 'decoy' : 'raider';
   }
@@ -1200,7 +1226,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       u.parked = false; u.state = 'fly'; u.sortie = so.id; u.wp = 0; u.diving = false; u.homing = false;
       u.x = base.x + (sim.rnd() - 0.5) * 18; u.y = base.y + (sim.rnd() - 0.5) * 18; u.px = u.x; u.py = u.y;
       u.hdg = datan2(anchor.y - u.y, anchor.x - u.x);
-      u.dash = so.stance === 'dash'; u.loiter = 0; u.cool = 0;
+      u.dash = so.stance === 'dash'; u.loiter = 0; u.cool = 0; u.link = true; u.jam = false;
       u.target = type === 'raider' && so.mode === 'raid' ? 0 : so.target;   // a Raider flies its route before it bombs
       if (!T.reuse) u.battery = T.battery;
       so.units.push(u.id); so.cost += T.cost;
@@ -1208,10 +1234,21 @@ svg.i { width: 1em; height: 1em; flex: none; }
     sim.sorties.set(so.id, so);
     return so;
   }
+  // New orders reach only drones in link. Drones out of link or jammed carry on as they were, on a sortie of their own.
+  function splitUnlinked(sim, so) {
+    const off = so.units.filter(id => { const u = sim.byId.get(id); return u && u.hp > 0 && !u.link; });
+    if (!off.length || off.length === so.units.length) return;
+    const rest = Object.assign({}, so, { id: sim.nextSortie++, units: off, route: so.route.slice(), killed: {}, destroyed: 0, cost: 0, n: off.length });
+    sim.sorties.set(rest.id, rest);
+    for (const id of off) sim.byId.get(id).sortie = rest.id;
+    so.units = so.units.filter(id => !off.includes(id));
+  }
+  const linkedIn = (sim, so) => so.units.some(id => { const u = sim.byId.get(id); return u && u.hp > 0 && u.link; });
   function retask(sim, sortieId, route, opts) {
     opts = opts || {};
     const so = sim.sorties.get(sortieId);
-    if (!so || sim.over) return false;
+    if (!so || sim.over || !linkedIn(sim, so)) return false;
+    splitUnlinked(sim, so);
     so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0; so.post = 0;
     if (opts.stance) so.stance = opts.stance;
     for (const id of so.units) {
@@ -1224,7 +1261,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function recall(sim, sortieId) {
     const so = sim.sorties.get(sortieId);
-    if (!so || sim.over) return false;
+    if (!so || sim.over || !linkedIn(sim, so)) return false;
+    splitUnlinked(sim, so);
     so.post = 0;
     if (TYPES[so.type].reuse) { for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.homing = true; u.target = 0; } } }
     else if (so.type === 'sting') { so.mode = 'home'; for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.target = 0; u.diving = false; } } }
@@ -1233,7 +1271,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function setStance(sim, sortieId, stance) {
     const so = sim.sorties.get(sortieId);
-    if (!so) return;
+    if (!so || !linkedIn(sim, so)) return;
+    splitUnlinked(sim, so);
     so.stance = stance;
     for (const id of so.units) { const u = sim.byId.get(id); if (u) u.dash = stance === 'dash'; }
   }
@@ -1359,7 +1398,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const S = sim.sides[s], pic = S.pic;
       const sensors = [];
       for (const u of sim.units) {
-        if (u.side !== s || u.parked || u.hp <= 0) continue;
+        if (u.side !== s || u.parked || u.hp <= 0 || u.jam) continue;   // a jammed drone cannot send back what it sees
         const R = reachOf(sim, u);
         if (R > 0) sensors.push({ x: u.x, y: u.y, R });
       }
@@ -1386,6 +1425,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
           if (revealHere) reveal = true;
           if (best >= 1.5 && (!isDecoy || reveal)) break;
         }
+        if (e.type === 'harrier' && e.jams > 0 && best < 1) best = 1;   // jamming gives a Harrier away: tracked while it jams you
         const grade = best >= 1.5 ? 3 : best >= 1 ? 2 : best >= 0.55 ? 1 : 0;
         e.spot = grade;
         if (!c) {
@@ -1435,6 +1475,39 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (u.spot < 2) S.unseen += dtd;
     }
   }
+
+  // ---------- links and jamming ----------
+  // A drone is in link when it is within reach of your Heart, a Nest, or a Relay that is itself in link, and not inside
+  // a rival Harrier's jamming. Out of link it keeps its orders; jammed, it also cannot report or use the hive's picture.
+  const jammedAt = (sim, side, x, y) => sim.units.some(h => h.side !== side && h.type === 'harrier' && !h.parked && h.hp > 0 && (h.x - x) * (h.x - x) + (h.y - y) * (h.y - y) <= JAM_R * JAM_R);
+  function linkPass(sim) {
+    const harriers = [[], []];
+    for (const u of sim.units) if (u.type === 'harrier' && !u.parked && u.hp > 0) { harriers[u.side].push(u); u.jams = 0; }
+    for (const u of sim.units) {
+      if (u.parked || u.hp <= 0 || isStructure(u)) continue;
+      u.jam = false;
+      for (const h of harriers[1 - u.side]) if ((h.x - u.x) * (h.x - u.x) + (h.y - u.y) * (h.y - u.y) <= JAM_R * JAM_R) { u.jam = true; h.jams++; }
+    }
+    for (let s = 0; s < 2; s++) {
+      const nodes = basesOf(sim, s).map(b => ({ x: b.x, y: b.y, r: LINK_R[b.type], id: b.id }));
+      const relays = sim.units.filter(u => u.side === s && u.type === 'relay' && !u.parked && u.hp > 0 && !u.jam && !u.homing);
+      const used = new Set();
+      for (let grew = true; grew;) {
+        grew = false;
+        for (const r of relays) {
+          if (used.has(r.id)) continue;
+          const from = nodes.find(n => (n.x - r.x) * (n.x - r.x) + (n.y - r.y) * (n.y - r.y) <= n.r * n.r);
+          if (from) { nodes.push({ x: r.x, y: r.y, r: LINK_R.relay, id: r.id, relay: true, from: from.id }); used.add(r.id); grew = true; }
+        }
+      }
+      sim.links[s] = nodes;
+      for (const u of sim.units) {
+        if (u.side !== s || u.parked || u.hp <= 0 || isStructure(u)) continue;
+        u.link = !u.jam && nodes.some(n => (n.x - u.x) * (n.x - u.x) + (n.y - u.y) * (n.y - u.y) <= n.r * n.r);
+      }
+    }
+  }
+  const inLink = (sim, side, x, y) => sim.links[side].some(n => (n.x - x) * (n.x - x) + (n.y - y) * (n.y - y) <= n.r * n.r);
 
   // ---------- combat ----------
   function killUnit(sim, u, src, how) {
@@ -1526,8 +1599,13 @@ svg.i { width: 1em; height: 1em; flex: none; }
       }
     }
     const spd = u.dash ? T.dash : T.speed;
-    const mode = so.mode;
+    let mode = so.mode;
     if (mode === 'home') { flyHome(sim, u, dt); return; }
+    if (u.jam && (mode === 'strike' || mode === 'guard')) {   // cut off from the hive's track: hunt with its own seeker
+      const tgt = sim.byId.get(u.target);
+      if (tgt && tgt.hp > 0 && !tgt.parked && (sim.tick + u.scanPhase) % 3 === 0 && seekerSees(sim, u, tgt)) { u.diving = true; u.diveT = 3; return; }
+      mode = 'hunt';
+    }
     if (mode === 'raid') {
       const tgt = sim.byId.get(so.target);
       if (tgt && tgt.hp > 0) {
@@ -1540,7 +1618,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
     if (mode === 'strike' || mode === 'guard') {
       const tgt = sim.byId.get(u.target);
-      const est = u.target ? estimate(sim, u.side, u.target) : null;
+      const est = u.target ? estimate(sim, u.side, u.target) : null;   // (not reached when jammed)
       if (!tgt || tgt.hp <= 0 || tgt.parked || !est || (est.stale && dhypot(est.x - u.x, est.y - u.y) < 24)) {
         u.target = 0;
         if (mode === 'guard') so.mode = 'home';
@@ -1562,7 +1640,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         const q = (T.reach * sigOf(sim, e)) / 5 / d;
         if (q < 1) continue;
         const taken = targetedBy(sim, u.side, e.id);
-        const score = q * (TYPES[perceivedType(sim, u.side, e)].cost / 10 + 1) / (1 + taken * 2);
+        const score = q * (TYPES[perceivedType(sim, u.side, e, u.jam)].cost / 10 + 1) / (1 + taken * 2);
         if (score > bq && los(sim.map, u.x, u.y, e.x, e.y)) { bq = score; best = e; }
       }
       if (best) { u.target = best.id; u.diving = true; u.diveT = 3; return; }
@@ -1577,9 +1655,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
     followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);
   }
 
-  const WARDEN_PRI = { sting: 5, raider: 4, decoy: 4, glint: 3, warden: 3, forager: 2 };
+  function updateSupport(sim, u, dt) {   // Relays and Harriers: fly the route, hold station, home to recharge
+    const T = TYPES[u.type];
+    u.battery -= dt;
+    if (u.battery <= 0) { killUnit(sim, u, null, 'expired'); return; }
+    const so = sim.sorties.get(u.sortie);
+    if (!so || u.battery < 30 || u.hp < T.hp) u.homing = true;
+    if (u.homing) { flyHome(sim, u, dt); return; }
+    followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);   // then holds station at the end until its battery runs low
+  }
+
+  const WARDEN_PRI = { harrier: 6, sting: 5, raider: 4, decoy: 4, relay: 4, glint: 3, warden: 3, forager: 2 };
   function wardenSees(sim, u, e) {
-    const c = sim.sides[u.side].pic.get(e.id);
+    const c = u.jam ? null : sim.sides[u.side].pic.get(e.id);   // jammed: only what its own sensor sees
     if (c && (c.grade >= 2 || c.lockUntil > sim.t)) return true;
     const d = Math.max(1, dist(u.x, u.y, e.x, e.y));
     return (reachOf(sim, u) * sigOf(sim, e)) / 5 / d >= 0.7 && los(sim.map, u.x, u.y, e.x, e.y);
@@ -1591,7 +1679,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (dist(e.x, e.y, cx, cy) > WARDEN_ENGAGE) continue;
       const du = dist(e.x, e.y, u.x, u.y);
       if (du > 320 || !wardenSees(sim, u, e)) continue;
-      let sc = (WARDEN_PRI[perceivedType(sim, u.side, e)] || 1) + (e.diving ? 2 : 0) - du / 200;
+      let sc = (WARDEN_PRI[perceivedType(sim, u.side, e, u.jam)] || 1) + (e.diving ? 2 : 0) - du / 200;
       if (targetedBy(sim, u.side, e.id, 'warden') > 0) sc -= 3;
       if (sc > bs) { bs = sc; best = e; }
     }
@@ -1628,7 +1716,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
   function raiderSees(sim, u, e) {
     const c = sim.sides[u.side].pic.get(e.id);
-    if (c && ((c.static && c.known) || c.grade >= 2 || c.lockUntil > sim.t)) return true;
+    if (c && c.static && c.known) return true;                      // fixed targets: it was briefed before launch
+    if (c && !u.jam && (c.grade >= 2 || c.lockUntil > sim.t)) return true;   // moving ones need the hive's picture
     const d = Math.max(1, dist(u.x, u.y, e.x, e.y));
     return (reachOf(sim, u) * sigOf(sim, e)) / 5 / d >= 1 && los(sim.map, u.x, u.y, e.x, e.y);
   }
@@ -1674,7 +1763,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const spd = u.dash ? T.dash : T.speed;
     if ((so.mode === 'strike' || so.mode === 'raid') && so.target) {
       const tgt = sim.byId.get(so.target), est = estimate(sim, u.side, so.target);
-      if (!tgt || tgt.hp <= 0 || !est || (est.stale && dist(est.x, est.y, u.x, u.y) < 30)) { so.mode = 'route'; so.target = 0; so.route = []; u.homing = true; return; }
+      const lost = u.jam && tgt && !isStructure(tgt) && !raiderSees(sim, u, tgt);   // jammed: a moving target it cannot see itself is lost
+      if (!tgt || tgt.hp <= 0 || !est || lost || (est.stale && dist(est.x, est.y, u.x, u.y) < 30)) { so.mode = 'route'; so.target = 0; so.route = []; u.homing = true; return; }
       if (so.mode === 'strike' || u.wp >= so.route.length) {
         if (dist(est.x, est.y, u.x, u.y) < 150 && u.cool <= 0 && raiderSees(sim, u, tgt) && (isStructure(tgt) || tgt.type === 'forager' || !tgt.moving)) { u.target = tgt.id; return; }
         moveTo(u, est.x, est.y, spd, T.turn, dt);
@@ -1834,6 +1924,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         case 'sting': updateSting(sim, u, dt); break;
         case 'warden': updateWarden(sim, u, dt); break;
         case 'raider': updateRaider(sim, u, dt); break;
+        case 'relay': case 'harrier': updateSupport(sim, u, dt); break;
       }
       if (sim.over) return;
     }
@@ -1853,7 +1944,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
     for (const u of sim.units) { if (!u.parked) { u.vx = (u.x - u.px) / dt; u.vy = (u.y - u.py) / dt; } }
 
-    if (sim.tick % 3 === 0) detect(sim, dt * 3);
+    if (sim.tick % 3 === 0) { linkPass(sim); detect(sim, dt * 3); }
 
     // tidy the dead
     if (sim.units.some(u => u.hp <= 0 && u.type !== 'heart')) {
@@ -1955,14 +2046,48 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
     return out;
   }
+  // Whether the hive can staff a post: its spot must be in link ('ok'), not out of reach ('cut') or jammed ('jammed').
+  // Drones already there carry on; the hive just cannot send more or relieve them.
+  function postReach(sim, side, p) {
+    if (jammedAt(sim, side, p.x, p.y)) return 'jammed';
+    return inLink(sim, side, p.x, p.y) ? 'ok' : 'cut';
+  }
+  // Relays a post has taken to carry the link out to it ('bridges'), each holding a spot of its own.
+  const bridgesOf = (sim, side, p) => [...sim.sorties.values()].filter(so => so.side === side && so.post === p.id && so.bridge && so.units.length);
+  // A post beyond link takes a Relay, if one is ready, to the edge of the link towards it, and keeps one there.
+  // Further out it chains them. A jammed spot is no use, so jamming cannot be bridged.
+  function bridgeTick(sim, side, p, reach) {
+    const list = bridgesOf(sim, side, p);
+    const flying = so => so.units.some(id => { const u = sim.byId.get(id); return u && !u.homing && u.wp < so.route.length; });
+    if (list.some(flying)) return;                              // one is on its way: wait for it
+    for (const so of list) {                                    // relieve a Relay that is fading, at the same spot
+      const u = sim.byId.get(so.units[0]), spot = so.route[0];
+      if (!u || onStation(sim, side, spot, u)) continue;
+      if (list.some(o => o !== so && dist(o.route[0].x, o.route[0].y, spot.x, spot.y) < 25 && o.units.some(id => onStation(sim, side, spot, sim.byId.get(id))))) continue;
+      const r = launch(sim, side, 'relay', 1, [spot], { post: p.id, label: 'Relay', stance: 'quiet' });
+      if (r) { r.bridge = true; return; }
+    }
+    if (reach !== 'cut' || list.length >= BRIDGE_MAX) return;
+    let n = null, best = Infinity;
+    for (const q of sim.links[side]) { const g = dist(q.x, q.y, p.x, p.y) - q.r; if (g < best) { best = g; n = q; } }
+    if (!n) return;
+    const d = dist(n.x, n.y, p.x, p.y), k = Math.min(n.r * 0.85, Math.max(0, d - LINK_R.relay * 0.6)) / d;
+    const spot = { x: n.x + (p.x - n.x) * k, y: n.y + (p.y - n.y) * k };
+    if (jammedAt(sim, side, spot.x, spot.y)) return;
+    const r = launch(sim, side, 'relay', 1, [spot], { post: p.id, label: 'Relay', stance: 'quiet' });
+    if (r) r.bridge = true;
+  }
   // Send ready units to any post that is short, highest priority first.
   function postTick(sim, side) {
     const S = sim.sides[side];
     if (!S.posts.length || sim.over) return;
     for (const p of byPri(S.posts)) {
+      const reach = postReach(sim, side, p);
+      if (reach !== p.reach) { if (p.reach) sim.events.push({ k: 'postReach', side, post: p.id, reach }); p.reach = reach; }
+      bridgeTick(sim, side, p, reach);
       for (const type of POST_TYPES) {
         const need = p.need[type] | 0;
-        if (!need) continue;
+        if (!need || reach !== 'ok') continue;
         let on = 0;
         for (const u of postUnits(sim, side, p, type)) if (onStation(sim, side, p, u)) on++;
         if (on >= need) continue;
@@ -1978,8 +2103,14 @@ svg.i { width: 1em; height: 1em; flex: none; }
     for (const p of byPri(S.posts)) for (const type of POST_TYPES) {
       const n = p.need[type] | 0;
       if (!n) continue;
-      want[type] = (want[type] || 0) + n + (type === 'warden' ? 0 : 1);
+      want[type] = (want[type] || 0) + n + (type === 'warden' || type === 'harrier' ? 0 : 1);
       if (!order.includes(type)) order.push(type);
+    }
+    for (const p of byPri(S.posts)) {
+      const k = bridgesOf(sim, side, p).length + (p.reach === 'cut' ? 1 : 0);
+      if (!k) continue;
+      want.relay = (want.relay || 0) + k + 1;
+      if (!order.includes('relay')) order.unshift('relay');
     }
     const out = [];
     for (const type of order) {
@@ -1990,7 +2121,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         const so = sim.sorties.get(u.sortie);
         if (!so || !so.post) continue;                       // busy on your own orders
         const p = S.posts.find(q => q.id === so.post);
-        if (p && onStation(sim, side, p, u)) have++;
+        if (p && onStation(sim, side, so.bridge ? so.route[0] : p, u)) have++;
       }
       for (const q of S.queue) if (q.type === type) have += BUILD[type].n;
       if (have < want[type]) out.push([type, want[type] - have]);
@@ -2043,14 +2174,27 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (patch.name != null) p.name = patch.name;
     if (patch.x != null && patch.y != null) {
       p.x = clamp(patch.x, 10, W - 10); p.y = clamp(patch.y, 10, H - 10);
-      for (const so of sim.sorties.values()) if (so.side === side && so.post === id) { so.route = [{ x: p.x, y: p.y }]; for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } } }
+      for (const so of [...sim.sorties.values()]) {
+        if (so.side !== side || so.post !== id) continue;
+        if (!linkedIn(sim, so)) { so.post = 0; continue; }          // out of link: they stay where they were sent
+        if (so.bridge) { so.post = 0; for (const uid of so.units) { const u = sim.byId.get(uid); if (u && u.link) u.homing = true; } continue; }
+        const before = sim.nextSortie;
+        splitUnlinked(sim, so);
+        if (sim.nextSortie > before) sim.sorties.get(before).post = 0;
+        so.route = [{ x: p.x, y: p.y }];
+        for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } }
+      }
     }
-    // drop units the post no longer needs: Wardens go home, Glints and Decoys stay where they are until their batteries fade
+    // drop units the post no longer needs (only those in link hear it): reusable ones go home, Glints and Decoys stay until they fade
     for (const type of POST_TYPES) {
-      const list = postUnits(sim, side, p, type), extra = list.length - p.need[type];
-      for (let i = 0; i < extra; i++) {
+      const list = postUnits(sim, side, p, type).filter(u => u.link);
+      let extra = postUnits(sim, side, p, type).length - p.need[type];
+      for (let i = 0; i < list.length && extra > 0; i++) {
         const so = sim.sorties.get(list[i].sortie);
-        if (so && so.post === id) { so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; } }
+        if (!so || so.post !== id) continue;
+        splitUnlinked(sim, so);
+        extra -= so.units.length;
+        so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
       }
     }
     return p;
@@ -2059,9 +2203,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const S = sim.sides[side], i = S.posts.findIndex(q => q.id === id);
     if (i < 0) return false;
     S.posts.splice(i, 1);
-    for (const so of sim.sorties.values()) {
+    for (const so of [...sim.sorties.values()]) {
       if (so.side !== side || so.post !== id) continue;
       so.post = 0;
+      if (!linkedIn(sim, so)) continue;                          // out of link: they hold until their batteries say otherwise
+      splitUnlinked(sim, so);
       if (TYPES[so.type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
     }
     return true;
@@ -2149,7 +2295,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function aiTick(sim, ai) {
     const s = ai.side, o = 1 - s, S = sim.sides[s], cfg = ai.cfg, t = sim.t, m = sim.map, C = sim.cfg;
     const h = sim.hearts[s], eh = sim.hearts[o], ci = m.fields.length - 1, cf = m.fields[ci];
-    const parked = { sting: [], glint: [], decoy: [], warden: [], raider: [] };
+    const parked = { sting: [], glint: [], decoy: [], warden: [], raider: [], relay: [], harrier: [] };
     let glOut = 0;
     for (const u of sim.units) {
       if (u.side !== s || u.hp <= 0) continue;
@@ -2171,7 +2317,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const site = aiNestSite(sim, ai);
       if (site) build(sim, s, 'nest', site);
     }
-    maintain(sim, s, cfg.force ? AI_FORCE[sim.phase].map(([t, n]) => [t, t === 'forager' || t === 'glint' ? n : Math.max(1, Math.round(n * cfg.force))]) : AI_FORCE[sim.phase], 2);
+    let force = cfg.force ? AI_FORCE[sim.phase].map(([t, n]) => [t, t === 'forager' || t === 'glint' ? n : Math.max(1, Math.round(n * cfg.force))]) : AI_FORCE[sim.phase];
+    if (cfg.jam && sim.phase >= 2) { force = force.slice(); force.splice(force.length - 1, 0, ['harrier', 1]); }
+    maintain(sim, s, force, 2);
 
     // scout
     ai.scoutT -= 0.5;
@@ -2246,6 +2394,13 @@ svg.i { width: 1em; height: 1em; flex: none; }
       }
     }
 
+    // a Harrier jams the Crown at Last Light, so the rival's drones there fight half blind
+    const harrierOut = sim.units.some(u => u.side === s && u.type === 'harrier' && !u.parked && u.hp > 0);
+    if (parked.harrier.length && !harrierOut && t >= C.bloomScore - 20) {
+      const p = { x: cf.x + (s ? 70 : -70), y: cf.y + (ai.rnd() - 0.5) * 80 };
+      if (launch(sim, s, 'harrier', 1, aiRoute(ai, h, p, 0.4), { label: 'Jam' })) take('harrier', 1);
+    }
+
     // raids: on a harvest, or on the Heart with decoys running ahead
     if (t >= ai.raidT && spare() >= cfg.raid && t < C.round - 25) {
       ai.raidT = t + C.round * (0.085 + ai.rnd() * 0.05);
@@ -2263,6 +2418,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
           parked.decoy.length = 0;
         }
         if (launch(sim, s, 'sting', k, [fp, mid, { x: eh.x, y: eh.y }], { stance: 'quiet', mode: 'raid', target: eh.id, label: 'Raid' })) take('sting', k);
+        if (parked.harrier.length) {   // a Harrier rides in behind and jams the defenders near the Heart
+          const jp = { x: eh.x + (fp.x - eh.x) * 0.45, y: eh.y + (fp.y - eh.y) * 0.45 };
+          if (launch(sim, s, 'harrier', 1, [fp, jp], { label: 'Jam' })) take('harrier', 1);
+        }
         if (sim.phase >= 2 && parked.raider.length) {
           if (launch(sim, s, 'raider', 1, [fp, mid, { x: eh.x, y: eh.y }], { mode: 'raid', target: eh.id, label: 'Raid' })) take('raider', 1);
         }
@@ -2272,19 +2431,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
   root.DS = {
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
-    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP,
+    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP, LINK_R, JAM_R,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT,
     createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
-    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
+    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits, postReach, inLink, jammedAt, linkPass,
     spawnUnit: addUnit, setAI, dsin, dcos, datan2, dhypot,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
 <script>
-/* Drone Season · rendering, input, sound and overlays (milestone 2.6: command tools, training, two players). */
+/* Drone Season · rendering, input, sound and overlays (milestone 3: links, Relays and Harriers). */
 (function () {
   'use strict';
   const DS = window.DS, W = DS.W, H = DS.H, TAU = Math.PI * 2, T = DS.TYPES;
@@ -2297,8 +2456,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const FONT_D = '"Chakra Petch", "Bahnschrift", "Segoe UI", sans-serif';
   const FONT_M = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
-  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider'];
-  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3 };
+  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier'];
+  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3, relay: 2, harrier: 2 };
   const SQUAD_STEP = { sting: 2 };
   const DEFAULT_SQUADS = [
     { name: 'Scout', mix: { glint: 1 } },
@@ -2306,20 +2465,21 @@ svg.i { width: 1em; height: 1em; flex: none; }
     { name: 'Swarm', mix: { sting: 8, decoy: 2 } },
     { name: 'Bomb run', mix: { raider: 1, decoy: 2 } },
     { name: 'Patrol', mix: { warden: 1 } },
+    { name: 'Jam', mix: { harrier: 1 } },
   ];
   const PRESETS = {
-    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['sting', 28]],
-    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['glint', 2], ['sting', 36]],
-    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
-    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['sting', 16], ['warden', 3], ['glint', 2], ['sting', 28]],
+    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['relay', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['harrier', 1], ['sting', 28]],
+    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['harrier', 1], ['glint', 2], ['sting', 36]],
+    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['harrier', 1], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
+    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['relay', 1], ['sting', 16], ['warden', 3], ['relay', 2], ['glint', 2], ['sting', 28]],
   };
-  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6 };
+  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6, relay: 4, harrier: 3 };
   const PRI = ['Low', 'Normal', 'High'];
-  const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
+  const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', relay: 'Relays', harrier: 'Harriers', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
   const nameN = (type, n) => (n === 1 ? T[type].name : PLURAL[type]);
   const units = (n, type) => `${n} ${nameN(type, n)}`;
   const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-  const DRONES = new Set(['glint', 'sting', 'decoy', 'warden', 'raider']);
+  const DRONES = new Set(['glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier']);
 
   // ---------- settings ----------
   const store = {
@@ -2329,6 +2489,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const randSeed = () => 1000 + Math.floor(Math.random() * 9000);
   const copySquads = list => list.map(q => ({ name: q.name, mix: Object.assign({}, q.mix) }));
   function cleanSquads(v) {
+    if (Array.isArray(v) && v.length === 5) v = v.concat(copySquads(DEFAULT_SQUADS.slice(5)));   // saved before the sixth slot
     if (!Array.isArray(v) || v.length !== DEFAULT_SQUADS.length) return copySquads(DEFAULT_SQUADS);
     return v.map((q, i) => {
       const mix = {};
@@ -2759,6 +2920,22 @@ svg.i { width: 1em; height: 1em; flex: none; }
       ctx.beginPath(); ctx.moveTo(7.5, 0); ctx.lineTo(-3, -5.6); ctx.lineTo(-3, 5.6); ctx.closePath();
       ctx.fillStyle = col; ctx.fill();
       ctx.fillRect(-7, -6.4, 2.3, 12.8);
+    } else if (type === 'relay') {
+      ctx.scale(k, k);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 2.7, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineCap = 'round';
+      for (const [r, w] of [[5.6, 1.5], [8.8, 1.2]]) {
+        ctx.lineWidth = w;
+        ctx.beginPath(); ctx.arc(0, 0, r, -0.72, 0.72); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, r, Math.PI - 0.72, Math.PI + 0.72); ctx.stroke();
+      }
+    } else if (type === 'harrier') {
+      ctx.scale(k, k);
+      if (u && !REDUCED) ctx.rotate(G.now * 0.9 + u.id);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i < 8; i++) { const a = (i * TAU) / 8, r1 = i % 2 ? 7.2 : 9; ctx.moveTo(Math.cos(a) * 5, Math.sin(a) * 5); ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); }
+      ctx.stroke();
     } else if (type === 'decoy') {
       ctx.rotate(ang); ctx.scale(k * 1.15, k * 1.15);
       raiderPath(); ctx.lineWidth = 1.2; ctx.strokeStyle = col; ctx.stroke();
@@ -2837,7 +3014,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function computeVis() {
     const sim = G.sim, out = [];
     for (const u of sim.units) {
-      if (u.side !== ME || u.parked || u.hp <= 0) continue;
+      if (u.side !== ME || u.parked || u.hp <= 0 || u.jam) continue;   // a jammed drone sends nothing back
       const R = DS.reachOf(sim, u);
       if (R <= 0) continue;
       out.push(DS.visPoly(sim.map, u.x, u.y, R, RAYS[u.type] || 26));
@@ -2922,6 +3099,24 @@ svg.i { width: 1em; height: 1em; flex: none; }
         ctx.setLineDash([2 / s, 6 / s]); ring(p.x, p.y, p.need.warden ? DS.WARDEN_ENGAGE : 90); ctx.stroke(); ctx.setLineDash([]);
       }
     }
+    // link: where your orders reach (shown while you give them), the Relay mesh, and jamming
+    if (G.mode === 'play') {
+      const nodes = sim.links[ME] || [];
+      if (showLink()) drawLinkArea(nodes, s);
+      ctx.lineWidth = 1 / s; ctx.strokeStyle = 'rgba(245,165,36,0.32)'; ctx.setLineDash([1.5 / s, 4 / s]);
+      for (const n of nodes) {
+        if (!n.relay) continue;
+        const f = nodes.find(q => q.id === n.from);
+        if (f) { ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(n.x, n.y); ctx.stroke(); }
+      }
+      ctx.setLineDash([]);
+      const pic = sim.sides[ME].pic;
+      for (const u of sim.units) {
+        if (u.type !== 'harrier' || u.parked || u.hp <= 0) continue;
+        if (u.side === ME) jamRing(u.x, u.y, '245,165,36', 0.3, s);
+        else { const c = pic.get(u.id); if (c && (c.grade >= 2 || c.lockUntil > sim.t)) jamRing(c.grade >= 2 ? u.x : c.x, c.grade >= 2 ? u.y : c.y, '120,150,255', 0.5, s); }
+      }
+    }
     // where a Nest may grow
     if (G.placing) {
       ctx.setLineDash([6 / s, 6 / s]); ctx.lineWidth = 1.4 / s;
@@ -2973,6 +3168,57 @@ svg.i { width: 1em; height: 1em; flex: none; }
         ctx.strokeStyle = sel ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.16)'; ctx.lineWidth = 1 / s;
         ctx.setLineDash([2 / s, 6 / s]); ring(end.x, end.y, DS.WARDEN_ENGAGE); ctx.stroke(); ctx.setLineDash([]);
       }
+    }
+  }
+  // Link coverage: the union of your Heart's, Nests' and linked Relays' reach, with only its outer edge drawn.
+  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (G.training && TR.d.showLink));
+  function drawLinkArea(nodes, s) {
+    if (!nodes.length) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();   // the valley only
+    ctx.beginPath();
+    for (const n of nodes) { ctx.moveTo(n.x + n.r, n.y); ctx.arc(n.x, n.y, n.r, 0, TAU); }
+    ctx.fillStyle = 'rgba(245,165,36,0.045)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,103,0.5)'; ctx.lineWidth = 1.3 / s; ctx.setLineDash([7 / s, 5 / s]);
+    ctx.beginPath();
+    for (const n of nodes) {
+      const steps = Math.max(48, Math.round(n.r / 6));
+      let pen = false;
+      for (let i = 0; i <= steps; i++) {
+        const a = (i / steps) * TAU, x = n.x + Math.cos(a) * n.r, y = n.y + Math.sin(a) * n.r;
+        const inside = nodes.some(q => q !== n && (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y) < (q.r - 0.5) * (q.r - 0.5));
+        if (inside) { pen = false; continue; }
+        if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true; }
+      }
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+  // A Harrier's jamming: a ragged ring that crackles (still, for reduced motion).
+  function jamRing(x, y, rgb, a, s) {
+    const R = DS.JAM_R, n = 90, t = REDUCED ? 0 : Math.floor(G.now * 10);
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const an = (i / n) * TAU, j = (((i % n) * 7919 + t * 104729) % 17) / 17, r = R + (i % 2 ? -1 : 1) * (2 + j * 5);
+      if (i) ctx.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); else ctx.moveTo(x + Math.cos(an) * r, y + Math.sin(an) * r);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${rgb},${a * 0.12})`; ctx.fill();
+    ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 1 / s; ctx.stroke();
+  }
+  // Your drone's link state, drawn beside it: a crackle when jammed, a broken ring when out of link.
+  function linkMark(u, p, k) {
+    if (u.jam) {
+      const t = REDUCED ? 0 : G.now * 14 + u.id;
+      ctx.strokeStyle = `rgba(228,236,232,${0.55 + 0.3 * Math.sin(t)})`; ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) { const a = (i / 14) * TAU, r = (i % 2 ? 9 : 12.5) * k; if (i) ctx.lineTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); else ctx.moveTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); }
+      ctx.stroke();
+    } else if (!u.link) {
+      ctx.strokeStyle = 'rgba(154,170,165,0.75)'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, -0.35, 1.2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, 1.9, 3.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, 4.2, 5.6); ctx.stroke();
     }
   }
   function drawUnits() {
@@ -3034,7 +3280,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     for (const u of sim.units) {
       if (u.side !== ME || u.parked || u.hp <= 0 || u.type === 'heart' || u.type === 'nest') continue;
       const p = S2(u.x, u.y), hid = DS.canopyAt(sim.map, u.x, u.y);
-      drawGlyph(u.type, p.x, p.y, sAng(u.hdg), u.diving ? COL.amberHi : COL.amber, k, u, hid ? 0.72 : 1);
+      drawGlyph(u.type, p.x, p.y, sAng(u.hdg), u.diving ? COL.amberHi : COL.amber, k, u, hid ? 0.72 : u.link ? 1 : 0.78);
+      if (u.type !== 'forager') linkMark(u, p, k);
       if (hid) {   // under canopy: a leaf ring says "hidden"
         ctx.strokeStyle = 'rgba(127,209,164,0.85)'; ctx.lineWidth = 1.1; ctx.setLineDash([2, 2.5]);
         ctx.beginPath(); ctx.arc(p.x, p.y, 9 * k, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
@@ -3120,7 +3367,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (G.mode !== 'play' || !S0.posts.length) return;
     const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
     for (const p of S0.posts) {
-      const q = S2(p.x, p.y), st = staffOf(p), short = isShort(st), moving = G.movingPost === p.id;
+      const q = S2(p.x, p.y), st = staffOf(p), moving = G.movingPost === p.id, rs = reachOf(p), short = isShort(st) || rs !== 'ok';
       if (p.id === selP) { ctx.strokeStyle = COL.amberHi; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 15 * k, 0, TAU); ctx.stroke(); }
       postMark(q.x, q.y, k, short ? COL.lock : COL.amberHi, moving ? 0.4 : 1);
       // pips
@@ -3137,7 +3384,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const bloomNamed = sim.map.fields.some(f => (f.centre ? 'Crown' : f.name) === p.name);
       ctx.font = `700 ${8.5 * k}px ${FONT_D}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillStyle = short ? 'rgba(255,94,77,0.9)' : 'rgba(255,200,103,0.9)';
-      ctx.fillText(bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`, q.x, q.y - 11 * k);
+      ctx.fillText((bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`) + (rs === 'jammed' ? ' · JAMMED' : rs === 'cut' ? ' · OUT OF LINK' : ''), q.x, q.y - 11 * k);
       ctx.textBaseline = 'alphabetic';
     }
   }
@@ -3175,6 +3422,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
           ctx.beginPath(); ctx.arc(q.x, q.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
           notes.push(['PATROL HERE', COL.amberHi]);
         }
+        if (has('relay') || has('harrier')) {
+          for (const [t, R] of [['relay', DS.LINK_R.relay], ['harrier', DS.JAM_R]]) {
+            if (!has(t)) continue;
+            ctx.strokeStyle = t === 'relay' ? 'rgba(255,200,103,0.45)' : 'rgba(228,236,232,0.45)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+            ctx.beginPath(); ctx.arc(q.x, q.y, R * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          }
+          if (has('relay')) notes.push(DS.inLink(sim, ME, end.x, end.y) ? ['CARRIES YOUR LINK 300 ON', COL.amberHi] : ['OUT OF LINK HERE: PASSES NOTHING ON', COL.lock]);
+          if (has('harrier')) notes.push(['JAMS RIVAL DRONES WITHIN 200', COL.ink]);
+        }
         if (types.some(isStriker) && st) notes.push([st.type === 'heart' ? 'RAID THE HEART' : 'RAID THE NEST', COL.lock]);
         if (has('decoy') && types.some(isStriker)) notes.push(['DECOYS LEAD', COL.amberHi]);
         if (DS.canopyAt(sim.map, end.x, end.y)) notes.push(['UNDER CANOPY: HARD TO SEE', COL.leaf]);
@@ -3188,6 +3444,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       ctx.strokeStyle = 'rgba(255,200,103,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.arc(G.hover.x, G.hover.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       label(G.hover.x, G.hover.y - 20, `POST: ${postName(w.x, w.y).toUpperCase()}`, COL.amberHi);
+      if (!DS.inLink(sim, ME, w.x, w.y)) label(G.hover.x, G.hover.y - 37, 'OUT OF LINK: TAKES A RELAY', COL.lock);
       return;
     }
     if (G.placing) {
@@ -3243,6 +3500,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
         if (u.type !== 'forager') text += ` · ${Math.ceil(u.battery)} s`;
         if (DS.canopyAt(sim.map, u.x, u.y)) text += ' · under canopy';
         if (u.spot >= 2) text += ' · tracked';
+        if (u.type !== 'forager') text += u.jam ? ' · jammed' : !u.link ? ' · out of link' : u.type === 'relay' && (G.sim.links[ME] || []).some(n => n.id === u.id) ? ' · carrying the link' : '';
+        if (u.type === 'harrier') text += ' · jamming';
       }
     }
     if (!text) return;
@@ -3376,7 +3635,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
         fx('ping', e.x, e.y, { life: 0.7 });
         if (live) {
           play('chirp', 0.12);
-          if (e.type !== 'sting') toastOnce('c' + e.type, `Contact: ${e.type === 'nest' ? 'Cobalt Nest' : T[e.type].name} ${placeOf(e.x, e.y)}`, 'cobalt', 5);
+          if (e.type === 'harrier') toastOnce('charrier', `Cobalt Harrier ${placeOf(e.x, e.y)}. It jams your drones near it. Kill it.`, 'cobalt', 8);
+          else if (e.type !== 'sting') toastOnce('c' + e.type, `Contact: ${e.type === 'nest' ? 'Cobalt Nest' : T[e.type].name} ${placeOf(e.x, e.y)}`, 'cobalt', 5);
         }
         break;
       case 'lock':
@@ -3403,6 +3663,12 @@ svg.i { width: 1em; height: 1em; flex: none; }
         break;
       case 'guard':
         if (live && e.side === ME) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your ${e.at === 'nest' ? 'Nest' : 'Heart'}.`, 'amber', 8);
+        break;
+      case 'postReach':
+        if (live && e.side === ME) {
+          const p = postById(e.post);
+          if (p) toastOnce('pr' + e.post + e.reach, e.reach === 'jammed' ? `${p.name} post jammed. No relief until the Harrier is gone.` : e.reach === 'cut' ? `${p.name} post out of link. ${DS.parkedCount(sim, ME, 'relay') ? 'Sending a Relay.' : 'It needs a Relay.'}` : `${p.name} post back in link.`, e.reach === 'ok' ? 'amber' : 'lock', 8);
+        }
         break;
       case 'postSent':
         if (live && e.side === ME) {
@@ -3747,7 +4013,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const readyOf = type => DS.parkedCount(G.sim, ME, type);
   const mixTypes = mix => SQUAD_TYPES.filter(t => mix[t] > 0);
   const mixSize = mix => mixTypes(mix).reduce((n, t) => n + mix[t], 0);
-  const MIX_ORDER = ['sting', 'raider', 'warden', 'glint', 'decoy'];
+  const MIX_ORDER = ['sting', 'raider', 'warden', 'harrier', 'relay', 'glint', 'decoy'];
   const mixText = (mix, sep) => MIX_ORDER.filter(t => mix[t] > 0).map(t => units(mix[t], t)).join(sep || ' + ');
   function mixReady(mix) {
     let r = 0;
@@ -3836,7 +4102,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       return { route: pts.length ? pts : [end], opts: {}, what: `patrolling ${placeOf(end.x, end.y)}` };
     }
     const route = pts.length ? pts : [end];
-    return { route, opts: {}, what: type === 'glint' ? `scouting ${placeOf(end.x, end.y)}` : `drawing fire ${placeOf(end.x, end.y)}` };
+    const what = { glint: 'scouting', relay: 'carrying the link', harrier: 'jamming' }[type] || 'drawing fire';
+    return { route, opts: {}, what: `${what} ${placeOf(end.x, end.y)}` };
   }
   // Launch a mix of units along one gesture as one package, so it can be selected and retasked as one.
   function launchMix(mix, planFor, name) {
@@ -3878,9 +4145,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
     launchMix(a.mix, t => plan(t, pts, c), a.name);
     G.stance = st;
   }
+  // New orders reach only drones in link; the rest carry on with what they were told.
+  const linkedSo = so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.hp > 0 && u.link; });
+  const cutCount = list => list.reduce((n, so) => n + so.units.filter(id => { const u = G.sim.byId.get(id); return u && u.hp > 0 && !u.link; }).length, 0);
+  function linkDeny(all) {
+    const jam = all.some(so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.jam; }));
+    play('deny');
+    toastOnce('nolink', jam ? 'Jammed: they can\u2019t hear you. They carry on with their last orders.' : 'Out of link: they carry on with their last orders. A Relay or Nest nearby would reach them.', 'lock', 2);
+  }
   function retaskSel(planFor) {
-    const list = selSorties();
-    if (!list.length) { G.sel = null; return; }
+    const all = selSorties();
+    if (!all.length) { G.sel = null; return; }
+    const list = all.filter(linkedSo), cut = cutCount(all);
+    if (!list.length) { linkDeny(all); return; }
     let what = '';
     for (const so of list) {
       const p = planFor(so.type);
@@ -3889,7 +4166,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (!what || isStriker(so.type)) what = p.what;
     }
     play('tick');
-    toastOnce('rt' + G.sel.id, `${list.map(so => units(so.units.length, so.type)).join(' + ')}: ${what}`, 'amber', 1);
+    toastOnce('rt' + G.sel.id, `${list.map(so => units(so.units.filter(id => G.sim.byId.get(id) && G.sim.byId.get(id).link).length, so.type)).join(' + ')}: ${what}${cut ? `. ${cut} out of link carry on.` : ''}`, 'amber', 1);
   }
   function commitRoute(pts) {
     const sim = G.sim;
@@ -4026,12 +4303,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function setStance(st) {
     G.stance = st;
-    for (const so of selSorties()) act('setStance', so.id, so.type === 'decoy' && selSorties().some(o => isStriker(o.type)) ? 'dash' : st);
+    const all = selSorties(), list = all.filter(linkedSo);
+    if (all.length && !list.length) { linkDeny(all); return; }
+    for (const so of list) act('setStance', so.id, so.type === 'decoy' && list.some(o => isStriker(o.type)) ? 'dash' : st);
     play('tick');
   }
   function recallSel() {
-    const done = [];
-    for (const so of selSorties()) if ((so.type === 'sting' || T[so.type].reuse) && act('recall', so.id)) done.push(so);
+    const done = [], all = selSorties(), list = all.filter(linkedSo);
+    if (all.length && !list.length) { linkDeny(all); return; }
+    for (const so of list) if ((so.type === 'sting' || T[so.type].reuse) && act('recall', so.id)) done.push(so);
     if (!done.length) return;
     toast(`${done.map(so => units(so.units.length, so.type)).join(' + ')} heading home${done.some(so => T[so.type].reuse) ? ' to rearm' : ''}.`, 'amber');
     play('tick'); G.sel = null;
@@ -4054,6 +4334,14 @@ svg.i { width: 1em; height: 1em; flex: none; }
     return best ? `${best.centre ? 'Crown' : best.name} approach` : 'Open ground';
   }
   function staffOf(p) { return DS.postStaff(G.sim, ME, p); }
+  const reachOf = p => DS.postReach(G.sim, ME, p);
+  // a post's link, said plainly: what the hive can and cannot do for it
+  function reachText(p) {
+    const rs = reachOf(p);
+    if (rs === 'jammed') return 'Jammed: a Cobalt Harrier is near. No relief gets through until it is gone.';
+    if (rs === 'cut') return DS.parkedCount(G.sim, ME, 'relay') ? 'Out of link: a Relay is on its way to carry the link out.' : `Out of link: it needs a Relay to carry the link out.${autoOn() ? ' Auto builds one.' : ' Build one.'}`;
+    return '';
+  }
   const isShort = st => Object.values(st).some(v => v.on < v.need);
   function staffText(p, sep) {
     const st = staffOf(p);
@@ -4113,6 +4401,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       { icon: 'sting', label: 'Hunt here', sub: readyLine(4, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: 4 }, g, 'Hunt') },
       { icon: 'warden', label: 'Patrol here', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Patrol') },
       { icon: 'post', label: 'Post here', sub: S0.posts.length >= DS.POST_MAX ? `${DS.POST_MAX} posts already` : 'the hive keeps it staffed', off: S0.posts.length >= DS.POST_MAX, run: () => openPostSheet(null, w) },
+      { icon: 'harrier', label: 'Jam here', sub: readyLine(1, 'harrier'), off: !readyOf('harrier'), run: () => sendMix({ harrier: 1 }, g, 'Jam') },
+      { icon: 'relay', label: 'Relay here', sub: DS.inLink(sim, ME, w.x, w.y) ? readyLine(1, 'relay') : 'out of link here', off: !readyOf('relay') || !DS.inLink(sim, ME, w.x, w.y), run: () => sendMix({ relay: 1 }, g, 'Relay') },
       { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
     ];
     openMenu(X, Y, postName(w.x, w.y), items);
@@ -4187,12 +4477,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
       enter: d => { d.k0 = G.sim.sides[ME].kills; },
       check: d => G.sim.sides[ME].kills > d.k0 || G.now - TR.t > 30 },
     { h: 'Set a post', p: () => 'A <b>post</b> is a spot the hive keeps staffed. <b>Press and hold</b> on the Crown bloom until a menu opens, choose <b>Post here</b>, then <b>Set post</b>.',
-      enter: () => { grant('glint', 1); grant('warden', 2); },
+      enter: () => { grant('glint', 1); grant('warden', 2); grant('relay', 1); },
       mark: () => ({ x: crown().x, y: crown().y, r: crown().r + 14, label: 'CROWN BLOOM' }),
       check: () => G.sim.sides[ME].posts.some(p => Math.hypot(p.x - crown().x, p.y - crown().y) < 140),
       hint: 'Hold your finger or the mouse button still on the Crown for half a second. Or open the Posts tab, tap + Post, then tap the Crown.' },
-    { h: 'Standing orders', p: () => 'The hive sends a Glint and Wardens to the post and keeps them there, relieving the Glint before its battery fades. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
+    { h: 'Standing orders', p: () => 'The hive keeps the post staffed, relieving the Glint before its battery fades. The Crown is just beyond your Heart\u2019s link, so a <b>Relay</b> flies out first to carry it. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
       check: () => G.tab === 'posts' },
+    { h: 'Link', p: () => 'New orders reach only drones in <b>link</b>: near your Heart, a Nest, or a Relay that is linked itself. The dashed amber edge shows it whenever you give orders. Beyond it, drones carry on with their last orders. A cobalt <b>Harrier</b> jams drones near it: they can\u2019t report or hear you, and a jammed post gets no relief. Kill Harriers fast.', next: 'Next',
+      enter: d => { d.showLink = true; },
+      mark: () => { const r = own('relay', u => !u.parked)[0]; return r ? { x: r.x, y: r.y, r: 16, label: 'RELAY' } : null; } },
     { h: 'Raid', p: () => 'A cobalt raid is heading for your Heart. With <b>Guard</b> on, parked Stings launch at drones that come close and the Heart fires its flak. Watch, or send a squad yourself.', hi: '#btn-guard',
       enter: d => {
         const sim = G.sim, h = sim.hearts[ME];
@@ -4214,7 +4507,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       mark: () => ({ x: crown().x, y: crown().y, r: DS.HOLD_R, label: 'HOLD THE CROWN' }),
       check: () => G.sim.sides[ME].score >= 10,
       hint: 'Tap a squad, then tap the Crown. The score is the amber number at the top right.', hintAfter: 20 },
-    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, and leave the routine to Auto and your posts. A real round adds a rival that adapts, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
+    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, keep your link, and leave the routine to Auto and your posts. A real round adds a rival that adapts, with its own Harriers, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
       enter: () => { store.set('trained', true); syncTitle(); } },
   ];
   function trainStart() {
@@ -4398,8 +4691,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     zoomAt(p.x, p.y, cam.z * (e.deltaY < 0 ? 1.14 : 1 / 1.14));
   }, { passive: false });
 
-  const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'nest' };
-  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4 };
+  const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'relay', 8: 'harrier', 9: 'nest' };
+  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5 };
   window.addEventListener('keydown', e => {
     const tg = e.target && e.target.tagName;
     if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
@@ -4576,7 +4869,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       h = `Squad ${sh.i + 1}: ${sq.name}`;
       body = `<div class="sh-row"><label class="sh-l" for="sq-name">Name</label><input id="sq-name" maxlength="12" value="${sq.name.replace(/"/g, '&quot;')}" autocomplete="off" spellcheck="false"></div>
         <ul class="mix-rows">${SQUAD_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('m', t, sq.mix[t] || 0, 0, SQUAD_MAX[t])}<span class="pr-now">${readyOf(t)} ready</span></li>`).join('')}</ul>
-        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERT'[sh.i]} arms it from the keyboard.</p>
+        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERTY'[sh.i]} arms it from the keyboard.</p>
         <div class="btn-row"><button class="btn" data-act="sq-reset">Reset to ${DEFAULT_SQUADS[sh.i].name}</button></div>`;
     } else if (sh.kind === 'post') {
       const p = sh.isNew ? null : postById(sh.id);
@@ -4584,7 +4877,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const need = sh.isNew ? sh.need : p.need, pri = sh.isNew ? sh.pri : p.pri, st = p ? staffOf(p) : {};
       h = sh.isNew ? `New post: ${sh.name}` : `Post: ${p.name}`;
       done = sh.isNew ? 'Set post' : 'Done';
-      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint or Decoy before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>
+      const rt = p ? reachText(p) : !DS.inLink(sim, ME, sh.x, sh.y) ? 'This spot is out of link. The hive will send a Relay out first to carry the link there.' : '';
+      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint, Decoy or Harrier before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>${rt ? `<p class="sh-note warn">${rt}</p>` : ''}
         <ul class="mix-rows">${DS.POST_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('n', t, need[t] || 0, 0, DS.POST_CAP[t])}<span class="pr-now">${st[t] ? `${st[t].on} on station` : `${readyOf(t)} ready`}</span></li>`).join('')}</ul>
         <div class="sh-row"><span class="sh-l">Priority</span><div class="seg" role="group" aria-label="Priority">${[2, 1, 0].map(v => `<button data-act="pri" data-v="${v}" aria-pressed="${pri === v}">${PRI[v]}</button>`).join('')}</div></div>
         <div class="btn-row">${sh.isNew ? '<button class="btn" data-act="post-cancel">Cancel</button>' : '<button class="btn" data-act="post-move">Move</button><button class="btn danger" data-act="post-del">Remove post</button>'}</div>`;
@@ -4647,17 +4941,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
     'Tap a <b>squad</b>, then tap the map or drag a route. Tap two squads to send them together.',
     '<b>Auto</b> keeps the queue full from your plan. Tap <b>Plan</b> to set what it builds.',
     'Tap a blue contact for quick orders: <b>Strike</b>, <b>Bomb</b> or <b>Intercept</b>.',
-    'Press and hold open ground to scout, hunt, patrol, set a <b>post</b> or grow a Nest there.',
+    'Press and hold open ground to scout, hunt, patrol, jam, place a Relay, set a <b>post</b> or grow a Nest there.',
     'A <b>post</b> is a spot the hive keeps staffed. Put one on the Crown before Last Light.',
     'Long-press or right-click a squad to change its mix.',
     'Perch a <b>Glint</b> on a ridge to see further. Canopy hides what sits under it.',
+    'Orders reach only drones in <b>link</b>. A <b>Relay</b> carries it 300 further; the Crown is just beyond your Heart\u2019s.',
+    'A <b>Harrier</b> jams rival drones near it: they can\u2019t report, hear orders or relieve a post. Kill theirs fast.',
     '<b>Decoys</b> look like Raiders to the rival and draw its fire.',
     'A <b>Nest</b> is a forward base. Parked Stings guard it as well as the Heart.',
     'Tap a Forager on the map, then a bloom, to move your harvest.',
   ];
   function ctxKey() {
-    const sel = selSorties().map(so => so.type + so.units.length + so.stance).join(',');
-    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri : '';
+    const sel = selSorties().map(so => so.type + so.units.length + so.stance + linkedSo(so) + cutCount([so])).join(',');
+    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri + reachOf(postById(G.sel.id)) : '';
     return [G.armedSq.join(','), G.group.map(t => G.mix[t] + ':' + readyOf(t)).join(','), G.placing, G.placingPost, G.movingPost, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, post, G.again ? G.again.name : '', G.tipI].join('|');
   }
   function stanceSeg(st) {
@@ -4670,6 +4966,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (one === 'warden') return 'Tap where to patrol, or a contact to intercept.';
     if (one === 'decoy') return 'They read as Raiders. Drag a route.';
     if (one === 'raider') return 'Drag a bombing route or tap a target.';
+    if (one === 'relay') return 'Tap where it should hover. Your link reaches 300 beyond it.';
+    if (one === 'harrier') return 'Tap where it should jam. Rival drones within 200 fly blind.';
     return types.some(isStriker) ? 'Tap a contact or drag a route.' : 'Tap a point or drag a route.';
   }
   function renderCtx() {
@@ -4688,17 +4986,21 @@ svg.i { width: 1em; height: 1em; flex: none; }
       const list = selSorties();
       if (list.length) {
         const types = list.map(so => so.type), one = list.length === 1 ? list[0] : null;
-        const canRecall = types.some(t => t === 'sting' || T[t].reuse);
-        const hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
+        const linked = list.some(linkedSo), cut = cutCount(list);
+        const jam = list.some(so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.jam; }));
+        const canRecall = linked && types.some(t => t === 'sting' || T[t].reuse);
+        let hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy' || one.type === 'relay' || one.type === 'harrier') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
+        if (!linked) hint = jam ? 'Jammed: it can\u2019t hear new orders and carries on with its last ones.' : 'Out of link: it carries on with its last orders until its battery says home.';
+        else if (cut) hint += ` ${cut} out of link carry on.`;
         const name = list.slice().sort((a, b) => MIX_ORDER.indexOf(a.type) - MIX_ORDER.indexOf(b.type)).map(so => units(so.units.length, so.type)).join(' + ');
         const lbl = list[0].post ? `${(postById(list[0].post) || {}).name || 'Post'} post: ` : list[0].label && list[0].label !== 'Guard' ? `${list[0].label}: ` : one ? '' : 'Group: ';
-        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
+        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${!linked || (one && one.type === 'warden') ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
       } else G.sel = null;
     } else if (G.sel && G.sel.kind === 'forager') {
       html = `<span class="ctx-text"><b>Forager selected.</b> Tap a bloom to send it there.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
     } else if (G.sel && G.sel.kind === 'post') {
       const p = postById(G.sel.id);
-      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
+      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.${reachText(p) ? ' ' + reachText(p) : ''}</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
       else G.sel = null;
     }
     if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>${G.again ? `<span class="ctx-ctl"><button class="chip again" data-act="again" title="Send ${G.again.name} again the same way (A)">Again: ${G.again.name}</button></span>` : ''}`;
@@ -4709,10 +5011,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (key !== G.sqKey) {
       G.sqKey = key;
       G.squads.forEach((q, i) => {
-        const types = mixTypes(q.mix), main = ['raider', 'warden', 'sting', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
+        const types = mixTypes(q.mix), main = ['raider', 'warden', 'harrier', 'sting', 'relay', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
         const el = $('sq-' + i);
         el.innerHTML = `<svg class="i gly"><use href="#g-${main}"/></svg><span class="nm">${q.name}</span><span class="sub">${types.length ? mixText(q.mix, ' · ') : 'empty: tap to set'}</span><span class="ct" id="sqr-${i}">0</span><span class="meter"><i id="sqm-${i}"></i></span>`;
-        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERT'[i]}). Long-press or right-click to edit.`;
+        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERTY'[i]}). Long-press or right-click to edit.`;
         el.setAttribute('aria-label', `${q.name}: ${types.length ? mixText(q.mix) : 'empty'}. Long-press or right-click to edit.`);
       });
     }
@@ -4764,6 +5066,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     let lead = null;
     for (const id of so.units) { const u = sim.byId.get(id); if (u) { lead = u; break; } }
     if (!lead) return '';
+    if (!linkedSo(so)) return so.units.some(id => { const u = sim.byId.get(id); return u && u.jam; }) ? 'jammed' : 'out of link';
     if (lead.homing || so.mode === 'home') return 'heading home';
     if (lead.diving) return 'diving';
     if (so.mode === 'raid') return 'raiding';
@@ -4780,7 +5083,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     // posts
     const posts = S0.posts;
     let short = 0;
-    const pinfo = posts.map(p => { const st = staffOf(p), sh = isShort(st); if (sh) short++; return { p, st, sh }; });
+    const pinfo = posts.map(p => { const st = staffOf(p), rs = reachOf(p), sh = isShort(st) || rs !== 'ok'; if (sh) short++; return { p, st, sh, rs }; });
     const tbp = $('tb-posts');
     tbp.textContent = posts.length ? String(posts.length) : '';
     tbp.className = 'tb' + (short ? ' warn' : '');
@@ -4797,19 +5100,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
     setText('tb-flying', fl.length ? String(fl.length) : '');
     if (G.tab === 'posts') {
       const sel = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
-      const key = pinfo.map(({ p, st, sh }) => p.id + p.name + p.pri + JSON.stringify(st) + sh).join('|') + sel + G.placingPost;
+      const key = pinfo.map(({ p, st, sh, rs }) => p.id + p.name + p.pri + JSON.stringify(st) + sh + rs).join('|') + sel + G.placingPost;
       if (key !== G.listKeys.posts) {
         G.listKeys.posts = key;
         const add = `<button class="dcard add${G.placingPost ? ' on' : ''}" data-act="addpost"${posts.length >= DS.POST_MAX ? ' disabled' : ''}><span class="c-n">+ Post</span><span class="c-s">${posts.length >= DS.POST_MAX ? `${DS.POST_MAX} at most` : 'then tap the map'}</span></button>`;
-        const cards = pinfo.map(({ p, st, sh }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
-        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens or Decoys. Press and hold the map for <b>Post here</b>.</p>');
+        const cards = pinfo.map(({ p, st, sh, rs }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${rs === 'jammed' ? 'Jammed' : rs === 'cut' ? 'Out of link' : PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
+        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens, Decoys or a Harrier. Press and hold the map for <b>Post here</b>.</p>');
       }
     } else if (G.tab === 'flying') {
       const sel = selSet();
-      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + e.list.some(so => sel.has(so.id))).join('|');
+      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0]) + e.list.some(so => sel.has(so.id)) + e.list.some(linkedSo)).join('|');
       if (key !== G.listKeys.flying) {
         G.listKeys.flying = key;
-        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
+        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}${e.list.some(linkedSo) ? '' : ' cut'}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
           : '<p class="cards-note">Nothing in the air on your orders. Tap a squad, then the map. Guard and post flights are not listed here.</p>';
       }
     }
@@ -4855,6 +5158,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (NET.live && NET.waiting && !G.paused && G.now - NET.waitT > 15) netProblem('slow');
     renderCtx();
     flushAgg();
+    // your drones going blind
+    let jam = null, nj = 0;
+    for (const u of sim.units) if (u.side === ME && u.jam && !u.parked && u.hp > 0) { nj++; jam = jam || u; }
+    if (nj && !G.jamWas && !G.training) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
+    G.jamWas = nj > 0;
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
       const onCrown = S0.posts.some(p => Math.hypot(p.x - W / 2, p.y - H / 2) < DS.HOLD_R);

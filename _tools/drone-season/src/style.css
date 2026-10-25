@@ -116,7 +116,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   background: linear-gradient(0deg, rgba(6, 9, 12, 0.97), rgba(9, 14, 18, 0.92));
   border-top: 1px solid var(--rule);
 }
-.dock-in { max-width: 980px; margin: 0 auto; display: grid; gap: 6px; }
+.dock-in { max-width: 1040px; margin: 0 auto; display: grid; gap: 6px; }
 .ctx { display: flex; align-items: center; gap: 8px; min-height: 34px; }
 .ctx-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
 .ctx-text { font-size: 13px; line-height: 1.25; color: var(--ink-dim); min-width: 0; }
@@ -138,7 +138,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .chip.cancel { color: var(--ink); }
 
 /* squads: what is ready to fly */
-.launch { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.launch { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .ltile {
   position: relative; min-width: 0; text-align: left;
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center;
@@ -191,6 +191,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .dcard:hover { border-color: var(--ink-faint); }
 .dcard.sel { border-color: var(--amber); background: #1d1a12; }
 .dcard.short { border-color: rgba(255, 94, 77, 0.7); }
+.dcard.cut { border-style: dashed; opacity: 0.8; }
+.dcard.cut em { color: var(--ink-faint); }
 .dcard.add { border-style: dashed; min-width: 96px; color: var(--amber-hi); }
 .dcard.add.on { border-style: solid; border-color: var(--amber); background: var(--amber-wash); }
 .dcard:disabled { opacity: 0.45; cursor: default; }
@@ -219,7 +221,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .qchip .x { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255, 94, 77, 0.88); color: #fff; font-size: 18px; opacity: 0; transition: opacity 0.12s; }
 .qchip:hover .x, .qchip:focus-visible .x { opacity: 1; }
 .q-count { margin-left: auto; font-family: var(--f-data); font-size: 11px; color: var(--ink-faint); flex: none; }
-.bbtns { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.bbtns { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
 .bbtn {
   position: relative; min-width: 0; text-align: left;
   display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 7px;
@@ -228,6 +230,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .bbtn svg { grid-row: 1 / span 2; font-size: 17px; color: var(--amber); }
 .bbtn .bn { font-family: var(--f-display); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bbtn .bc { font-family: var(--f-data); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--bloom); }
+.bbtn .bc small { font-size: 10px; color: var(--ink-faint); }
 .bbtn .bk { position: absolute; top: 3px; right: 5px; font-family: var(--f-data); font-size: 10px; color: var(--ink-faint); }
 .bbtn:hover:not(:disabled) { border-color: var(--bloom); background: rgba(215, 166, 255, 0.12); }
 .bbtn:active:not(:disabled) { transform: translateY(1px); }
@@ -304,6 +307,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .sh-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
 .sh-l { font-family: var(--f-display); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); min-width: 84px; }
 .sh-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-dim); max-width: 62ch; }
+.sh-note.warn { color: #ff8a7d; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips .chip svg { color: var(--amber); }
 .chip:disabled { opacity: 0.45; cursor: default; }
@@ -426,6 +430,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   .bbtn svg { grid-row: 1; font-size: 16px; }
   .bbtn .bn { display: none; }
   .bbtn .bc { font-size: 11px; }
+  .bbtn .bc small { display: none; }
   .bbtn .bk { top: 2px; right: 3px; font-size: 9px; }
 }
 @media (max-width: 640px) {
