@@ -1,5 +1,5 @@
 # Site settings. For now the site is standalone HTML pages (the index.html menu,
-# timecat/, top-banana/, kings-line/ and brasshaven/) with no theme or layout;
+# timecat/, top-banana/, kings-line/, brasshaven/ and drone-season/) with no theme or layout;
 # Jekyll copies them as-is.
 title: Michael Chapman
 locale: en_GB
