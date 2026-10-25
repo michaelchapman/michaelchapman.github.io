@@ -260,8 +260,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .coach-btns:empty { display: none; }
 .coach-btns .btn { min-height: 38px; padding: 7px 16px; font-size: 13px; }
 #app.coaching #toasts { top: calc(var(--coach-b, 56px) + 8px); }
-.coach.rival { border-left-color: var(--cobalt); pointer-events: none; }   /* taps go through to the map, but for its button */
-.coach.rival button { pointer-events: auto; }
+.coach { pointer-events: none; }   /* taps go through the coach and rival cards to the map, but for their buttons */
+.coach button { pointer-events: auto; }
+.coach.rival { border-left-color: var(--cobalt); }
 .coach.rival .coach-k { color: var(--cobalt-hi); }
 .coach.rival .coach-hint { color: var(--ink); }
 #app.rival-on #toasts { top: calc(var(--rival-b, 160px) + 8px); }
@@ -420,6 +421,36 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .units th { font-family: var(--f-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); width: 76px; }
 .units .c { font-family: var(--f-data); color: var(--bloom); width: 46px; white-space: nowrap; }
 .units td:last-child { color: var(--ink-dim); }
+/* ---------- campaign ---------- */
+#ov-camp { z-index: 11; background: rgba(5, 8, 11, 0.92); }
+.card.camp { max-width: 760px; }
+.camp-body { display: grid; gap: 22px; }
+.camp-body > p { margin: 0; }
+.camp-lede { color: var(--ink-dim); }
+.chap { display: grid; gap: 8px; }
+.chap h3 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--f-display); font-size: 17px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.chap h3 small { font-family: var(--f-data); font-size: 12px; font-weight: 500; color: var(--amber-hi); letter-spacing: 0.04em; }
+.chap > p { margin: 0; font-size: 14px; color: var(--ink-dim); }
+.scen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+.scen { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; column-gap: 8px; row-gap: 3px; text-align: left; padding: 10px 12px; border: 1px solid var(--rule-hi); background: rgba(255, 255, 255, 0.02); min-height: 92px; align-content: start; }
+.scen:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
+.scen:disabled { opacity: 0.45; cursor: default; }
+.scen .sn { grid-row: 1; font-family: var(--f-data); font-size: 12px; color: var(--ink-faint); align-self: center; }
+.scen b { grid-row: 1; font-family: var(--f-display); font-size: 15px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.scen small { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.35; color: var(--ink-dim); }
+.scen .st { grid-column: 1 / -1; }
+.scen.won { border-color: rgba(245, 165, 36, 0.55); }
+.scen .st i, .camp-stars i { font-style: normal; color: rgba(255, 255, 255, 0.16); margin-right: 2px; }
+.scen .st i.on, .camp-stars .on i { color: var(--amber); }
+.camp-more { font-size: 13px; color: var(--ink-faint); }
+.camp-goal { color: var(--ink) !important; }
+.camp-stars { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--ink-dim); }
+.camp-stars li.on { color: var(--ink); }
+.camp-stars.inline { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 13px; }
+.camp-stars.inline span.on { color: var(--ink); }
+.rival-note .pr-now { display: inline-block; margin-left: 6px; font-family: var(--f-data); font-size: 12px; color: var(--amber-hi); }
+.stats div.stars-row { display: grid; gap: 8px; }
+.stats div.stars-row dd { text-align: left; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
 .stats div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
 .stats dt { font-size: 13px; color: var(--ink-dim); }
@@ -611,7 +642,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   <div class="qmenu" id="qmenu" role="menu" hidden></div>
 
   <section class="coach" id="coach" hidden aria-live="polite" aria-labelledby="coach-h">
-    <div class="coach-k"><span id="coach-n">Training</span><button class="coach-skip" id="coach-skip">Skip training</button></div>
+    <div class="coach-k"><span id="coach-n">Tips</span><button class="coach-skip" id="coach-skip">Hide tips</button></div>
     <h3 id="coach-h"></h3>
     <p id="coach-p"></p>
     <p class="coach-hint" id="coach-hint" hidden></p>
@@ -637,7 +668,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 4</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 5</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -657,10 +688,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
       </div>
       <div class="go-row">
         <button class="go" id="btn-go">Launch round</button>
-        <button class="btn train" id="btn-train">Training</button>
+        <button class="btn train" id="btn-camp">Campaign</button>
         <button class="btn train" id="btn-friend">Play a friend</button>
       </div>
-      <p class="train-hint" id="train-hint">New here? Training takes about five minutes and shows you every control.</p>
+      <p class="train-hint" id="train-hint">New here? The campaign’s first chapter teaches the game in four short scenarios.</p>
       <div class="lobby" id="lobby" hidden aria-live="polite">
         <div class="kicker" id="lobby-k">Two players</div>
         <h2 class="lobby-h" id="lobby-h">Invite a player</h2>
@@ -672,6 +703,15 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <div class="btn-row"><button class="btn" id="btn-lobby-alt" hidden>Play against the computer</button><button class="btn" id="btn-lobby-cancel">Cancel</button></div>
       </div>
       <p class="keys">Keys: Q W E R T Y arm squads &middot; A again &middot; 1&ndash;9 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
+    </div>
+  </section>
+
+  <section class="overlay" id="ov-camp" hidden aria-labelledby="camp-h">
+    <div class="card camp">
+      <div class="kicker" id="camp-k">Campaign</div>
+      <h2 id="camp-h">The season</h2>
+      <div class="camp-body" id="camp-body"></div>
+      <div class="btn-row" id="camp-btns"></div>
     </div>
   </section>
 
@@ -757,7 +797,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
 </div>
 
 <script>
-/* Drone Season · simulation core (milestone 4, Rivals). Pure logic, no DOM, deterministic per seed and across browsers. */
+/* Drone Season · simulation core (milestone 5, Campaign). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -781,8 +821,6 @@ svg.i { width: 1em; height: 1em; flex: none; }
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
     duel:  { key: 'duel',  name: 'Duel',       minutes: 6,  round: 360, bloomOpen: 150, bloomScore: 270, nectar: 150, phases: [0, 60, 150, 270, 360] },
-    // training: no clock pressure, the Crown open from the start; the lesson switches Crown scoring on when it gets there
-    training: { key: 'training', name: 'Training', minutes: 30, round: 1800, bloomOpen: 0, bloomScore: 1e9, nectar: 200, phases: [0, 1800, 1800, 1800, 1800] },
   };
   const PHASE_INFO = [
     { key: 'pollination', name: 'Pollination', line: 'Scout the valley and claim your blooms' },
@@ -790,7 +828,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
     { key: 'swarming', name: 'Swarming', line: 'The Crown bloom opens at the centre' },
     { key: 'lastlight', name: 'Last Light', line: 'Hold the Crown bloom to score' },
   ];
-  const phasesFor = mode => PHASE_INFO.map((p, i) => Object.assign({ start: MODES[mode].phases[i], end: MODES[mode].phases[i + 1] }, p));
+  const phasesFor = ph => PHASE_INFO.map((p, i) => Object.assign({ start: ph[i], end: ph[i + 1] }, p));
+  // What each hive starts with, unless a scenario says otherwise.
+  const START = { forager: 2, glint: 1, sting: 4 };
 
   const TYPES = {
     heart:   { name: 'Heart',   cost: 300, sig: 10, reach: 230, hp: 30, structure: true },
@@ -1090,10 +1130,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const seed = (opts.seed >>> 0) || 1;
     const diff = DIFF[opts.diff] ? opts.diff : 'normal';
     const mode = MODES[opts.mode] ? opts.mode : 'short';
-    const cfg = Object.assign({}, MODES[mode]);   // a copy, so a round (training) can change its own timings
+    // a copy, so a round can change its own timings; a campaign scenario overrides them (opts.cfg)
+    const cfg = Object.assign({}, MODES[mode], opts.cfg || {});
     const map = genMap(seed);
     const sim = {
-      seed, diff, mode, cfg, phases: phasesFor(mode), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
+      seed, diff, mode, cfg, phases: phasesFor(cfg.phases), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
       units: [], byId: new Map(), nextId: 1, sorties: new Map(), nextSortie: 1,
       events: [], rnd: mulberry32((seed ^ 0x5bd1e995) >>> 0), holder: -1, presence: [0, 0],
       phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false, links: [[], []],
@@ -1103,16 +1144,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
       destroyed: 0, lost: 0, kills: 0, losses: 0, spent: 0, score: 0,
       unseen: 0, exposure: 0, pic: new Map(), flakCd: 0, mult: 1,
       droneDestroyed: 0, droneLost: 0, heartDealt: 0, heartTaken: 0,
-      heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, recovered: 0, returns: 0, decoyDrew: 0,
+      heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, used: {}, recovered: 0, returns: 0, decoyDrew: 0, revealed: 0,
       fieldDanger: new Float32Array(map.fields.length).fill(-999), best: null,
       plan: [], auto: false, autoSkip: null, posts: [], postSeq: 1,
+      kit: (opts.kit && opts.kit[s]) || null,   // what this side may build (a campaign scenario limits it)
     }));
     for (let s = 0; s < 2; s++) {
-      const hp = map.hearts[s];
-      sim.hearts.push(addUnit(sim, s, 'heart', hp.x, hp.y, { parked: false, state: 'heart' }));
-      for (let i = 0; i < 2; i++) addUnit(sim, s, 'forager', hp.x + (s ? -22 : 22), hp.y + (i ? 16 : -16), { parked: false, state: 'idle', hdg: s ? Math.PI : 0 });
-      addUnit(sim, s, 'glint', hp.x, hp.y);
-      for (let i = 0; i < 4; i++) addUnit(sim, s, 'sting', hp.x, hp.y);
+      const hp = map.hearts[s], start = (opts.start && opts.start[s]) || START;
+      if (opts.nectar && opts.nectar[s] != null) sim.sides[s].nectar = opts.nectar[s];
+      const heart = addUnit(sim, s, 'heart', hp.x, hp.y, { parked: false, state: 'heart' });
+      if (opts.heartHp && opts.heartHp[s]) heart.hp = opts.heartHp[s];
+      sim.hearts.push(heart);
+      for (let i = 0; i < (start.forager || 0); i++) addUnit(sim, s, 'forager', hp.x + (s ? -22 : 22), hp.y + (i % 2 ? 16 : -16) + (i >> 1) * 8, { parked: false, state: 'idle', hdg: s ? Math.PI : 0 });
+      for (const [type, n] of Object.entries(start)) if (type !== 'forager') for (let i = 0; i < n; i++) addUnit(sim, s, type, hp.x, hp.y);
     }
     const aiSides = opts.ai || [1];
     for (const s of aiSides) sim.ai[s] = createAI(sim, s, (opts.aiDiff && opts.aiDiff[s]) || diff, opts.aiStyle && opts.aiStyle[s]);
@@ -1182,9 +1226,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
     return '';
   }
   // Auto items (from the production plan) wait behind anything you queue yourself, except the one already in the vat.
+  const canBuild = (sim, side, type) => !sim.sides[side].kit || sim.sides[side].kit.includes(type);
   function build(sim, side, type, site, opts) {
     const S = sim.sides[side], b = BUILD[type];
-    if (!b || sim.over || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
+    if (!b || sim.over || !canBuild(sim, side, type) || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
     if (b.site && (!site || nestSiteError(sim, side, site.x, site.y))) return null;
     S.nectar -= b.cost; S.spent += b.cost;
     const auto = !!(opts && opts.auto);
@@ -1450,7 +1495,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
           pic.set(e.id, c);
         }
         if (isDecoy && reveal && !c.revealed) {
-          c.revealed = true;
+          c.revealed = true; S.revealed++;
           sim.events.push({ k: 'decoyReveal', obs: s, id: e.id, x: e.x, y: e.y });
         }
         const prevGrade = c.grade, wasLocked = c.lockUntil > t;
@@ -1542,6 +1587,8 @@ svg.i { width: 1em; height: 1em; flex: none; }
       }
       if (u.type === 'forager' && u.field >= 0) S.fieldDanger[u.field] = sim.t;
       sim.events.push({ k: 'killed', side: u.side, type: u.type, x: u.x, y: u.y, by });
+    } else if (how === 'spent') {
+      S.used[u.type] = (S.used[u.type] || 0) + 1;
     } else if (how === 'expired') {
       if (TYPES[u.type].reuse) { S.lost += v; S.droneLost += v; S.losses++; S.lostBy[u.type] = (S.lostBy[u.type] || 0) + 1; }
       const so = sim.sorties.get(u.sortie);
@@ -1676,7 +1723,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     u.battery -= dt;
     if (u.battery <= 0) { killUnit(sim, u, null, 'expired'); return; }
     const so = sim.sorties.get(u.sortie);
-    if (!so || u.battery < 30 || u.hp < T.hp) u.homing = true;
+    if (!so || u.battery < 30 || (u.hp < T.hp && !u.stay)) u.homing = true;   // (a scenario can tell one to stay put)
     if (u.homing) { flyHome(sim, u, dt); return; }
     followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);   // then holds station at the end until its battery runs low
   }
@@ -1992,8 +2039,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
 
     if (sim.tick % 15 === 7) for (let s = 0; s < 2; s++) { postTick(sim, s); autoTick(sim, s); }
     if (sim.tick % 15 === 0) for (const ai of sim.ai) if (ai) aiTick(sim, ai);
+    if (sim.hook) sim.hook(sim);   // a campaign scenario's rules
+    if (sim.over) return;
 
-    if (t >= C.round) {
+    if (t >= C.round && !C.noFrost) {
       const a = sim.sides[0], b = sim.sides[1];
       let w = -1;
       if (a.score > b.score + 0.5) w = 0;
@@ -2155,7 +2204,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   function autoNext(sim, side) {
     const S = sim.sides[side], skip = S.autoSkip && S.autoSkip.until > sim.t ? S.autoSkip.type : null;
     for (const [type, want, from] of planList(sim, side)) {
-      if (type === skip) continue;
+      if (type === skip || !canBuild(sim, side, type)) continue;
       const have = forceCount(sim, side, type);
       if (have < want) return { type, cost: BUILD[type].cost, have, want, from };
     }
@@ -2580,12 +2629,532 @@ svg.i { width: 1em; height: 1em; flex: none; }
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
     NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP, LINK_R, JAM_R,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT, STYLES, STYLE_KEYS,
-    createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
+    createSim, step, endGame, canBuild, START, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
     setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits, postReach, inLink, jammedAt, linkPass,
     spawnUnit: addUnit, setAI, dsin, dcos, datan2, dhypot,
   };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* Drone Season · campaign: chapters of short scenarios, as data, and the rules that run them. Pure logic, no DOM.
+   A scenario sets up a round (map, what each side starts with and may build, the rival: a script or a style), gives
+   the player one objective and two optional goals for stars, and may carry coach tips the page shows as it plays.
+   More chapters are added by adding to CHAPTERS and SCENARIOS. */
+(function (root) {
+  'use strict';
+  const DS = root.DS, W = DS.W, H = DS.H;
+  const hyp = (ax, ay, bx, by) => DS.dhypot(ax - bx, ay - by);
+  const byNear = (list, p) => list.slice().sort((a, b) => hyp(a.x, a.y, p.x, p.y) - hyp(b.x, b.y, p.x, p.y));
+  const clock = t => `${Math.floor(Math.max(0, t) / 60)}:${String(Math.floor(Math.max(0, t) % 60)).padStart(2, '0')}`;
+  const ALL = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier', 'nest'];
+
+  // ---------- helpers scenarios share ----------
+  function geo(sim) {
+    const m = sim.map, home = sim.hearts[0], rival = sim.hearts[1], crown = m.fields[m.fields.length - 1];
+    return {
+      m, home, rival, crown,
+      mine: byNear(m.fields.filter(f => f.side === 0), home),
+      theirs: byNear(m.fields.filter(f => f.side === 1), rival),
+      peaks: m.peaks, patches: m.patches,
+    };
+  }
+  const own = (sim, side, type, f) => sim.units.filter(u => u.side === side && u.type === type && u.hp > 0 && (!f || f(u)));
+  const alive = (sim, ids) => (ids || []).filter(id => { const u = sim.byId.get(id); return u && u.hp > 0; });
+  // make sure n of a type are parked and ready at a side's Heart
+  function grant(sim, side, type, n) {
+    const h = sim.hearts[side];
+    for (let have = DS.parkedCount(sim, side, type); have < n; have++) DS.spawnUnit(sim, side, type, h.x, h.y);
+  }
+  // put drones in the air at a point, flying a route
+  function fly(run, side, type, n, from, route, opts) {
+    const sim = run.sim;
+    grant(sim, side, type, n);
+    const so = DS.launch(sim, side, type, n, route, Object.assign({ stance: 'quiet' }, opts || {}));
+    if (!so) return null;
+    for (const id of so.units) {
+      const u = sim.byId.get(id), to = route[0] || from;
+      u.x = u.px = from.x + (run.rnd() - 0.5) * 24; u.y = u.py = from.y + (run.rnd() - 0.5) * 24;
+      u.hdg = DS.datan2(to.y - u.y, to.x - u.x);
+    }
+    return so;
+  }
+  // put a rival unit on the player's picture as a track (for things a scenario wants found)
+  function reveal(sim, u) {
+    const pic = sim.sides[0].pic, c = pic.get(u.id);
+    if (c && c.grade >= 2) return;
+    pic.set(u.id, Object.assign(c || {}, { id: u.id, grade: 2, x: u.x, y: u.y, gx: u.x, gy: u.y, vx: 0, vy: 0, type: u.type, known: true, static: false, first: c ? c.first : sim.t, seenT: sim.t, trackT: sim.t, lockUntil: 0, held: c ? c.held : 0, jitT: 0 }));
+  }
+  const nest = (sim, side, x, y) => DS.spawnUnit(sim, side, 'nest', x, y, { parked: false, state: 'nest', hdg: 0 });
+  // where Cobalt's drones come from: the far side, level with the target, a little to one flank
+  const fromEast = (run, p, spread) => ({ x: W * 0.72 + (run.rnd() - 0.5) * 60, y: Math.max(60, Math.min(H - 60, p.y + (run.rnd() - 0.5) * (spread || 200))) });
+  const ridgeMark = sim => { const h = sim.hearts[0], ps = byNear(sim.map.peaks.filter(p => p.x < W * 0.45), h); return ps[0] ? { x: ps[0].x, y: ps[0].y } : { x: 480, y: 500 }; };
+  const busiest = (sim, side) => {
+    const g = geo(sim), list = side ? g.theirs : g.mine;
+    let best = list[0], bn = -1;
+    for (const f of list) { const n = own(sim, side, 'forager', u => hyp(u.x, u.y, f.x, f.y) < f.r + 30).length; if (n > bn) { bn = n; best = f; } }
+    return best;
+  };
+  // the base a scenario starts from: no clock of its own, no Crown, no frost; the scenario ends it
+  const OPEN = { round: 3600, noFrost: true, bloomOpen: 1e9, bloomScore: 1e9, phases: [0, 3600, 3600, 3600, 3600] };
+
+  // ---------- chapters ----------
+  const CHAPTERS = [
+    { id: 'first-light', n: 1, title: 'First light', line: 'Learn the hive: see, strike, build and hold.', scenarios: ['eyes', 'first-blood', 'harvest', 'hold'] },
+    { id: 'spectrum', n: 2, title: 'Spectrum', line: 'Links, jamming and lies.', scenarios: ['long-reach', 'static', 'smoke', 'nest-breaker'] },
+    { id: 'rivals', n: 3, title: 'Rivals', line: 'Full rounds against hives that fight their own way.', scenarios: ['reaper', 'bulwark', 'two-faces'] },
+  ];
+
+  // ---------- scenarios ----------
+  // steps: coach tips the page shows in order. Each has a heading (h), text (p), and may highlight a control (hi),
+  // mark a spot on the map (mark), wait for something (check) or show a button (next). ctx = { run, sim, S, d, ui }.
+  const SCENARIOS = {
+    // ===== Chapter 1: First light =====
+    eyes: {
+      title: 'Eyes', line: 'Find a hidden Nest with your Glints.', seed: 7729, limit: 300,
+      brief: ['Whatever is seen is killed, so the first job is seeing.', 'Cobalt has hidden a Nest somewhere on its side of the valley. Find it with your Glints: quiet scouts with long sight. A Glint perched on a ridge sees further, and canopy hides whatever sits under it.'],
+      goal: 'Find the hidden Cobalt Nest.',
+      cfg: OPEN, kit: ['glint'], start: { 0: { forager: 2, glint: 3 }, 1: { forager: 2 } }, nectar: { 0: 30, 1: 0 },
+      setup(run) {
+        const sim = run.sim, g = geo(sim);
+        // under the rival-side canopy furthest from the Crown that is not on top of their Heart
+        const spots = g.patches.filter(p => p.x > W * 0.55 && hyp(p.x, p.y, g.rival.x, g.rival.y) > 260);
+        const p = spots.sort((a, b) => hyp(b.x, b.y, g.crown.x, g.crown.y) - hyp(a.x, a.y, g.crown.x, g.crown.y))[0] || { x: W * 0.8, y: H * 0.8 };
+        run.S.nest = nest(sim, 1, p.x, p.y).id;
+        run.S.area = { x: p.x + (p.x > W * 0.8 ? -90 : 60), y: p.y + (p.y > H / 2 ? -70 : 70) };
+      },
+      progress(run) {
+        const c = run.sim.sides[0].pic.get(run.S.nest);
+        return { text: 'Find the Nest', done: !!(c && c.known) };
+      },
+      won: 'You found it. Now Cobalt knows you know.',
+      stars: [
+        { text: 'Find it within 1:30', check: run => run.result.t <= 90 },
+        { text: 'Keep clear of their Heart’s flak: lose no Glints', check: run => !(run.sim.sides[0].lostBy.glint) },
+      ],
+      steps: [
+        { h: 'Your hive', p: c => `You command the amber hive: your Heart is ${c.ui.homeAt()} and Cobalt is ${c.ui.cobaltAt()}. In this valley whatever is seen is killed, so the first job is seeing.`, next: 'Start' },
+        { h: 'Scout', p: c => `Tap ${c.ui.sq(0)}, then tap the marked ridge. Glints are quiet scouts with long sight.`, hi: '#sq-0',
+          enter: c => { c.d.mark = ridgeMark(c.sim); },
+          mark: c => ({ x: c.d.mark.x, y: c.d.mark.y, r: 26, label: 'RIDGE' }),
+          check: c => own(c.sim, 0, 'glint', u => !u.parked && hyp(u.x, u.y, c.d.mark.x, c.d.mark.y) < 45).length > 0,
+          hint: 'Missed it? Tap your Glint on the map to select it, then tap the marked ridge.' },
+        { h: 'Sight', p: () => 'On a ridge a Glint sees 30% further: the dashed ring is its sight. Ridges block sight unless you stand on one. Green dashed patches are <b>canopy</b>: anything under it is hard to see, yours included.', next: 'Next' },
+        { h: 'Search', p: c => `Somewhere on Cobalt’s side sits a Nest. Send Glints to look: tap ${c.ui.sq(0)}, then tap where to look, or drag a route through several places. A Glint flies for 75 seconds, and the Cobalt Heart shoots anything that comes close.`,
+          mark: c => (c.since > 40 ? { x: c.S.area.x, y: c.S.area.y, r: 170, label: 'TRY HERE' } : { x: W * 0.78, y: H / 2, r: 220, label: 'COBALT\u2019S SIDE' }),
+          hint: 'Still looking? Try the marked area: drag a route through it.', hintAfter: 40 },
+      ],
+    },
+    'first-blood': {
+      title: 'First blood', line: 'Stings, routes and the quick menu.', seed: 3301, limit: 240,
+      brief: ['Stings are cheap and spent on impact: one ◆6 Sting for a ◆25 Forager is a good trade.', 'Cobalt’s Foragers are working a bloom near the centre. Destroy six of them before they finish their harvest.'],
+      goal: 'Destroy 6 Cobalt Foragers.',
+      cfg: OPEN, kit: ['glint', 'sting'], start: { 0: { forager: 2, glint: 1, sting: 8 }, 1: { forager: 8 } }, nectar: { 0: 60, 1: 0 },
+      setup(run) {
+        const sim = run.sim, g = geo(sim);
+        const f = byNear(g.theirs, g.crown)[0];
+        run.S.field = { x: f.x, y: f.y, r: f.r };
+        run.S.fi = sim.map.fields.indexOf(f);
+      },
+      // Cobalt keeps three Foragers on the bloom while it has them
+      watch(run) {
+        const sim = run.sim, fi = run.S.fi;
+        if (sim.tick % 15) return;
+        const on = own(sim, 1, 'forager', u => u.field === fi && u.manual).length;
+        if (on < 3) { const u = own(sim, 1, 'forager', x => x.field !== fi || !x.manual)[0]; if (u) DS.assignForager(sim, u.id, fi); }
+      },
+      progress(run) {
+        const k = run.sim.sides[1].lostBy.forager || 0;
+        return { text: `Foragers ${Math.min(6, k)}/6`, done: k >= 6 };
+      },
+      won: 'Six Foragers down: Cobalt’s harvest is broken.',
+      stars: [
+        { text: 'Within 2:30', check: run => run.result.t <= 150 },
+        { text: 'Use 12 Stings or fewer', check: run => (run.sim.sides[0].used.sting || 0) <= 12 },
+      ],
+      steps: [
+        { h: 'Contact', p: () => 'A Cobalt Glint is scouting you. Blue brackets mean your sensors hold it; red means a firing solution. <b>Tap it</b>, then choose <b>Strike</b>.',
+          enter: c => {
+            const sim = c.sim, g = geo(sim), m = ridgeMark(sim);
+            const a = DS.datan2(g.rival.y - m.y, g.rival.x - m.x), at = r => ({ x: m.x + DS.dcos(a) * r, y: m.y + DS.dsin(a) * r });
+            const so = fly(c.run, 1, 'glint', 1, at(320), [at(150)]);
+            c.d.ids = so ? so.units.slice() : [];
+            c.S.reveal = c.d.ids;   // your Heart has caught its signal: it stays on your picture
+            grant(sim, 0, 'sting', 4);
+          },
+          mark: c => { const u = c.sim.byId.get((c.d.ids || [])[0]); return u && u.hp > 0 ? { x: u.x, y: u.y, r: 22, label: 'CONTACT', lock: true } : null; },
+          tick: c => { const u = c.sim.byId.get((c.d.ids || [])[0]); if (u && u.hp > 0) u.battery = 75; },
+          check: c => !alive(c.sim, c.d.ids).length,
+          hint: 'Tap the blue diamond inside the brackets. A menu offers Strike, Bomb or Intercept.', hintAfter: 12 },
+        { h: 'Build', p: () => '<b>Nectar</b>, top left, pays for everything; your Foragers bring it home. Tap <b>Stings</b> in the Build tab to queue four more.', hi: '#buy-sting',
+          enter: c => { c.sim.sides[0].nectar = Math.max(c.sim.sides[0].nectar, 30); c.ui.tab('build'); },
+          check: c => c.sim.sides[0].queue.some(q => q.type === 'sting' && !q.auto) },
+        { h: 'Strike', p: c => `Cobalt Foragers are working the marked bloom. Tap ${c.ui.sq(1)}, then drag a route from your Heart to it. Stings hunt along the route and dive on the first thing they find.`, hi: '#sq-1',
+          enter: c => grant(c.sim, 0, 'sting', 4),
+          mark: c => ({ x: c.S.field.x, y: c.S.field.y, r: c.S.field.r + 12, label: 'COBALT FORAGERS' }),
+          check: c => [...c.sim.sorties.values()].some(so => so.side === 0 && so.type === 'sting' && so.route.length && hyp(so.route[so.route.length - 1].x, so.route[so.route.length - 1].y, c.S.field.x, c.S.field.y) < 130),
+          hint: 'Press near your Heart and drag to the marked bloom before letting go. A single tap on the bloom works too.' },
+        { h: 'Finish the job', p: () => 'Foragers flare while they harvest, which makes them easy to find. Keep sending Stings until six are down, and build more when you run low.', next: 'Got it' },
+      ],
+    },
+    harvest: {
+      title: 'Harvest', line: 'Build, Auto and Wardens on patrol.', seed: 5150, limit: 360,
+      brief: ['Nectar pays for everything, and Foragers bring it home from the blooms.', 'Bank ◆450 of harvest while Cobalt sends raids after your Foragers. Wardens on patrol net raiders before they reach them, and parked Stings guard your Heart.'],
+      goal: 'Harvest ◆450.',
+      cfg: OPEN, kit: ['forager', 'glint', 'sting', 'decoy', 'warden'],
+      start: { 0: { forager: 2, glint: 1, sting: 4, warden: 1 }, 1: {} }, nectar: { 0: 150, 1: 0 },
+      setup(run) { run.S.h0 = run.sim.sides[0].harvested; },
+      script: [50, 105, 160, 215, 270, 325].map((at, i) => ({ at, run(run) {
+        const sim = run.sim, f = busiest(sim, 0), to = { x: f.x, y: f.y };
+        if (i % 2 === 1) {   // a Raider bombs the bloom
+          const from = fromEast(run, to);
+          fly(run, 1, 'raider', 1, from, [{ x: (from.x + to.x) / 2, y: from.y }, to], { label: 'Raid' });
+          if (i > 2) fly(run, 1, 'sting', 3, fromEast(run, to), [to], { mode: 'hunt', label: 'Raid' });
+        } else fly(run, 1, 'sting', [3, 4, 6][i / 2] || 6, fromEast(run, to), [to], { mode: 'hunt', label: 'Raid' });
+        run.msgs.push({ text: `Raid inbound on ${f.name}.`, kind: 'lock' });
+      } })),
+      progress(run) {
+        const h = run.sim.sides[0].harvested - run.S.h0;
+        return { text: `Harvest ◆${Math.min(450, Math.floor(h))}/450`, done: h >= 450 };
+      },
+      won: 'The vats are full and the raids came to nothing.',
+      stars: [
+        { text: 'Lose no more than one Forager', check: run => (run.sim.sides[0].lostBy.forager || 0) <= 1 },
+        { text: 'Within 4:30', check: run => run.result.t <= 270 },
+      ],
+      steps: [
+        { h: 'More Foragers', p: () => '<b>Nectar</b>, top left, pays for everything, and Foragers bring it home from the blooms. Tap <b>Forager</b> in the Build tab: more Foragers, more nectar.', hi: '#buy-forager',
+          enter: c => c.ui.tab('build'),
+          check: c => c.sim.sides[0].queue.some(q => q.type === 'forager' && !q.auto) || own(c.sim, 0, 'forager').length > 2 },
+        { h: 'Auto build', p: () => 'Tapping every build gets busy in a fight. Turn on <b>Auto</b> and the hive keeps two items queued from your plan, rebuilding what you lose.', hi: '#btn-auto',
+          check: c => c.sim.sides[0].auto },
+        { h: 'Your plan', p: () => 'Tap <b>Plan</b> to see what Auto builds: it works down the list and builds the first row below its target. The round pauses while the plan is open; tap Done when you have had a look.', hi: '#btn-plan',
+          check: c => c.ui.planSeen() },
+        { h: 'Patrol', p: c => `Raids are coming for your blooms. Tap ${c.ui.sq(4)}, then tap your busiest bloom. A Warden nets drones that come near, then flies home to rearm.`, hi: '#sq-4',
+          enter: c => grant(c.sim, 0, 'warden', 1),
+          mark: c => { const f = busiest(c.sim, 0); return { x: f.x, y: f.y, r: f.r + 12, label: 'PATROL HERE' }; },
+          check: c => own(c.sim, 0, 'warden', u => !u.parked && c.sim.map.fields.some(f => f.side === 0 && hyp(u.x, u.y, f.x, f.y) < 150)).length > 0 },
+        { h: 'Keep it coming', p: () => 'Keep <b>Guard</b> on: parked Stings launch at drones that come close to your Heart. Bank ◆450 of harvest; the bar at the top counts it.', next: 'Got it' },
+      ],
+    },
+    hold: {
+      title: 'Hold', line: 'Posts, Relays and the Crown.', seed: 4242, limit: 480,
+      brief: ['In Last Light the Crown bloom at the centre scores for whichever hive has more drones on it.', 'Cobalt is coming for it. Be first to 60 seconds of Crown score. A post keeps a spot staffed for you; the Crown is just beyond your Heart’s link, so a Relay goes out first.'],
+      goal: 'Reach 60 Crown score before Cobalt does.',
+      cfg: Object.assign({}, OPEN, { bloomOpen: 0, bloomScore: 120 }), kit: ['forager', 'glint', 'sting', 'decoy', 'warden', 'relay'],
+      start: { 0: { forager: 3, glint: 1, sting: 16, decoy: 2, warden: 2, relay: 1 }, 1: {} }, nectar: { 0: 250, 1: 0 },
+      script: [
+        // Cobalt's Stings make for the Crown from the time it scores, a little more each wave
+        ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => ({ when: run => run.sim.t >= run.sim.cfg.bloomScore - 6 + i * 24, run(run) {
+          const g = geo(run.sim), c = g.crown;
+          fly(run, 1, 'sting', Math.min(8, 3 + i), fromEast(run, c, 260), [{ x: c.x + 18, y: c.y + (run.rnd() - 0.5) * 40 }], { mode: 'hunt', label: 'Hold' });
+        } })),
+        { at: 100, run(run) { raidHeart(run, 5); } },
+      ],
+      progress(run) {
+        const a = run.sim.sides[0].score, b = run.sim.sides[1].score;
+        return { text: run.sim.t < run.sim.cfg.bloomScore ? `Crown scores in ${Math.ceil(run.sim.cfg.bloomScore - run.sim.t)} s` : `Crown ${Math.floor(a)} : ${Math.floor(b)}`, done: a >= 60 };
+      },
+      fail: run => (run.sim.sides[1].score >= 60 ? 'Cobalt held the Crown for 60 seconds first.' : null),
+      won: 'The Crown is yours.',
+      stars: [
+        { text: 'No hits on your Heart', check: run => !run.sim.sides[0].heartTaken },
+        { text: 'Hold Cobalt under 20', check: run => run.sim.sides[1].score < 20 },
+      ],
+      steps: [
+        { h: 'Set a post', p: () => 'A <b>post</b> is a spot the hive keeps staffed. <b>Press and hold</b> on the Crown bloom until a menu opens, choose <b>Post here</b>, then <b>Set post</b>.',
+          mark: c => { const g = geo(c.sim); return { x: g.crown.x, y: g.crown.y, r: g.crown.r + 14, label: 'CROWN BLOOM' }; },
+          check: c => { const g = geo(c.sim); return c.sim.sides[0].posts.some(p => hyp(p.x, p.y, g.crown.x, g.crown.y) < 140); },
+          hint: 'Hold your finger or the mouse button still on the Crown for half a second. Or open the Posts tab, tap + Post, then tap the Crown.' },
+        { h: 'Standing orders', p: () => 'The hive keeps the post staffed, relieving the Glint before its battery fades. The Crown is just beyond your Heart’s link, so a <b>Relay</b> flies out first to carry it. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
+          check: c => c.ui.tabIs('posts') },
+        { h: 'Link', p: () => 'New orders reach only drones in <b>link</b>: near your Heart, a Nest, or a Relay that is linked itself. The dashed amber edge shows it whenever you give orders. Beyond it, drones carry on with their last orders.', next: 'Next',
+          enter: c => { c.d.showLink = true; },
+          mark: c => { const r = own(c.sim, 0, 'relay', u => !u.parked)[0]; return r ? { x: r.x, y: r.y, r: 16, label: 'RELAY' } : null; } },
+        { h: 'Raid', p: () => 'A Cobalt raid is heading for your Heart. With <b>Guard</b> on, parked Stings launch at drones that come close, and the Heart fires its flak. Watch, or send a squad yourself.', hi: '#btn-guard',
+          enter: c => { if (!c.S.raid) raidHeart(c.run, 5); },
+          check: c => !alive(c.sim, c.S.raid).length && c.since > 4 },
+        { h: 'Hold the Crown', p: c => `The Crown scores now and Cobalt Stings are moving in. Send ${c.ui.sq(2)} or ${c.ui.sq(1)} to hold it. First to 60 wins.`,
+          enter: c => { c.sim.cfg.bloomScore = Math.min(c.sim.cfg.bloomScore, c.sim.t + 3); },
+          mark: c => { const g = geo(c.sim); return { x: g.crown.x, y: g.crown.y, r: DS.HOLD_R, label: 'HOLD THE CROWN' }; },
+          hint: 'Tap a squad, then tap the Crown. The score is at the top.', hintAfter: 20 },
+      ],
+    },
+
+    // ===== Chapter 2: Spectrum =====
+    'long-reach': {
+      title: 'Long reach', line: 'Carry your link across the valley.', seed: 8086, limit: 360,
+      brief: ['Orders reach only drones in link: near your Heart, a Nest, or a Relay that is itself in link. Out of link, drones carry on with their last orders.', 'Cobalt watches the valley from the far ridge. Hold a post there for 45 seconds. A post out of link sends a ready Relay ahead of it, and Relays chain, so build them; Cobalt will hunt them.'],
+      goal: 'Keep a post on the far ridge staffed for 45 seconds.',
+      cfg: OPEN, kit: ['forager', 'glint', 'sting', 'decoy', 'warden', 'relay'],
+      start: { 0: { forager: 3, glint: 1, sting: 8, warden: 2 }, 1: { forager: 2 } }, nectar: { 0: 220, 1: 0 },
+      setup(run) {
+        const sim = run.sim, g = geo(sim);
+        const pk = byNear(g.peaks.filter(p => p.x > W * 0.55 && hyp(p.x, p.y, g.rival.x, g.rival.y) > 300), g.crown)[0] || { x: W * 0.62, y: H * 0.45 };
+        run.S.spot = { x: pk.x, y: pk.y }; run.S.held = 0;
+        fly(run, 1, 'glint', 1, { x: pk.x + 60, y: pk.y }, [{ x: pk.x, y: pk.y }], { label: 'Watch' });
+      },
+      script: [40, 80, 120, 160, 200, 240, 280, 320].map(at => ({ at, run(run) {
+        // Cobalt hunts your outermost Relay
+        const g = geo(run.sim), rs = own(run.sim, 0, 'relay', u => !u.parked).sort((a, b) => b.x - a.x);
+        const to = rs[0] ? { x: rs[0].x, y: rs[0].y } : { x: (g.home.x + run.S.spot.x) / 2, y: run.S.spot.y };
+        fly(run, 1, 'sting', 3, fromEast(run, to), [to], { mode: 'hunt', label: 'Hunt' });
+      } })),
+      watch(run) {
+        const sim = run.sim, S0 = sim.sides[0];
+        const ok = S0.posts.some(p => hyp(p.x, p.y, run.S.spot.x, run.S.spot.y) < 90 && DS.postReach(sim, 0, p) === 'ok' && Object.values(DS.postStaff(sim, 0, p)).some(v => v.on > 0));
+        run.S.on = ok;
+        if (ok) run.S.held += DS.DT;
+      },
+      progress(run) { return { text: `Post held ${Math.floor(run.S.held)}/45 s`, done: run.S.held >= 45 }; },
+      won: 'Your link reaches across the valley.',
+      stars: [
+        { text: 'Lose no Relays', check: run => !(run.sim.sides[0].lostBy.relay) },
+        { text: 'Within 3:30', check: run => run.result.t <= 210 },
+      ],
+      steps: [
+        { h: 'The far ridge', p: () => 'Press and hold the marked ridge, choose <b>Post here</b>, and set it with a Warden. It is far beyond your link: watch the post send Relays out ahead of it. Build Relays if you have none, or turn on <b>Auto</b>.',
+          mark: c => ({ x: c.S.spot.x, y: c.S.spot.y, r: 30, label: 'FAR RIDGE' }),
+          check: c => c.sim.sides[0].posts.some(p => hyp(p.x, p.y, c.S.spot.x, c.S.spot.y) < 90) },
+        { h: 'Keep the chain', p: () => 'Cobalt Stings hunt your outermost Relay. Lose one and everything beyond it is out of link, and the post goes unrelieved. Wardens near your Relays keep them alive.', next: 'Got it' },
+      ],
+    },
+    static: {
+      title: 'Static', line: 'Find and kill the jammers.', seed: 2718, limit: 420,
+      brief: ['A Harrier jams your drones near it: they cannot report what they see, take new orders or use the hive’s picture, and a jammed post gets no relief. Sending more drones into the jamming does not fix it.', 'Killing the Harrier does, and its noise gives it away while it jams you. Three are coming, one after another.'],
+      goal: 'Destroy 3 Cobalt Harriers.',
+      cfg: OPEN, kit: ['forager', 'glint', 'sting', 'decoy', 'warden', 'relay', 'harrier'],
+      start: { 0: { forager: 4, glint: 2, sting: 16, warden: 2, decoy: 2 }, 1: {} }, nectar: { 0: 200, 1: 0 },
+      setup(run) {
+        const sim = run.sim, f = geo(sim).mine[1] || geo(sim).mine[0];
+        DS.addPost(sim, 0, f.x, f.y, { warden: 1 }, 1, f.name);
+        run.S.wave = 0; run.S.ids = []; run.S.killed = 0; run.S.nextT = 12;
+      },
+      watch(run) {
+        const sim = run.sim, S = run.S;
+        const live = alive(sim, S.ids);
+        S.killed = S.wave - live.length;
+        for (const id of live) {   // they stay until killed, and move on to where your drones are if they jam nothing
+          const u = sim.byId.get(id); u.stay = true; if (u.battery < 100) u.battery = 400;
+          u.idleT = u.jams ? 0 : (u.idleT || 0) + DS.DT;
+          const so = sim.sorties.get(u.sortie);
+          if (u.idleT > 15 && so) { u.idleT = 0; const f = busiest(sim, 0); so.route = [{ x: f.x + 40, y: f.y }]; u.wp = 0; }
+          reveal(sim, u);   // a Harrier this loud is never hard to find
+        }
+        if (!live.length && S.wave < 3 && sim.t >= S.nextT) {
+          // over your blooms, where your Foragers are, so its jamming gives it away
+          const g = geo(sim), at = [g.mine[1] || g.mine[0], g.mine[0], busiest(sim, 0)][S.wave];
+          const p = { x: at.x + 50, y: at.y + (at.y > H / 2 ? -40 : 40) }, from = fromEast(run, p);
+          const so = fly(run, 1, 'harrier', 1, from, [p], { label: 'Jam' });
+          if (so) { S.ids.push(so.units[0]); sim.byId.get(so.units[0]).battery = 400; }
+          fly(run, 1, 'warden', S.wave === 2 ? 2 : 1, from, [p], { label: 'Escort' });
+          if (S.wave) fly(run, 1, 'sting', S.wave === 2 ? 4 : 3, from, [p], { mode: 'hunt', label: 'Escort' });
+          S.wave++; S.nextT = 1e9;
+          run.msgs.push({ text: `A Cobalt Harrier is jamming ${at.name}.`, kind: 'cobalt' });
+        }
+        if (!live.length && S.nextT === 1e9 && S.wave < 3) S.nextT = sim.t + 15;
+      },
+      progress(run) { return { text: `Harriers ${run.S.killed}/3`, done: run.S.killed >= 3 }; },
+      won: 'The static clears.',
+      stars: [
+        { text: 'Lose no Wardens', check: run => !(run.sim.sides[0].lostBy.warden) },
+        { text: 'Within 4:00', check: run => run.result.t <= 240 },
+      ],
+      steps: [
+        { h: 'Static', p: () => 'A Harrier is over your post. Your drones near it are jammed: they cannot see for the hive or hear you. Its noise gives it away, so you can see it: <b>tap it</b> and <b>Strike</b>, or send Stings at it from outside the jamming.',
+          mark: c => { const u = c.sim.byId.get(c.S.ids[0]); return u && u.hp > 0 ? { x: u.x, y: u.y, r: 22, label: 'HARRIER', lock: true } : null; },
+          check: c => c.S.killed >= 1, hint: 'Stings on a strike that get jammed hunt with their own seekers: send enough of them.', hintAfter: 25 },
+        { h: 'Two more', p: () => 'The next ones bring escorts. Wardens net Stings, so send more than you think, or bring Decoys to draw the nets. Your own <b>Harrier</b> can jam their escorts.', next: 'Got it' },
+      ],
+    },
+    smoke: {
+      title: 'Smoke', line: 'Decoys, feints and a steady Guard.', seed: 5150, limit: 240, survive: true,
+      brief: ['Decoys read as Raiders until a sensor gets a close look. Cobalt will feint at your Heart with Decoys on one flank and send the real raid on the other.', 'Keep your Heart above 15 for four minutes. Keep Guard on, and do not empty your Heart chasing the first wave.'],
+      goal: 'Survive 4:00 with your Heart above 15.',
+      cfg: OPEN, kit: ['forager', 'glint', 'sting', 'decoy', 'warden', 'relay', 'harrier'],
+      start: { 0: { forager: 3, glint: 2, sting: 16, warden: 2 }, 1: {} }, nectar: { 0: 200, 1: 0 },
+      script: [35, 95, 155, 210].map((at, i) => ({ at, run(run) {
+        const sg = run.rnd() < 0.5 ? 1 : -1;
+        run.S.flank = sg;
+        const h = run.sim.hearts[0], f1 = { x: W * 0.55, y: H / 2 + sg * 330 }, m1 = { x: W * 0.3, y: H / 2 + sg * 260 };
+        fly(run, 1, 'decoy', 6, f1, [m1, { x: h.x + 50, y: h.y }], { stance: 'dash', label: 'Feint' });
+        run.S.pending = { t: run.sim.t + 6, i, sg };
+      } })),
+      watch(run) {
+        const p = run.S.pending, sim = run.sim;
+        if (p && sim.t >= p.t) {
+          run.S.pending = null;
+          const h = sim.hearts[0], f2 = { x: W * 0.55, y: H / 2 - p.sg * 320 }, m2 = { x: W * 0.32, y: H / 2 - p.sg * 230 };
+          fly(run, 1, 'sting', [8, 10, 12, 12][p.i], f2, [m2, { x: h.x, y: h.y }], { mode: 'raid', target: h.id, label: 'Raid' });
+          if (p.i >= 2) fly(run, 1, 'decoy', 4, f2, [m2, { x: h.x + 40, y: h.y }], { stance: 'dash', label: 'Decoys' });
+          if (p.i === 3) fly(run, 1, 'harrier', 1, f2, [{ x: h.x + 260, y: h.y - p.sg * 120 }], { label: 'Jam' });
+        }
+      },
+      progress(run) {
+        const sim = run.sim;
+        return { text: `Hold ${Math.max(0, Math.ceil(240 - sim.t))} s · Heart ${sim.hearts[0].hp}`, done: false };
+      },
+      fail: run => (run.sim.hearts[0].hp <= 15 ? 'Your Heart fell to 15.' : null),
+      won: 'The smoke clears and your Heart stands.',
+      stars: [
+        { text: 'Your Heart takes fewer than 6 hits', check: run => run.sim.sides[0].heartTaken < 6 },
+        { text: 'See through 8 Decoys', check: run => run.sim.sides[0].revealed >= 8 },
+      ],
+      steps: [
+        { h: 'Look first', p: () => 'Raids are coming, some of them fake. A Decoy shows as a Raider until a sensor sees it close, then it is marked DECOY. A Glint perched between your Heart and the flanks sees them early.', next: 'Got it' },
+      ],
+    },
+    'nest-breaker': {
+      title: 'Nest-breaker', line: 'Raiders, forward Nests and Decoys.', seed: 3301, limit: 480,
+      brief: ['Raiders carry three bombs for anything that sits still, then fly home to rearm at the nearest base.', 'Cobalt has two Nests on its flanks, watched by Wardens. Destroy both. A forward Nest of your own shortens every trip, and Decoys draw the Wardens’ nets.'],
+      goal: 'Destroy both Cobalt Nests.',
+      cfg: OPEN, kit: ALL,
+      start: { 0: { forager: 4, glint: 1, sting: 8, raider: 2, decoy: 4, warden: 1 }, 1: { forager: 2, sting: 6, warden: 2 } }, nectar: { 0: 300, 1: 0 },
+      setup(run) {
+        const sim = run.sim, g = geo(sim);
+        const spots = [{ x: W * 0.74, y: H * 0.24 }, { x: W * 0.74, y: H * 0.76 }].map(p => {
+          for (let k = 0; k < 40; k++) { const q = { x: p.x + ((k % 7) - 3) * 22, y: p.y + (Math.floor(k / 7) - 3) * 22 }; if (!DS.ridgeAt(sim.map, q.x, q.y) && !sim.map.fields.some(f => hyp(f.x, f.y, q.x, q.y) < f.r + 30)) return q; }
+          return p;
+        });
+        run.S.nests = spots.map(p => nest(sim, 1, p.x, p.y).id);
+        for (const p of spots) DS.addPost(sim, 1, p.x, p.y, { warden: 1 }, 1, 'Nest');
+        void g;
+      },
+      progress(run) {
+        const k = run.S.nests.length - alive(run.sim, run.S.nests).length;
+        return { text: `Nests ${k}/2`, done: k >= 2 };
+      },
+      won: 'Both Nests are rubble.',
+      stars: [
+        { text: 'Lose no Raiders', check: run => !(run.sim.sides[0].lostBy.raider) },
+        { text: 'Within 5:00', check: run => run.result.t <= 300 },
+      ],
+      steps: [
+        { h: 'Bombing run', p: c => `Find the Nests with a Glint first: a Raider needs to know where to go. Then tap ${c.ui.sq(3)} and tap a Nest, or drag a route around the Wardens to it. Decoys in the squad run ahead and draw their nets.`, next: 'Got it' },
+      ],
+    },
+
+    // ===== Chapter 3: Rivals =====
+    reaper: {
+      title: 'Reaper', line: 'Weather an early swarm, then win.', seed: 5150, full: true, rival: 'reaper',
+      brief: ['Reaper hives swarm early: Stings and Decoys, raids early and often, and a flood onto the Crown before it scores.', 'This one has a head start. Win the round, by Crown score at frost or by destroying the Cobalt Heart.'],
+      goal: 'Win the round.',
+      start: { 1: { forager: 2, glint: 1, sting: 12, decoy: 2 } },
+      setup(run) { const ai = run.sim.ai[1]; if (ai) ai.raidT = 75; },
+      progress(run) { const s = run.sim.sides; return { text: `Crown ${Math.floor(s[0].score)} : ${Math.floor(s[1].score)}`, done: false }; },
+      won: 'The swarm broke on your Heart.',
+      stars: [
+        { text: 'Your Heart never drops below 20', check: run => run.minHp >= 20 },
+        { text: 'Lose no more than 4 Foragers', check: run => (run.sim.sides[0].lostBy.forager || 0) <= 4 },
+      ],
+    },
+    bulwark: {
+      title: 'Bulwark', line: 'Break a fortress before frost.', seed: 8086, full: true, rival: 'bulwark', limit: 720,
+      brief: ['Bulwark hives turtle behind Wardens and posts, and this one has had time to dig in: two Nests, Wardens on post and a Harrier over the Crown.', 'There is no Crown score this time. Destroy the Cobalt Heart before frost.'],
+      goal: 'Destroy the Cobalt Heart.',
+      cfg: { bloomScore: 1e9, noFrost: true }, heartHp: { 1: 20 }, nectar: { 0: 450 },
+      start: { 1: { forager: 4, glint: 1, sting: 8, warden: 3, relay: 1 } },
+      setup(run) {
+        const sim = run.sim;
+        for (const p of [{ x: W * 0.7, y: H * 0.3 }, { x: W * 0.7, y: H * 0.7 }]) {
+          for (let k = 0; k < 40; k++) { const q = { x: p.x + ((k % 7) - 3) * 22, y: p.y + (Math.floor(k / 7) - 3) * 22 }; if (!DS.nestSiteError(sim, 1, q.x, q.y)) { nest(sim, 1, q.x, q.y); break; } }
+        }
+      },
+      progress(run) { return { text: `Cobalt Heart ${run.sim.hearts[1].hp}`, done: false }; },
+      won: 'The fortress falls.',
+      stars: [
+        { text: 'With 3:00 or more left', check: run => run.result.t <= 540 },
+        { text: 'Lose no more than 2 Raiders', check: run => (run.sim.sides[0].lostBy.raider || 0) <= 2 },
+      ],
+    },
+    'two-faces': {
+      title: 'Two faces', line: 'A rival that changes its play.', seed: 2718, full: true, rival: 'listener',
+      brief: ['The best hives change their play. This one opens as a Listener, eyes everywhere and precise strikes, and at the halfway mark it turns Mimic: Decoys and feints.', 'You start with a stronger hive: four Foragers, eight Stings and a Warden. Win the round.'],
+      goal: 'Win the round.',
+      start: { 0: { forager: 4, glint: 1, sting: 8, warden: 1 } },
+      script: [{ at: 360, run(run) { DS.setAI(run.sim, 1, run.sim.diff, 'mimic'); run.S.turned = true; run.msgs.push({ text: 'Cobalt has turned Mimic: expect feints and Decoys.', kind: 'cobalt' }); } }],
+      progress(run) { const s = run.sim.sides; return { text: `Crown ${Math.floor(s[0].score)} : ${Math.floor(s[1].score)}`, done: false }; },
+      won: 'Neither face fooled you.',
+      stars: [
+        { text: 'Win by Crown score of 100 or more', check: run => run.sim.sides[0].score >= 100 },
+        { text: 'Cost exchange 2 : 1 or better', check: run => run.sim.sides[0].destroyed / Math.max(1, run.sim.sides[0].lost) >= 2 },
+      ],
+    },
+  };
+  // a raid on your Heart from the far flank, as the coach and the script both use it
+  function raidHeart(run, n) {
+    const sim = run.sim, h = sim.hearts[0], side = h.y < H / 2 ? -1 : 1;
+    const from = { x: h.x + 520, y: h.y + side * 330 }, mid = { x: h.x + 300, y: h.y + side * 230 };
+    const so = fly(run, 1, 'sting', n, from, [mid, { x: h.x, y: h.y }], { mode: 'raid', target: h.id, label: 'Raid' });
+    run.S.raid = so ? so.units.slice() : [];
+    run.msgs.push({ text: 'Raid inbound on your Heart.', kind: 'lock' });
+  }
+
+  const ORDER = [];
+  CHAPTERS.forEach(ch => ch.scenarios.forEach((id, i) => { const sc = SCENARIOS[id]; sc.id = id; sc.chapter = ch.n; sc.n = i + 1; ORDER.push(id); }));
+
+  // ---------- running a scenario ----------
+  function start(id, opts) {
+    opts = opts || {};
+    const sc = SCENARIOS[id];
+    const cfg = sc.full ? Object.assign({}, sc.cfg || {}) : Object.assign({}, OPEN, sc.cfg || {});
+    const sim = DS.createSim({
+      seed: sc.seed, mode: 'short', diff: opts.diff || sc.diff || 'normal', cfg,
+      ai: sc.rival ? [1] : [], aiStyle: sc.rival ? { 1: sc.rival } : null,
+      kit: sc.kit ? { 0: sc.kit } : null, start: sc.start, nectar: sc.nectar, heartHp: sc.heartHp,
+    });
+    const run = { id, sc, sim, S: {}, rnd: DS.mulberry32((sc.seed ^ 0x9e3779b9) >>> 0), fired: new Set(), result: null, prog: { text: '', done: false }, msgs: [], minHp: sim.hearts[0].hp };
+    sim.hook = () => tick(run);
+    if (sc.setup) sc.setup(run);
+    run.prog = sc.progress(run);
+    return run;
+  }
+  function tick(run) {
+    const sim = run.sim, sc = run.sc;
+    if (run.result) return;
+    if (sim.over) { settle(run); return; }
+    for (const ev of sc.script || []) {
+      if (run.fired.has(ev)) continue;
+      if (ev.when ? ev.when(run) : sim.t >= ev.at) { run.fired.add(ev); ev.run(run); }
+    }
+    if (sc.watch) sc.watch(run);
+    for (const id of run.S.reveal || []) { const u = sim.byId.get(id); if (u && u.hp > 0) reveal(sim, u); }   // units a scenario wants found
+    run.minHp = Math.min(run.minHp, sim.hearts[0].hp);
+    run.prog = sc.progress(run);
+    if (run.prog.done) return finish(run, true, 'objective');
+    const f = sc.fail ? sc.fail(run) : null;
+    if (f) return finish(run, false, f);
+    if (sc.limit && sim.t >= sc.limit) return finish(run, !!sc.survive, sc.survive ? 'survived' : 'Out of time.');
+  }
+  function finish(run, won, reason) {
+    const sim = run.sim, sc = run.sc;
+    run.result = { won, reason, t: sim.t };
+    run.result.stars = [won].concat(sc.stars.map(st => won && !!st.check(run)));
+    run.result.text = won ? sc.won : reason;
+    if (!sim.over) DS.endGame(sim, won ? 0 : 1, won ? 'objective' : 'failed');
+  }
+  // a round that ended by itself (a Heart destroyed, or frost in a full round)
+  function settle(run) {
+    if (run.result || !run.sim.over) return run.result;
+    const sim = run.sim, won = sim.winner === 0;
+    finish(run, won, won ? 'won' : sim.reason === 'heart' ? 'Your Heart has fallen.' : 'Cobalt won the round.');
+    if (won && sim.reason === 'heart') run.result.text = 'Cobalt Heart destroyed. ' + run.sc.won;
+    return run.result;
+  }
+  const next = id => ORDER[ORDER.indexOf(id) + 1] || null;
+  const chapterOf = id => CHAPTERS.find(ch => ch.scenarios.includes(id));
+
+  // ---------- progress (the page keeps it in the browser) ----------
+  // progress: { [id]: { won: bool, stars: [bool, bool, bool] } }. A scenario is open once the one before it is won.
+  const isOpen = (prog, id) => { const i = ORDER.indexOf(id); return i === 0 || !!(prog[ORDER[i - 1]] && prog[ORDER[i - 1]].won); };
+  function record(prog, run) {
+    const r = settle(run) || run.result, old = prog[run.id] || { won: false, stars: [false, false, false] };
+    prog[run.id] = { won: old.won || r.won, stars: old.stars.map((s, i) => s || !!r.stars[i]) };
+    return prog;
+  }
+  const starCount = (prog, ids) => (ids || ORDER).reduce((n, id) => n + ((prog[id] && prog[id].stars.filter(Boolean).length) || 0), 0);
+
+  root.CAMP = { CHAPTERS, SCENARIOS, ORDER, start, settle, next, chapterOf, isOpen, record, starCount, clock, geo, own, alive, hyp };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -3320,7 +3889,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
   }
   // Link coverage: the union of your Heart's, Nests' and linked Relays' reach, with only its outer edge drawn.
-  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (G.training && TR.d.showLink));
+  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (!!RUN && TR.d.showLink));
   function drawLinkArea(nodes, s) {
     if (!nodes.length) return;
     ctx.save();
@@ -3489,7 +4058,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
       if (f.centre) {
         ctx.font = `500 ${9.5 * k}px ${FONT_M}`;
         let sub = '';
-        if (G.training) sub = sim.t < C.bloomScore ? 'open' : sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
+        if (RUN && !RUN.sc.full) sub = !open ? 'closed' : sim.t < C.bloomScore ? 'open' : sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
         else if (!open) sub = `opens at ${clockStr(C.round - C.bloomOpen)}`;
         else if (sim.t < C.bloomScore) sub = `scores from ${clockStr(C.round - C.bloomScore)}`;
         else sub = sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
@@ -3681,7 +4250,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     drawUnits();
     drawFx();
     if (G.mode === 'play') drawPreview();
-    if (G.training && G.mode === 'play') drawCoachMark();
+    if (RUN && G.mode === 'play') drawCoachMark();
   }
 
   function updateTrails() {
@@ -3704,7 +4273,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     el.className = 'toast ' + (kind || '');
     el.textContent = text;
     box.prepend(el);
-    while (box.children.length > (VW < 640 ? (G.training ? 2 : 3) : 4)) box.lastChild.remove();
+    while (box.children.length > (VW < 640 ? (RUN ? 2 : 3) : 4)) box.lastChild.remove();
     setTimeout(() => el.classList.add('out'), 3400);
     setTimeout(() => el.remove(), 3900);
   }
@@ -3845,10 +4414,10 @@ svg.i { width: 1em; height: 1em; flex: none; }
         if (e.side === ME) fx('deliver', e.x, e.y, { life: 1.1, n: Math.round(e.n) });
         break;
       case 'phase':
-        if (live) { const p = sim.phases[e.i]; banner(p.name, p.line, e.i === 3); play('chime'); }
+        if (live && !(RUN && !RUN.sc.full)) { const p = sim.phases[e.i]; banner(p.name, p.line, e.i === 3); play('chime'); }
         break;
       case 'bloomOpen':
-        if (live && !G.training) toast(`The Crown bloom is open. It scores from ${clockStr(sim.cfg.round - sim.cfg.bloomScore)}.`, 'bloom');
+        if (live && !(RUN && !RUN.sc.full)) toast(`The Crown bloom is open. It scores from ${clockStr(sim.cfg.round - sim.cfg.bloomScore)}.`, 'bloom');
         break;
       case 'holder':
         if (live) toastOnce('holder', e.side === ME ? 'You hold the Crown.' : e.side === OP ? 'Cobalt holds the Crown.' : 'The Crown is contested.', e.side === ME ? 'amber' : e.side === OP ? 'cobalt' : 'bloom', 3);
@@ -4446,7 +5015,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   // Auto as the round has it (training starts with it off whatever you saved); the saved setting is for real rounds.
   const autoOn = () => (G.sim && G.mode === 'play' ? G.sim.sides[ME].auto : G.auto);
   function setAuto(on) {
-    if (!G.training) { G.auto = !!on; store.set('auto', G.auto); }
+    if (!RUN) { G.auto = !!on; store.set('auto', G.auto); }
     if (G.sim && G.mode === 'play') act('setAuto', ME, !!on);
     play('tick');
   }
@@ -4540,7 +5109,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     items.push({ icon: 'sting', label: st ? 'Raid' : 'Strike', sub: readyLine(k, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: k }, g, st ? 'Raid' : 'Strike') });
     if (st || look === 'forager' || look === 'nest' || !look) items.push({ icon: 'raider', label: 'Bomb', sub: readyLine(1, 'raider'), off: !readyOf('raider'), run: () => sendMix({ raider: 1 }, g, 'Bomb run') });
     if (!st) items.push({ icon: 'warden', label: 'Intercept', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Intercept') });
-    openMenu(X, Y, cname(c), items);
+    openMenu(X, Y, cname(c), items.filter(inKit));
   }
   function groundMenu(X, Y) {
     const sim = G.sim, w = toWorld(X, Y), g = { pts: [w], c: null }, S0 = sim.sides[ME];
@@ -4554,148 +5123,46 @@ svg.i { width: 1em; height: 1em; flex: none; }
       { icon: 'relay', label: 'Relay here', sub: DS.inLink(sim, ME, w.x, w.y) ? readyLine(1, 'relay') : 'out of link here', off: !readyOf('relay') || !DS.inLink(sim, ME, w.x, w.y), run: () => sendMix({ relay: 1 }, g, 'Relay') },
       { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
     ];
-    openMenu(X, Y, postName(w.x, w.y), items);
+    openMenu(X, Y, postName(w.x, w.y), items.filter(inKit));
   }
+  // a scenario that limits what you build also trims the quick menus to what you have or can make
+  const inKit = it => it.icon === 'post' || DS.canBuild(G.sim, ME, it.icon) || readyOf(it.icon) > 0;
 
-  // ---------- training: a guided round on a fixed map with no rival commander ----------
-  const TRAIN_SEED = 7729;
-  const TR = { i: -1, t: 0, hinted: false, d: {}, hiEl: null };
+  // ---------- campaign: scenarios, and the coach that gives a scenario's tips ----------
+  const CAMP = window.CAMP;
+  let RUN = null;                        // the campaign scenario being played, if any
+  const campProg = () => store.get('camp1', {});
+  const TR = { i: -1, t: 0, simT: 0, hinted: false, d: {}, hiEl: null, planSeen: false };
   const homeAt = () => (cam.portrait ? 'at the bottom' : 'on the left'), cobaltAt = () => (cam.portrait ? 'at the top' : 'on the right');
-  const sqName = i => `<b>${G.squads[i].name}</b>`;
-  const crown = () => G.sim.map.fields[G.sim.map.fields.length - 1];
-  const own = (type, f) => G.sim.units.filter(u => u.side === ME && u.type === type && u.hp > 0 && (!f || f(u)));
-  // make sure n of a type are parked and ready (training tops you up rather than making you wait)
-  function grant(type, n) {
-    const sim = G.sim, h = sim.hearts[ME];
-    for (let have = DS.parkedCount(sim, ME, type); have < n; have++) DS.spawnUnit(sim, ME, type, h.x, h.y);
-  }
-  // put cobalt drones in the air at a point, flying a route
-  function cobalt(type, n, from, route, opts) {
-    const sim = G.sim, h = sim.hearts[OP];
-    for (let have = DS.parkedCount(sim, OP, type); have < n; have++) DS.spawnUnit(sim, OP, type, h.x, h.y);
-    const so = DS.launch(sim, OP, type, n, route, Object.assign({ stance: 'quiet' }, opts || {}));
-    if (!so) return null;
-    for (const id of so.units) {
-      const u = sim.byId.get(id), to = route[0] || from;
-      u.x = u.px = from.x + (Math.random() - 0.5) * 24; u.y = u.py = from.y + (Math.random() - 0.5) * 24;
-      u.hdg = Math.atan2(to.y - u.y, to.x - u.x);
-    }
-    return so;
-  }
-  const cobaltAlive = (type, ids) => G.sim.units.some(u => u.side === OP && u.type === type && u.hp > 0 && !u.parked && (!ids || ids.includes(u.id)));
-  function ridgeMark() {
-    const sim = G.sim, h = sim.hearts[ME];
-    const ps = sim.map.peaks.filter(p => p.x < DS.W * 0.45).sort((a, b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y));
-    const p = ps[0] || { x: 480, y: 500 };
-    return { x: p.x, y: p.y };
-  }
-  const TSTEPS = [
-    { h: 'Your hive', p: () => `You command the amber hive: your Heart is ${homeAt()} and cobalt is ${cobaltAt()}. In this valley whatever is seen is killed, so the first job is seeing. In training the cobalt hive only does what the lesson needs, and there is no clock.`, next: 'Start' },
-    { h: 'Scout', p: () => `Tap ${sqName(0)}, then tap the marked ridge. Glints are quiet scouts with long sight.`, hi: '#sq-0',
-      enter: d => { d.mark = ridgeMark(); if (!own('glint').length) grant('glint', 1); },
-      mark: d => ({ x: d.mark.x, y: d.mark.y, r: 26, label: 'RIDGE' }),
-      tick: d => { if (!own('glint').length) grant('glint', 1); },
-      check: d => own('glint', u => !u.parked && Math.hypot(u.x - d.mark.x, u.y - d.mark.y) < 45).length > 0,
-      hint: 'Missed it? Tap your Glint on the map to select it, then tap the marked ridge.' },
-    { h: 'Sight', p: () => 'On a ridge a Glint sees 30% further: the dashed ring is its sight. Ridges block sight unless you stand on one. Green dashed patches are <b>canopy</b>: anything under it is hard to see, yours included.', next: 'Next' },
-    { h: 'Contact', p: () => 'A cobalt Glint has come over the ridge. Blue brackets mean your sensors hold it; red means a firing solution. <b>Tap it</b>, then choose <b>Strike</b>.',
-      enter: d => {
-        grant('sting', 4);
-        const g = own('glint', u => !u.parked)[0], m = g ? { x: g.x, y: g.y } : ridgeMark(), h1 = G.sim.hearts[OP];
-        const a = Math.atan2(h1.y - m.y, h1.x - m.x), at = r => ({ x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r });
-        const so = cobalt('glint', 1, at(300), [at(64)]);
-        d.ids = so ? so.units.slice() : [];
-      },
-      mark: d => { const u = G.sim.byId.get(d.ids[0]); return u && u.hp > 0 ? { x: u.x, y: u.y, r: 22, label: 'CONTACT', lock: true } : null; },
-      tick: d => { const u = G.sim.byId.get(d.ids[0]); if (u && u.hp > 0) u.battery = 75; if (!readyOf('sting') && !own('sting', x => !x.parked).length) grant('sting', 2); },
-      check: d => !cobaltAlive('glint', d.ids),
-      hint: 'Tap the blue diamond inside the brackets. A menu offers Strike, Bomb or Intercept.', hintAfter: 12 },
-    { h: 'Build', p: () => '<b>Nectar</b>, top left, pays for everything; Foragers bring it home from the blooms. Tap <b>Stings ×4</b> in the Build tab to queue four more.', hi: '#buy-sting',
-      enter: () => { setTab('build'); G.sim.sides[ME].nectar = Math.max(G.sim.sides[ME].nectar, 120); },
-      check: () => G.sim.sides[ME].queue.some(q => q.type === 'sting' && !q.auto) },
-    { h: 'Auto build', p: () => 'Tapping every build gets busy in a fight. Turn on <b>Auto</b> and the hive keeps two items queued from your plan, rebuilding what you lose.', hi: '#btn-auto',
-      check: () => G.sim.sides[ME].auto },
-    { h: 'Your plan', p: () => 'Tap <b>Plan</b> to see what Auto builds: it works down the list and builds the first row below its target. The round pauses while the plan is open; tap Done when you have had a look.', hi: '#btn-plan',
-      check: d => d.planSeen },
-    { h: 'Strike', p: () => `Cobalt Foragers are working the marked bloom. Tap ${sqName(1)}, then drag a route from your Heart to it. Stings hunt along the route and dive on the first thing they find.`, hi: '#sq-1',
-      enter: d => { grant('sting', 4); d.f = d.field; },
-      mark: d => ({ x: d.f.x, y: d.f.y, r: d.f.r + 12, label: 'COBALT FORAGERS' }),
-      check: d => [...G.sim.sorties.values()].some(so => so.side === ME && so.type === 'sting' && so.route.length && Math.hypot(so.route[so.route.length - 1].x - d.f.x, so.route[so.route.length - 1].y - d.f.y) < 130),
-      hint: 'Press near your Heart and drag to the marked bloom before letting go. A single tap on the bloom works too.' },
-    { h: 'On their way', p: () => 'Stings are spent on impact, so they are cheap to lose. Foragers flare while they harvest, which makes them easy to find. Wait for the hit, or carry on.', next: 'Next',
-      enter: d => { d.k0 = G.sim.sides[ME].kills; },
-      check: d => G.sim.sides[ME].kills > d.k0 || G.now - TR.t > 30 },
-    { h: 'Set a post', p: () => 'A <b>post</b> is a spot the hive keeps staffed. <b>Press and hold</b> on the Crown bloom until a menu opens, choose <b>Post here</b>, then <b>Set post</b>.',
-      enter: () => { grant('glint', 1); grant('warden', 2); grant('relay', 1); },
-      mark: () => ({ x: crown().x, y: crown().y, r: crown().r + 14, label: 'CROWN BLOOM' }),
-      check: () => G.sim.sides[ME].posts.some(p => Math.hypot(p.x - crown().x, p.y - crown().y) < 140),
-      hint: 'Hold your finger or the mouse button still on the Crown for half a second. Or open the Posts tab, tap + Post, then tap the Crown.' },
-    { h: 'Standing orders', p: () => 'The hive keeps the post staffed, relieving the Glint before its battery fades. The Crown is just beyond your Heart\u2019s link, so a <b>Relay</b> flies out first to carry it. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
-      check: () => G.tab === 'posts' },
-    { h: 'Link', p: () => 'New orders reach only drones in <b>link</b>: near your Heart, a Nest, or a Relay that is linked itself. The dashed amber edge shows it whenever you give orders. Beyond it, drones carry on with their last orders. A cobalt <b>Harrier</b> jams drones near it: they can\u2019t report or hear you, and a jammed post gets no relief. Kill Harriers fast.', next: 'Next',
-      enter: d => { d.showLink = true; },
-      mark: () => { const r = own('relay', u => !u.parked)[0]; return r ? { x: r.x, y: r.y, r: 16, label: 'RELAY' } : null; } },
-    { h: 'Raid', p: () => 'A cobalt raid is heading for your Heart. With <b>Guard</b> on, parked Stings launch at drones that come close and the Heart fires its flak. Watch, or send a squad yourself.', hi: '#btn-guard',
-      enter: d => {
-        const sim = G.sim, h = sim.hearts[ME];
-        grant('sting', 8); DS.setGuard(sim, ME, true);
-        // in on a flank, wide of the Crown post so its Wardens leave the raid to the guard
-        const side = h.y < DS.H / 2 ? -1 : 1, from = { x: h.x + 520, y: h.y + side * 330 }, mid = { x: h.x + 300, y: h.y + side * 230 };
-        const so = cobalt('sting', 5, from, [mid, { x: h.x, y: h.y }], { mode: 'raid', target: h.id });
-        d.ids = so ? so.units.slice() : [];
-      },
-      check: d => !cobaltAlive('sting', d.ids) && G.now - TR.t > 4 },
-    { h: 'Hold the Crown', p: () => `In <b>Last Light</b> the Crown scores for whichever hive has more drones on it. It is scoring now and cobalt Stings are moving in: send ${sqName(2)} or ${sqName(1)} to hold it.`,
-      enter: d => {
-        const sim = G.sim, c = crown();
-        sim.cfg.bloomScore = sim.t;
-        grant('sting', 10); grant('decoy', 2);
-        const so = cobalt('sting', 4, { x: c.x + 300, y: c.y - 60 }, [{ x: c.x + 10, y: c.y }], { mode: 'hunt' });
-        d.ids = so ? so.units.slice() : [];
-      },
-      mark: () => ({ x: crown().x, y: crown().y, r: DS.HOLD_R, label: 'HOLD THE CROWN' }),
-      check: () => G.sim.sides[ME].score >= 10,
-      hint: 'Tap a squad, then tap the Crown. The score is the amber number at the top right.', hintAfter: 20 },
-    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, keep your link, and leave the routine to Auto and your posts. A real round adds a rival that adapts, with its own Harriers, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
-      enter: () => { store.set('trained', true); syncTitle(); } },
-  ];
-  function trainStart() {
-    TR.d = {};
-    const sim = G.sim, m = sim.map, cf = m.fields.length - 1;
-    // the cobalt Foragers work the bloom of theirs nearest the centre, away from their Heart's guard
-    let fi = -1, bd = 1e9;
-    m.fields.forEach((f, i) => { if (f.side === OP) { const d = Math.hypot(f.x - m.fields[cf].x, f.y - m.fields[cf].y); if (d < bd) { bd = d; fi = i; } } });
-    for (const u of sim.units) if (u.side === OP && u.type === 'forager') DS.assignForager(sim, u.id, fi);
-    TR.d.field = m.fields[fi];
-    trainGo(0);
-  }
-  function trainGo(i) {
-    const keep = { field: TR.d.field, planSeen: false };
-    TR.i = i; TR.t = G.now; TR.hinted = false; TR.d = keep;
-    const st = TSTEPS[i];
-    if (st && st.enter) st.enter(TR.d);
+  const steps = () => (RUN && RUN.sc.steps) || [];
+  const UIX = {
+    homeAt, cobaltAt, sq: i => `<b>${G.squads[i].name}</b>`, tab: t => setTab(t), tabIs: t => G.tab === t, planSeen: () => TR.planSeen,
+  };
+  const cctx = () => ({ run: RUN, sim: G.sim, S: RUN.S, d: TR.d, ui: UIX, since: G.sim.t - TR.simT });
+  function coachGo(i) {
+    TR.i = i; TR.t = G.now; TR.simT = G.sim.t; TR.hinted = false; TR.d = { showLink: false };
+    const st = steps()[i];
+    if (st && st.enter) st.enter(cctx());
     renderCoach();
   }
   function renderCoach() {
-    const el = $('coach'), st = G.training ? TSTEPS[TR.i] : null;
+    const el = $('coach'), list = steps(), st = RUN && G.mode === 'play' ? list[TR.i] : null;
     if (TR.hiEl) { TR.hiEl.classList.remove('coach-hi'); TR.hiEl = null; }
     app.classList.toggle('coaching', !!st);
     if (!st) app.classList.remove('coach-low');
     el.hidden = !st;
     if (!st) return;
-    setText('coach-n', `Training · ${TR.i + 1} of ${TSTEPS.length}`);
+    setText('coach-n', `${RUN.sc.title} · tip ${TR.i + 1} of ${list.length}`);
     setText('coach-h', st.h);
-    $('coach-p').innerHTML = st.p();
+    $('coach-p').innerHTML = st.p(cctx());
     const hint = $('coach-hint');
     hint.hidden = !TR.hinted || !st.hint;
     hint.textContent = st.hint || '';
-    $('coach-btns').innerHTML = st.final ? '<button class="btn primary" data-act="tr-play">Play a short game</button><button class="btn" data-act="tr-title">Title screen</button>'
-      : st.next ? `<button class="btn primary" data-act="tr-next">${st.next}</button>` : '';
-    $('coach-skip').hidden = !!st.final;
+    $('coach-btns').innerHTML = st.next ? `<button class="btn primary" data-act="tr-next">${st.next}</button>` : '';
     if (st.hi) { TR.hiEl = document.querySelector(st.hi); if (TR.hiEl) TR.hiEl.classList.add('coach-hi'); }
     requestAnimationFrame(placeCoach);
   }
-  // Keep the card off the spot the lesson points at. Work out whether the mark would sit under the card at the top
+  // Keep the card off the spot the tip points at. Work out whether the mark would sit under the card at the top
   // of the map and at its foot, and pick: the top unless only the foot is clear. Deciding from both positions (rather
   // than moving whenever the mark is covered) keeps the card still when the mark is under it in either place.
   function placeCoach() {
@@ -4703,7 +5170,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (el.hidden) return;
     const dockH = $('dock').offsetHeight;
     app.style.setProperty('--dock-h', `${dockH}px`);
-    const st = TSTEPS[TR.i], m = st && st.mark ? st.mark(TR.d) : null;
+    const st = steps()[TR.i], m = st && st.mark ? st.mark(cctx()) : null;
     let low = false;
     if (m) {
       const p = S2(m.x, m.y), h = el.offsetHeight, x0 = el.offsetLeft, x1 = x0 + el.offsetWidth, pad = 24 + (m.r || 0) * scale();
@@ -4714,18 +5181,19 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (app.classList.contains('coach-low') !== low) app.classList.toggle('coach-low', low);
     app.style.setProperty('--coach-b', `${low ? 46 : (VW <= 640 ? 52 : 56) + el.offsetHeight}px`);
   }
-  function trainTick() {
-    if (!G.training || G.mode !== 'play' || G.paused || G.sheet) return;
-    const st = TSTEPS[TR.i];
+  function coachTick() {
+    if (!RUN || G.mode !== 'play' || G.paused || G.sheet) return;
+    const st = steps()[TR.i];
     if (!st) return;
-    if (st.tick) st.tick(TR.d);
-    if (st.check && st.check(TR.d)) { play('chime'); trainGo(TR.i + 1); return; }
-    if (st.hint && !TR.hinted && G.now - TR.t > (st.hintAfter || 15)) { TR.hinted = true; renderCoach(); }
+    const c = cctx();
+    if (st.tick) st.tick(c);
+    if (st.check && st.check(c)) { play('chime'); coachGo(TR.i + 1); return; }
+    if (st.hint && !TR.hinted && c.since > (st.hintAfter || 15)) { TR.hinted = true; renderCoach(); }
   }
   function drawCoachMark() {
-    const st = G.training ? TSTEPS[TR.i] : null;
+    const st = RUN && G.mode === 'play' ? steps()[TR.i] : null;
     if (!st || !st.mark) return;
-    const m = st.mark(TR.d);
+    const m = st.mark(cctx());
     if (!m) return;
     const p = S2(m.x, m.y), r = Math.max(14, m.r * scale()), pulse = 0.5 + 0.5 * Math.sin(G.now * 4);
     ctx.strokeStyle = m.lock ? `rgba(255,94,77,${0.55 + 0.4 * pulse})` : `rgba(255,200,103,${0.5 + 0.45 * pulse})`;
@@ -4736,11 +5204,50 @@ svg.i { width: 1em; height: 1em; flex: none; }
   $('coach').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'coach-skip') { store.set('trained', true); toTitle(); return; }
-    const a = b.dataset.act;
-    if (a === 'tr-next') { play('tick'); trainGo(TR.i + 1); }
-    else if (a === 'tr-play') startRound(false);
-    else if (a === 'tr-title') toTitle();
+    if (b.id === 'coach-skip') { TR.i = steps().length; renderCoach(); return; }
+    if (b.dataset.act === 'tr-next') { play('tick'); coachGo(TR.i + 1); }
+  });
+
+  // the campaign screen: chapters, scenarios, stars, and a briefing before each scenario
+  const starStr = st => [0, 1, 2].map(i => `<i class="${st && st[i] ? 'on' : ''}" aria-hidden="true">★</i>`).join('');
+  const scenTag = id => { const sc = CAMP.SCENARIOS[id]; return `Chapter ${sc.chapter} · Scenario ${sc.n}`; };
+  function openCampaign(briefId) {
+    if (G.mode !== 'title') toTitle();
+    $('ov-title').hidden = true; $('ov-camp').hidden = false;
+    if (briefId) renderBrief(briefId); else renderCampaign();
+  }
+  function closeCampaign() { $('ov-camp').hidden = true; $('ov-title').hidden = false; syncTitle(); }
+  function renderCampaign() {
+    const prog = campProg(), total = CAMP.ORDER.length * 3;
+    setText('camp-k', `Campaign · ${CAMP.starCount(prog)} of ${total} stars`);
+    setText('camp-h', 'The season');
+    $('camp-body').innerHTML = `<p class="camp-lede">Short scenarios, one lesson each. The first chapter teaches the game; the skirmish stays open whenever you want it.</p>` +
+      CAMP.CHAPTERS.map(ch => `<section class="chap"><h3><span>Chapter ${ch.n} · ${ch.title}</span><small>${CAMP.starCount(prog, ch.scenarios)} / ${ch.scenarios.length * 3} ★</small></h3><p>${ch.line}</p><div class="scen-grid">` +
+        ch.scenarios.map(id => {
+          const sc = CAMP.SCENARIOS[id], open = CAMP.isOpen(prog, id), p = prog[id];
+          return `<button class="scen${p && p.won ? ' won' : ''}" data-id="${id}"${open ? '' : ' disabled'}><span class="sn">${ch.n}.${sc.n}</span><b>${sc.title}</b><small>${open ? sc.line : 'Win the one before to open it'}</small><span class="st">${starStr(p && p.stars)}</span></button>`;
+        }).join('') + '</div></section>').join('') +
+      '<p class="camp-more">More chapters are on the way.</p>';
+    $('camp-btns').innerHTML = '<button class="btn" data-act="camp-back">Title screen</button>';
+  }
+  function renderBrief(id) {
+    const sc = CAMP.SCENARIOS[id], p = campProg()[id];
+    setText('camp-k', scenTag(id));
+    setText('camp-h', sc.title);
+    $('camp-body').innerHTML = sc.brief.map(t => `<p>${t}</p>`).join('') +
+      `<p class="camp-goal"><b>Objective:</b> ${sc.goal}${sc.limit && !sc.full ? ` Time: ${CAMP.clock(sc.limit)}.` : ''}</p>` +
+      `<ul class="camp-stars">${['Complete the objective'].concat(sc.stars.map(s => s.text)).map((t, i) => `<li class="${p && p.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</li>`).join('')}</ul>`;
+    $('camp-btns').innerHTML = `<button class="btn primary" data-act="camp-start" data-id="${id}">Start</button><button class="btn" data-act="camp-list">All scenarios</button>`;
+    $('camp-btns').querySelector('.primary').focus({ preventScroll: true });
+  }
+  $('ov-camp').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    play('tick');
+    if (b.dataset.id && b.classList.contains('scen')) renderBrief(b.dataset.id);
+    else if (b.dataset.act === 'camp-start') startRound(b.dataset.id);
+    else if (b.dataset.act === 'camp-list') renderCampaign();
+    else if (b.dataset.act === 'camp-back') closeCampaign();
   });
 
   // ---------- input ----------
@@ -4846,7 +5353,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const tg = e.target && e.target.tagName;
     if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
     if (tg === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
-    if (G.mode === 'title') { if (e.key === 'Enter' && $('lobby').hidden) startRound(false); return; }
+    if (G.mode === 'title') { if (e.key === 'Enter' && $('lobby').hidden && $('ov-camp').hidden) startRound(false); return; }
     if (G.mode !== 'play') return;
     if (G.sheet) { if (e.key === 'Escape') closeSheet(); return; }
     if (e.key === 'Escape') {
@@ -4941,13 +5448,16 @@ svg.i { width: 1em; height: 1em; flex: none; }
   });
   $('btn-newmap').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); syncTitle(); newSim('title'); });
   $('btn-go').addEventListener('click', () => startRound(false));
-  $('btn-train').addEventListener('click', () => startRound(true));
+  $('btn-camp').addEventListener('click', () => openCampaign());
   $('btn-resume').addEventListener('click', resume);
-  $('btn-restart').addEventListener('click', () => startRound(G.training));
-  $('btn-quit').addEventListener('click', () => (NET.live ? leaveGame() : toTitle()));
-  $('btn-again').addEventListener('click', () => startRound(false));
-  $('btn-next').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); startRound(false); });
-  $('btn-title').addEventListener('click', () => (G.wasNet ? leaveGame() : toTitle()));
+  $('btn-restart').addEventListener('click', () => startRound(RUN ? RUN.id : null));
+  $('btn-quit').addEventListener('click', () => (NET.live ? leaveGame() : RUN ? openCampaign() : toTitle()));
+  $('btn-again').addEventListener('click', () => startRound(RUN ? RUN.id : false));
+  $('btn-next').addEventListener('click', () => {
+    if (RUN) { const nx = CAMP.next(RUN.id); if (nx) openCampaign(nx); else openCampaign(); return; }
+    G.seed = randSeed(); store.set('seed', G.seed); startRound(false);
+  });
+  $('btn-title').addEventListener('click', () => (G.wasNet ? leaveGame() : RUN ? openCampaign() : toTitle()));
 
   // ---------- dock tabs ----------
   function setTab(t) {
@@ -4988,7 +5498,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     app.classList.remove('sheet-on');
     G.last = 0; G.ctxKey = ''; G.listKeys = {};
     if (sh.kind === 'squad') G.sqKey = '';
-    if (sh.kind === 'plan' && G.training) TR.d.planSeen = true;
+    if (sh.kind === 'plan' && RUN) TR.planSeen = true;
   }
   function openPlanSheet() { openSheet({ kind: 'plan' }); }
   function openSquadSheet(i) { disarm(); openSheet({ kind: 'squad', i }); }
@@ -5017,7 +5527,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
         <div class="sh-row"><span class="sh-l">Start from</span><div class="chips">${Object.keys(PRESETS).map(n => `<button class="chip" data-act="preset" data-k="${n}">${n}</button>`).join('')}</div></div>
         <p class="sh-note">With Auto on, the hive keeps two items queued: the first row below its target, saving up for it rather than skipping ahead. Units in the air count, so losses are rebuilt. A type can appear twice to build in stages. Posts add what they need above these rows.</p>
         <ol class="plan-rows">${rows || '<li class="empty">No rows. Add a type below or start from a preset.</li>'}</ol>
-        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
+        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.filter(t => DS.canBuild(sim, ME, t)).map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
     } else if (sh.kind === 'squad') {
       const sq = G.squads[sh.i];
       h = `Squad ${sh.i + 1}: ${sq.name}`;
@@ -5281,10 +5791,11 @@ svg.i { width: 1em; height: 1em; flex: none; }
     const h0 = G.rateHist[0], dt = sim.t - h0.t;
     G.rateNow = dt > 2 ? (S0.harvested - h0.h) / dt : 0;
     setText('rate', `+${G.rateNow.toFixed(1)}/s`);
-    setText('clock', G.training ? `${TR.i + 1}/${TSTEPS.length}` : clockStr(C.round - sim.t));
-    setText('phase', G.training ? 'Training' : sim.phases[sim.phase].name);
-    trainTick();
-    if (G.training) placeCoach();
+    const lim = RUN && RUN.sc.limit;
+    setText('clock', RUN && !RUN.sc.full ? clockStr(lim ? lim - sim.t : sim.t) : clockStr((lim || C.round) - sim.t));
+    setText('phase', RUN && !RUN.sc.full ? RUN.prog.text : sim.phases[sim.phase].name);
+    coachTick();
+    if (RUN) { placeCoach(); while (RUN.msgs.length) { const m = RUN.msgs.shift(); toast(m.text, m.kind); } }
     $('clockbox').classList.toggle('late', sim.phase === 3);
     setText('sc0', Math.floor(S0.score)); setText('sc1', Math.floor(sim.sides[OP].score));
     $('hold').className = 'hold' + (sim.t >= C.bloomScore && sim.holder >= 0 ? ' h' + vs(sim.holder) : '');
@@ -5315,7 +5826,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     // your drones going blind
     let jam = null, nj = 0;
     for (const u of sim.units) if (u.side === ME && u.jam && !u.parked && u.hp > 0) { nj++; jam = jam || u; }
-    if (nj && !G.jamWas && !G.training) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
+    if (nj && !G.jamWas) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
     G.jamWas = nj > 0;
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
@@ -5338,42 +5849,57 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
 
   // ---------- modes ----------
-  function newSim(mode, net) {
-    const seed = mode === 'training' ? TRAIN_SEED : net ? net.seed : G.seed;
-    G.sim = mode === 'training' ? DS.createSim({ seed, diff: 'normal', mode: 'training', ai: [] })
-      : net ? DS.createSim({ seed, diff: 'normal', mode: net.round, ai: [] })     // two players: no computer on either side
-      : DS.createSim({ seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1], aiStyle: mode === 'play' && G.style !== 'any' ? { 1: G.style } : null });
+  // mode: 'title' (two computers play behind the title), 'play' (a skirmish, or two players with net), 'camp' (a scenario)
+  function newSim(mode, net, campId) {
+    RUN = null;
+    if (mode === 'camp') { RUN = CAMP.start(campId); G.sim = RUN.sim; }
+    else G.sim = net ? DS.createSim({ seed: net.seed, diff: 'normal', mode: net.round, ai: [] })     // two players: no computer on either side
+      : DS.createSim({ seed: G.seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1], aiStyle: mode === 'play' && G.style !== 'any' ? { 1: G.style } : null });
+    const seed = G.sim.seed;
     G.fx = []; G.trails.clear(); G.acc = 0; G.vis = []; G.visT = -1;
     disarm(); G.pkgSeq = 1; G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; G.again = null; closeMenu();
     G.rateHist = []; G.rateNow = 0; G.endShown = false; G.ctxKey = ''; G.qKey = '-'; G.sqKey = ''; G.listKeys = {};
     if (mode === 'play') { act('setPlan', ME, G.plan); act('setAuto', ME, G.auto); }
-    if (mode === 'training') DS.setPlan(G.sim, ME, G.plan);   // Auto starts off: the lesson turns it on
+    if (mode === 'camp') { DS.setPlan(G.sim, ME, G.plan); DS.setAuto(G.sim, ME, RUN.sc.chapter > 1 && G.auto); }   // chapter 1 teaches Auto
     G.agg = { mine: {}, theirs: {}, t: 0, val: 0 }; G.thr = {}; G.raidT = -99; G.overT = 0; G.warnedLL = false; G.firstNest = true;
     if (G.terrainSeed !== seed) { G.terrain = renderTerrain(G.sim.map); G.terrainSeed = seed; }
   }
-  function hideOverlays() { $('ov-title').hidden = true; $('ov-pause').hidden = true; $('ov-end').hidden = true; app.classList.remove('overlay-on'); }
-  // net = { seed, round, me } for a two-player round; otherwise a round against the computer (or training)
-  function startRound(training, net) {
+  function hideOverlays() { $('ov-title').hidden = true; $('ov-camp').hidden = true; $('ov-pause').hidden = true; $('ov-end').hidden = true; app.classList.remove('overlay-on'); }
+  // Only the build buttons a scenario allows show; the grid closes up around them.
+  function applyKit() {
+    let n = 0;
+    for (const t of DS.BUILD_ORDER) { const ok = DS.canBuild(G.sim, ME, t); $('buy-' + t).hidden = !ok; if (ok) n++; }
+    document.querySelector('.bbtns').style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`;
+  }
+  // campId: a campaign scenario to play; net = { seed, round, me } for a two-player round; otherwise a skirmish
+  function startRound(campId, net) {
     audioInit();
     if (G.sheet) closeSheet();
     if (!net && NET.role) { send({ t: 'bye' }); netReset(); dropJoinParam(); }
     hideOverlays(); closeLobby(); hideRival(); $('ov-net').hidden = true; $('wait').hidden = true;
-    G.mode = 'play'; G.paused = false; G.training = training === true; G.wasNet = !!net;
+    G.mode = 'play'; G.paused = false; G.wasNet = !!net;
     ME = net ? net.me : 0; OP = 1 - ME; cam.flip = ME === 1;
     app.className = 'mode-play';
     $('toasts').innerHTML = '';
-    newSim(G.training ? 'training' : 'play', net);
+    newSim(campId ? 'camp' : 'play', net, campId);
+    applyKit();
     renderSquads(); G.ctxKey = ''; renderCtx();   // fill the dock before measuring it, so the map's orientation is picked right
     cam.z = 1;
     layout();
     G.tipI = 0; G.tipT = G.now; G.tab = 'build'; setTab('build');
-    if (G.training) { banner('Training', 'Learn the hive in about five minutes'); play('chime'); trainStart(); return; }
+    if (RUN) {
+      TR.planSeen = false; TR.i = -1;
+      banner(RUN.sc.title, RUN.sc.goal); play('chime');
+      if (steps().length) coachGo(0); else renderCoach();
+      if (RUN.sc.rival) showRival();
+      return;
+    }
     renderCoach();
     banner('Pollination', G.sim.phases[0].line);
     play('chime');
     if (!net) showRival();
     setTimeout(() => {
-      if (G.mode !== 'play' || G.training) return;
+      if (G.mode !== 'play' || RUN) return;
       const mine = cam.portrait ? 'at the bottom' : 'on the left', theirs = cam.portrait ? 'at the top' : 'on the right';
       toast(net ? `Two players: you are amber, ${mine}. Your friend is cobalt, ${theirs}.` : `Your Heart is amber, ${mine}. Cobalt is ${theirs}.`, 'amber');
     }, 900);
@@ -5405,7 +5931,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     hideRival();
     if (G.sheet) closeSheet();
     hideOverlays(); $('ov-net').hidden = true; $('wait').hidden = true;
-    G.mode = 'title'; G.paused = false; G.training = false; G.wasNet = false;
+    G.mode = 'title'; G.paused = false; G.wasNet = false; $('ov-camp').hidden = true;
     ME = 0; OP = 1; cam.flip = false;
     renderCoach();
     app.className = 'mode-title';
@@ -5422,12 +5948,18 @@ svg.i { width: 1em; height: 1em; flex: none; }
     closeMenu(); hideRival();
     G.paused = true; gest = null; ptrs.clear();
     if (NET.live && fromRival !== true) send({ t: 'pause' });
-    setText('pause-k', fromRival === true ? 'Paused by your rival' : `Paused at ${clockStr(G.sim.cfg.round - G.sim.t)} left`);
-    const ai = G.training ? null : rivalAI(), pr = $('pause-rival');
-    pr.hidden = !ai;
-    if (ai) pr.innerHTML = `<b>Cobalt plays ${ai.st.name}.</b> ${ai.st.line} <b>How to beat it:</b> ${ai.st.beat}`;
+    const lim = RUN && RUN.sc.limit, left = RUN && !RUN.sc.full ? (lim ? lim - G.sim.t : null) : (lim || G.sim.cfg.round) - G.sim.t;
+    setText('pause-k', fromRival === true ? 'Paused by your rival' : left == null ? 'Paused' : `Paused at ${clockStr(left)} left`);
+    const ai = rivalAI(), pr = $('pause-rival');
+    pr.hidden = !ai && !RUN;
+    if (RUN) {
+      const sc = RUN.sc, p = campProg()[RUN.id];
+      pr.innerHTML = `<b>${scenTag(RUN.id)}: ${sc.title}.</b> ${sc.goal} <span class="pr-now">${RUN.prog.text}</span>` +
+        `<span class="camp-stars inline">${['Complete the objective'].concat(sc.stars.map(x => x.text)).map((t, i) => `<span class="${p && p.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</span>`).join('')}</span>` +
+        (ai ? ` <b>Cobalt plays ${ai.st.name}.</b> <b>How to beat it:</b> ${ai.st.beat}` : '');
+    } else if (ai) pr.innerHTML = `<b>Cobalt plays ${ai.st.name}.</b> ${ai.st.line} <b>How to beat it:</b> ${ai.st.beat}`;
+    setText('btn-quit', NET.live ? 'Leave game' : RUN ? 'Campaign' : 'Title screen');
     $('btn-restart').hidden = NET.live;
-    setText('btn-quit', NET.live ? 'Leave game' : 'Title screen');
     $('ov-pause').hidden = false;
     app.classList.add('overlay-on');
     $('btn-resume').focus({ preventScroll: true });
@@ -5442,7 +5974,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
   }
   function syncTitle() {
     setText('mapno', String(G.seed));
-    $('train-hint').hidden = !!store.get('trained', false);
+    $('train-hint').hidden = CAMP.starCount(campProg(), CAMP.CHAPTERS[0].scenarios) > 0 || !!store.get('trained', false);
     for (const b of $('seg-diff').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.d === G.diff));
     for (const b of $('seg-round').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.r === G.round));
     for (const b of $('seg-style').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.s === G.style));
@@ -5477,14 +6009,49 @@ svg.i { width: 1em; height: 1em; flex: none; }
     }
     return lines;
   }
+  // A scenario's end: what happened, the stars, and on to the next one.
+  function showCampEnd() {
+    const sim = G.sim, r = CAMP.settle(RUN) || RUN.result, sc = RUN.sc, a = sim.sides[ME];
+    const prog = CAMP.record(campProg(), RUN); store.set('camp1', prog);
+    const nx = r.won ? CAMP.next(RUN.id) : null, ch = CAMP.chapterOf(RUN.id), chDone = r.won && ch.scenarios.every(id => prog[id] && prog[id].won) && ch.scenarios[ch.scenarios.length - 1] === RUN.id;
+    setText('end-k', `${scenTag(RUN.id)} · ${sc.title}`);
+    const h = $('end-h');
+    h.textContent = r.won ? 'Scenario complete' : 'Not this time';
+    h.className = r.won ? 'win-a' : 'win-c';
+    $('end-p').innerHTML = `<span>${r.text}</span>` +
+      (chDone ? ` <span>Chapter ${ch.n}, ${ch.title}, is complete.${nx ? ` Chapter ${CAMP.chapterOf(nx).n} is open.` : ' That is the campaign so far: more chapters are on the way.'}</span>` : '') +
+      (!r.won ? ' <span>Read the objective again on the pause card, and try once more.</span>' : '');
+    const ce = a.destroyed / Math.max(1, a.lost);
+    const rows = [
+      ['Time', clockStr(sim.t)],
+      ['Cost exchange', `${ce.toFixed(1)} : 1`],
+      ['Destroyed', `${a.kills} · ◆${a.droneDestroyed}`],
+      ['Lost', `${a.losses} · ◆${a.droneLost}`],
+    ];
+    $('end-stats').innerHTML = `<div class="wide stars-row"><dt>Stars</dt><dd><ul class="camp-stars">${['Complete the objective'].concat(sc.stars.map(x => x.text)).map((t, i) => `<li class="${r.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</li>`).join('')}</ul></dd></div>` +
+      rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+    setText('btn-again', r.won ? 'Play it again' : 'Retry');
+    setText('btn-next', 'Next scenario'); $('btn-next').hidden = !nx;
+    setText('btn-title', 'Campaign'); $('btn-again').hidden = false; $('btn-rematch').hidden = true;
+    $('btn-again').classList.toggle('primary', !nx); $('btn-next').classList.toggle('primary', !!nx);
+    const note = $('end-net'); if (note) note.textContent = '';
+    $('ov-end').hidden = false;
+    app.classList.add('overlay-on');
+    play(r.won ? 'win' : 'lose');
+    (nx ? $('btn-next') : $('btn-again')).focus({ preventScroll: true });
+  }
   function showEnd() {
     if (G.endShown || G.mode !== 'play') return;
     G.endShown = true; G.mode = 'end'; hideRival();
+    if (RUN) { renderCoach(); showCampEnd(); return; }
+    setText('btn-again', 'Play this map again'); setText('btn-next', 'New map'); $('btn-next').hidden = false;
+    $('btn-again').classList.add('primary'); $('btn-next').classList.remove('primary');
     const sim = G.sim, a = sim.sides[ME], b = sim.sides[OP], won = sim.winner === ME, lost = sim.winner === OP, C = sim.cfg;
     const recKey = G.wasNet ? `2p-${NET.round}` : `${G.diff}-${G.round}`;
     const rec = store.get('record2', {});
     const r = rec[recKey] || { w: 0, l: 0, d: 0 };
-    if (!G.training) { if (won) r.w++; else if (lost) r.l++; else r.d++; rec[recKey] = r; store.set('record2', rec); }
+    if (won) r.w++; else if (lost) r.l++; else r.d++;
+    rec[recKey] = r; store.set('record2', rec);
     setText('end-k', sim.reason === 'heart' ? `Heart destroyed with ${clockStr(C.round - sim.t)} left` : 'Frost at 0:00');
     const h = $('end-h');
     h.textContent = sim.reason === 'heart' ? (won ? 'Cobalt Heart destroyed' : 'Your Heart has fallen') : won ? 'Amber holds the valley' : lost ? 'Cobalt holds the valley' : 'Stalemate at frost';
@@ -5547,7 +6114,7 @@ svg.i { width: 1em; height: 1em; flex: none; }
     if (now - G.hudT > 0.1) { G.hudT = now; hud(); audioFrame(); }
   }
 
-  if (/debug/.test(location.search)) window.__ds = { G, DS, cam, TR, TSTEPS, NET, hashSim, get ME() { return ME; }, layout, S2, toWorld, computeM, draw, drawFog, computeVis, drawFields, drawUnits, drawLabels };
+  if (/debug/.test(location.search)) window.__ds = { G, DS, cam, TR, CAMP, get RUN() { return RUN; }, NET, hashSim, get ME() { return ME; }, layout, S2, toWorld, computeM, draw, drawFog, computeVis, drawFields, drawUnits, drawLabels };
 
   // ---------- boot ----------
   function boot(data) {

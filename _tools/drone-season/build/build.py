@@ -20,9 +20,9 @@ def read(name):
 
 def fragment():
     out = read('shell.html')
-    for marker, name in (('/*__CSS__*/', 'style.css'), ('/*__SIM__*/', 'sim.js'), ('/*__GAME__*/', 'game.js')):
+    for marker, names in (('/*__CSS__*/', ['style.css']), ('/*__SIM__*/', ['sim.js', 'campaign.js']), ('/*__GAME__*/', ['game.js'])):
         assert out.count(marker) == 1, marker
-        out = out.replace(marker, read(name))
+        out = out.replace(marker, '\n'.join(read(n) for n in names))
     return out
 
 

@@ -1,5 +1,5 @@
 // Rival styles in the browser: picking one on the title screen, the card that names it at the start of a round,
-// the pause card, and the end screen. Needs Playwright and a built page: python3 _tools/drone-season/build/site.py
+// the pause card, and the end screen, and none for a scenario without a style. Needs Playwright and a built page: python3 _tools/drone-season/build/site.py
 const path = require('path');
 const { chromium } = require('playwright');
 (async () => {
@@ -38,8 +38,9 @@ const { chromium } = require('playwright');
     ok(label + ' Any picks one of the four and names it', ['reaper', 'bulwark', 'listener', 'mimic'].includes(st) && new RegExp(st, 'i').test(await page.textContent('#rival-h')), st);
     await tap('#btn-pause'); await page.waitForTimeout(200);
     await tap('#btn-quit'); await page.waitForTimeout(300);
-    await tap('#btn-train'); await page.waitForTimeout(500);
-    ok(label + ' training has no rival card', !(await page.isVisible('#rival')));
+    await page.evaluate(() => localStorage.setItem('ds1.camp1', JSON.stringify({})));
+    await tap('#btn-camp'); await page.waitForTimeout(200); await tap('.scen[data-id="eyes"]'); await tap('[data-act="camp-start"]'); await page.waitForTimeout(500);
+    ok(label + ' a scenario with no rival style has no rival card', !(await page.isVisible('#rival')));
     await ctx.close();
   }
   await browser.close();

@@ -728,7 +728,7 @@
     }
   }
   // Link coverage: the union of your Heart's, Nests' and linked Relays' reach, with only its outer edge drawn.
-  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (G.training && TR.d.showLink));
+  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (!!RUN && TR.d.showLink));
   function drawLinkArea(nodes, s) {
     if (!nodes.length) return;
     ctx.save();
@@ -897,7 +897,7 @@
       if (f.centre) {
         ctx.font = `500 ${9.5 * k}px ${FONT_M}`;
         let sub = '';
-        if (G.training) sub = sim.t < C.bloomScore ? 'open' : sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
+        if (RUN && !RUN.sc.full) sub = !open ? 'closed' : sim.t < C.bloomScore ? 'open' : sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
         else if (!open) sub = `opens at ${clockStr(C.round - C.bloomOpen)}`;
         else if (sim.t < C.bloomScore) sub = `scores from ${clockStr(C.round - C.bloomScore)}`;
         else sub = sim.holder === ME ? 'you hold it' : sim.holder === OP ? 'cobalt holds it' : 'contested';
@@ -1089,7 +1089,7 @@
     drawUnits();
     drawFx();
     if (G.mode === 'play') drawPreview();
-    if (G.training && G.mode === 'play') drawCoachMark();
+    if (RUN && G.mode === 'play') drawCoachMark();
   }
 
   function updateTrails() {
@@ -1112,7 +1112,7 @@
     el.className = 'toast ' + (kind || '');
     el.textContent = text;
     box.prepend(el);
-    while (box.children.length > (VW < 640 ? (G.training ? 2 : 3) : 4)) box.lastChild.remove();
+    while (box.children.length > (VW < 640 ? (RUN ? 2 : 3) : 4)) box.lastChild.remove();
     setTimeout(() => el.classList.add('out'), 3400);
     setTimeout(() => el.remove(), 3900);
   }
@@ -1253,10 +1253,10 @@
         if (e.side === ME) fx('deliver', e.x, e.y, { life: 1.1, n: Math.round(e.n) });
         break;
       case 'phase':
-        if (live) { const p = sim.phases[e.i]; banner(p.name, p.line, e.i === 3); play('chime'); }
+        if (live && !(RUN && !RUN.sc.full)) { const p = sim.phases[e.i]; banner(p.name, p.line, e.i === 3); play('chime'); }
         break;
       case 'bloomOpen':
-        if (live && !G.training) toast(`The Crown bloom is open. It scores from ${clockStr(sim.cfg.round - sim.cfg.bloomScore)}.`, 'bloom');
+        if (live && !(RUN && !RUN.sc.full)) toast(`The Crown bloom is open. It scores from ${clockStr(sim.cfg.round - sim.cfg.bloomScore)}.`, 'bloom');
         break;
       case 'holder':
         if (live) toastOnce('holder', e.side === ME ? 'You hold the Crown.' : e.side === OP ? 'Cobalt holds the Crown.' : 'The Crown is contested.', e.side === ME ? 'amber' : e.side === OP ? 'cobalt' : 'bloom', 3);
@@ -1854,7 +1854,7 @@
   // Auto as the round has it (training starts with it off whatever you saved); the saved setting is for real rounds.
   const autoOn = () => (G.sim && G.mode === 'play' ? G.sim.sides[ME].auto : G.auto);
   function setAuto(on) {
-    if (!G.training) { G.auto = !!on; store.set('auto', G.auto); }
+    if (!RUN) { G.auto = !!on; store.set('auto', G.auto); }
     if (G.sim && G.mode === 'play') act('setAuto', ME, !!on);
     play('tick');
   }
@@ -1948,7 +1948,7 @@
     items.push({ icon: 'sting', label: st ? 'Raid' : 'Strike', sub: readyLine(k, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: k }, g, st ? 'Raid' : 'Strike') });
     if (st || look === 'forager' || look === 'nest' || !look) items.push({ icon: 'raider', label: 'Bomb', sub: readyLine(1, 'raider'), off: !readyOf('raider'), run: () => sendMix({ raider: 1 }, g, 'Bomb run') });
     if (!st) items.push({ icon: 'warden', label: 'Intercept', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Intercept') });
-    openMenu(X, Y, cname(c), items);
+    openMenu(X, Y, cname(c), items.filter(inKit));
   }
   function groundMenu(X, Y) {
     const sim = G.sim, w = toWorld(X, Y), g = { pts: [w], c: null }, S0 = sim.sides[ME];
@@ -1962,148 +1962,46 @@
       { icon: 'relay', label: 'Relay here', sub: DS.inLink(sim, ME, w.x, w.y) ? readyLine(1, 'relay') : 'out of link here', off: !readyOf('relay') || !DS.inLink(sim, ME, w.x, w.y), run: () => sendMix({ relay: 1 }, g, 'Relay') },
       { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
     ];
-    openMenu(X, Y, postName(w.x, w.y), items);
+    openMenu(X, Y, postName(w.x, w.y), items.filter(inKit));
   }
+  // a scenario that limits what you build also trims the quick menus to what you have or can make
+  const inKit = it => it.icon === 'post' || DS.canBuild(G.sim, ME, it.icon) || readyOf(it.icon) > 0;
 
-  // ---------- training: a guided round on a fixed map with no rival commander ----------
-  const TRAIN_SEED = 7729;
-  const TR = { i: -1, t: 0, hinted: false, d: {}, hiEl: null };
+  // ---------- campaign: scenarios, and the coach that gives a scenario's tips ----------
+  const CAMP = window.CAMP;
+  let RUN = null;                        // the campaign scenario being played, if any
+  const campProg = () => store.get('camp1', {});
+  const TR = { i: -1, t: 0, simT: 0, hinted: false, d: {}, hiEl: null, planSeen: false };
   const homeAt = () => (cam.portrait ? 'at the bottom' : 'on the left'), cobaltAt = () => (cam.portrait ? 'at the top' : 'on the right');
-  const sqName = i => `<b>${G.squads[i].name}</b>`;
-  const crown = () => G.sim.map.fields[G.sim.map.fields.length - 1];
-  const own = (type, f) => G.sim.units.filter(u => u.side === ME && u.type === type && u.hp > 0 && (!f || f(u)));
-  // make sure n of a type are parked and ready (training tops you up rather than making you wait)
-  function grant(type, n) {
-    const sim = G.sim, h = sim.hearts[ME];
-    for (let have = DS.parkedCount(sim, ME, type); have < n; have++) DS.spawnUnit(sim, ME, type, h.x, h.y);
-  }
-  // put cobalt drones in the air at a point, flying a route
-  function cobalt(type, n, from, route, opts) {
-    const sim = G.sim, h = sim.hearts[OP];
-    for (let have = DS.parkedCount(sim, OP, type); have < n; have++) DS.spawnUnit(sim, OP, type, h.x, h.y);
-    const so = DS.launch(sim, OP, type, n, route, Object.assign({ stance: 'quiet' }, opts || {}));
-    if (!so) return null;
-    for (const id of so.units) {
-      const u = sim.byId.get(id), to = route[0] || from;
-      u.x = u.px = from.x + (Math.random() - 0.5) * 24; u.y = u.py = from.y + (Math.random() - 0.5) * 24;
-      u.hdg = Math.atan2(to.y - u.y, to.x - u.x);
-    }
-    return so;
-  }
-  const cobaltAlive = (type, ids) => G.sim.units.some(u => u.side === OP && u.type === type && u.hp > 0 && !u.parked && (!ids || ids.includes(u.id)));
-  function ridgeMark() {
-    const sim = G.sim, h = sim.hearts[ME];
-    const ps = sim.map.peaks.filter(p => p.x < DS.W * 0.45).sort((a, b) => Math.hypot(a.x - h.x, a.y - h.y) - Math.hypot(b.x - h.x, b.y - h.y));
-    const p = ps[0] || { x: 480, y: 500 };
-    return { x: p.x, y: p.y };
-  }
-  const TSTEPS = [
-    { h: 'Your hive', p: () => `You command the amber hive: your Heart is ${homeAt()} and cobalt is ${cobaltAt()}. In this valley whatever is seen is killed, so the first job is seeing. In training the cobalt hive only does what the lesson needs, and there is no clock.`, next: 'Start' },
-    { h: 'Scout', p: () => `Tap ${sqName(0)}, then tap the marked ridge. Glints are quiet scouts with long sight.`, hi: '#sq-0',
-      enter: d => { d.mark = ridgeMark(); if (!own('glint').length) grant('glint', 1); },
-      mark: d => ({ x: d.mark.x, y: d.mark.y, r: 26, label: 'RIDGE' }),
-      tick: d => { if (!own('glint').length) grant('glint', 1); },
-      check: d => own('glint', u => !u.parked && Math.hypot(u.x - d.mark.x, u.y - d.mark.y) < 45).length > 0,
-      hint: 'Missed it? Tap your Glint on the map to select it, then tap the marked ridge.' },
-    { h: 'Sight', p: () => 'On a ridge a Glint sees 30% further: the dashed ring is its sight. Ridges block sight unless you stand on one. Green dashed patches are <b>canopy</b>: anything under it is hard to see, yours included.', next: 'Next' },
-    { h: 'Contact', p: () => 'A cobalt Glint has come over the ridge. Blue brackets mean your sensors hold it; red means a firing solution. <b>Tap it</b>, then choose <b>Strike</b>.',
-      enter: d => {
-        grant('sting', 4);
-        const g = own('glint', u => !u.parked)[0], m = g ? { x: g.x, y: g.y } : ridgeMark(), h1 = G.sim.hearts[OP];
-        const a = Math.atan2(h1.y - m.y, h1.x - m.x), at = r => ({ x: m.x + Math.cos(a) * r, y: m.y + Math.sin(a) * r });
-        const so = cobalt('glint', 1, at(300), [at(64)]);
-        d.ids = so ? so.units.slice() : [];
-      },
-      mark: d => { const u = G.sim.byId.get(d.ids[0]); return u && u.hp > 0 ? { x: u.x, y: u.y, r: 22, label: 'CONTACT', lock: true } : null; },
-      tick: d => { const u = G.sim.byId.get(d.ids[0]); if (u && u.hp > 0) u.battery = 75; if (!readyOf('sting') && !own('sting', x => !x.parked).length) grant('sting', 2); },
-      check: d => !cobaltAlive('glint', d.ids),
-      hint: 'Tap the blue diamond inside the brackets. A menu offers Strike, Bomb or Intercept.', hintAfter: 12 },
-    { h: 'Build', p: () => '<b>Nectar</b>, top left, pays for everything; Foragers bring it home from the blooms. Tap <b>Stings ×4</b> in the Build tab to queue four more.', hi: '#buy-sting',
-      enter: () => { setTab('build'); G.sim.sides[ME].nectar = Math.max(G.sim.sides[ME].nectar, 120); },
-      check: () => G.sim.sides[ME].queue.some(q => q.type === 'sting' && !q.auto) },
-    { h: 'Auto build', p: () => 'Tapping every build gets busy in a fight. Turn on <b>Auto</b> and the hive keeps two items queued from your plan, rebuilding what you lose.', hi: '#btn-auto',
-      check: () => G.sim.sides[ME].auto },
-    { h: 'Your plan', p: () => 'Tap <b>Plan</b> to see what Auto builds: it works down the list and builds the first row below its target. The round pauses while the plan is open; tap Done when you have had a look.', hi: '#btn-plan',
-      check: d => d.planSeen },
-    { h: 'Strike', p: () => `Cobalt Foragers are working the marked bloom. Tap ${sqName(1)}, then drag a route from your Heart to it. Stings hunt along the route and dive on the first thing they find.`, hi: '#sq-1',
-      enter: d => { grant('sting', 4); d.f = d.field; },
-      mark: d => ({ x: d.f.x, y: d.f.y, r: d.f.r + 12, label: 'COBALT FORAGERS' }),
-      check: d => [...G.sim.sorties.values()].some(so => so.side === ME && so.type === 'sting' && so.route.length && Math.hypot(so.route[so.route.length - 1].x - d.f.x, so.route[so.route.length - 1].y - d.f.y) < 130),
-      hint: 'Press near your Heart and drag to the marked bloom before letting go. A single tap on the bloom works too.' },
-    { h: 'On their way', p: () => 'Stings are spent on impact, so they are cheap to lose. Foragers flare while they harvest, which makes them easy to find. Wait for the hit, or carry on.', next: 'Next',
-      enter: d => { d.k0 = G.sim.sides[ME].kills; },
-      check: d => G.sim.sides[ME].kills > d.k0 || G.now - TR.t > 30 },
-    { h: 'Set a post', p: () => 'A <b>post</b> is a spot the hive keeps staffed. <b>Press and hold</b> on the Crown bloom until a menu opens, choose <b>Post here</b>, then <b>Set post</b>.',
-      enter: () => { grant('glint', 1); grant('warden', 2); grant('relay', 1); },
-      mark: () => ({ x: crown().x, y: crown().y, r: crown().r + 14, label: 'CROWN BLOOM' }),
-      check: () => G.sim.sides[ME].posts.some(p => Math.hypot(p.x - crown().x, p.y - crown().y) < 140),
-      hint: 'Hold your finger or the mouse button still on the Crown for half a second. Or open the Posts tab, tap + Post, then tap the Crown.' },
-    { h: 'Standing orders', p: () => 'The hive keeps the post staffed, relieving the Glint before its battery fades. The Crown is just beyond your Heart\u2019s link, so a <b>Relay</b> flies out first to carry it. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
-      check: () => G.tab === 'posts' },
-    { h: 'Link', p: () => 'New orders reach only drones in <b>link</b>: near your Heart, a Nest, or a Relay that is linked itself. The dashed amber edge shows it whenever you give orders. Beyond it, drones carry on with their last orders. A cobalt <b>Harrier</b> jams drones near it: they can\u2019t report or hear you, and a jammed post gets no relief. Kill Harriers fast.', next: 'Next',
-      enter: d => { d.showLink = true; },
-      mark: () => { const r = own('relay', u => !u.parked)[0]; return r ? { x: r.x, y: r.y, r: 16, label: 'RELAY' } : null; } },
-    { h: 'Raid', p: () => 'A cobalt raid is heading for your Heart. With <b>Guard</b> on, parked Stings launch at drones that come close and the Heart fires its flak. Watch, or send a squad yourself.', hi: '#btn-guard',
-      enter: d => {
-        const sim = G.sim, h = sim.hearts[ME];
-        grant('sting', 8); DS.setGuard(sim, ME, true);
-        // in on a flank, wide of the Crown post so its Wardens leave the raid to the guard
-        const side = h.y < DS.H / 2 ? -1 : 1, from = { x: h.x + 520, y: h.y + side * 330 }, mid = { x: h.x + 300, y: h.y + side * 230 };
-        const so = cobalt('sting', 5, from, [mid, { x: h.x, y: h.y }], { mode: 'raid', target: h.id });
-        d.ids = so ? so.units.slice() : [];
-      },
-      check: d => !cobaltAlive('sting', d.ids) && G.now - TR.t > 4 },
-    { h: 'Hold the Crown', p: () => `In <b>Last Light</b> the Crown scores for whichever hive has more drones on it. It is scoring now and cobalt Stings are moving in: send ${sqName(2)} or ${sqName(1)} to hold it.`,
-      enter: d => {
-        const sim = G.sim, c = crown();
-        sim.cfg.bloomScore = sim.t;
-        grant('sting', 10); grant('decoy', 2);
-        const so = cobalt('sting', 4, { x: c.x + 300, y: c.y - 60 }, [{ x: c.x + 10, y: c.y }], { mode: 'hunt' });
-        d.ids = so ? so.units.slice() : [];
-      },
-      mark: () => ({ x: crown().x, y: crown().y, r: DS.HOLD_R, label: 'HOLD THE CROWN' }),
-      check: () => G.sim.sides[ME].score >= 10,
-      hint: 'Tap a squad, then tap the Crown. The score is the amber number at the top right.', hintAfter: 20 },
-    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, keep your link, and leave the routine to Auto and your posts. A real round adds a rival that adapts, with its own Harriers, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
-      enter: () => { store.set('trained', true); syncTitle(); } },
-  ];
-  function trainStart() {
-    TR.d = {};
-    const sim = G.sim, m = sim.map, cf = m.fields.length - 1;
-    // the cobalt Foragers work the bloom of theirs nearest the centre, away from their Heart's guard
-    let fi = -1, bd = 1e9;
-    m.fields.forEach((f, i) => { if (f.side === OP) { const d = Math.hypot(f.x - m.fields[cf].x, f.y - m.fields[cf].y); if (d < bd) { bd = d; fi = i; } } });
-    for (const u of sim.units) if (u.side === OP && u.type === 'forager') DS.assignForager(sim, u.id, fi);
-    TR.d.field = m.fields[fi];
-    trainGo(0);
-  }
-  function trainGo(i) {
-    const keep = { field: TR.d.field, planSeen: false };
-    TR.i = i; TR.t = G.now; TR.hinted = false; TR.d = keep;
-    const st = TSTEPS[i];
-    if (st && st.enter) st.enter(TR.d);
+  const steps = () => (RUN && RUN.sc.steps) || [];
+  const UIX = {
+    homeAt, cobaltAt, sq: i => `<b>${G.squads[i].name}</b>`, tab: t => setTab(t), tabIs: t => G.tab === t, planSeen: () => TR.planSeen,
+  };
+  const cctx = () => ({ run: RUN, sim: G.sim, S: RUN.S, d: TR.d, ui: UIX, since: G.sim.t - TR.simT });
+  function coachGo(i) {
+    TR.i = i; TR.t = G.now; TR.simT = G.sim.t; TR.hinted = false; TR.d = { showLink: false };
+    const st = steps()[i];
+    if (st && st.enter) st.enter(cctx());
     renderCoach();
   }
   function renderCoach() {
-    const el = $('coach'), st = G.training ? TSTEPS[TR.i] : null;
+    const el = $('coach'), list = steps(), st = RUN && G.mode === 'play' ? list[TR.i] : null;
     if (TR.hiEl) { TR.hiEl.classList.remove('coach-hi'); TR.hiEl = null; }
     app.classList.toggle('coaching', !!st);
     if (!st) app.classList.remove('coach-low');
     el.hidden = !st;
     if (!st) return;
-    setText('coach-n', `Training · ${TR.i + 1} of ${TSTEPS.length}`);
+    setText('coach-n', `${RUN.sc.title} · tip ${TR.i + 1} of ${list.length}`);
     setText('coach-h', st.h);
-    $('coach-p').innerHTML = st.p();
+    $('coach-p').innerHTML = st.p(cctx());
     const hint = $('coach-hint');
     hint.hidden = !TR.hinted || !st.hint;
     hint.textContent = st.hint || '';
-    $('coach-btns').innerHTML = st.final ? '<button class="btn primary" data-act="tr-play">Play a short game</button><button class="btn" data-act="tr-title">Title screen</button>'
-      : st.next ? `<button class="btn primary" data-act="tr-next">${st.next}</button>` : '';
-    $('coach-skip').hidden = !!st.final;
+    $('coach-btns').innerHTML = st.next ? `<button class="btn primary" data-act="tr-next">${st.next}</button>` : '';
     if (st.hi) { TR.hiEl = document.querySelector(st.hi); if (TR.hiEl) TR.hiEl.classList.add('coach-hi'); }
     requestAnimationFrame(placeCoach);
   }
-  // Keep the card off the spot the lesson points at. Work out whether the mark would sit under the card at the top
+  // Keep the card off the spot the tip points at. Work out whether the mark would sit under the card at the top
   // of the map and at its foot, and pick: the top unless only the foot is clear. Deciding from both positions (rather
   // than moving whenever the mark is covered) keeps the card still when the mark is under it in either place.
   function placeCoach() {
@@ -2111,7 +2009,7 @@
     if (el.hidden) return;
     const dockH = $('dock').offsetHeight;
     app.style.setProperty('--dock-h', `${dockH}px`);
-    const st = TSTEPS[TR.i], m = st && st.mark ? st.mark(TR.d) : null;
+    const st = steps()[TR.i], m = st && st.mark ? st.mark(cctx()) : null;
     let low = false;
     if (m) {
       const p = S2(m.x, m.y), h = el.offsetHeight, x0 = el.offsetLeft, x1 = x0 + el.offsetWidth, pad = 24 + (m.r || 0) * scale();
@@ -2122,18 +2020,19 @@
     if (app.classList.contains('coach-low') !== low) app.classList.toggle('coach-low', low);
     app.style.setProperty('--coach-b', `${low ? 46 : (VW <= 640 ? 52 : 56) + el.offsetHeight}px`);
   }
-  function trainTick() {
-    if (!G.training || G.mode !== 'play' || G.paused || G.sheet) return;
-    const st = TSTEPS[TR.i];
+  function coachTick() {
+    if (!RUN || G.mode !== 'play' || G.paused || G.sheet) return;
+    const st = steps()[TR.i];
     if (!st) return;
-    if (st.tick) st.tick(TR.d);
-    if (st.check && st.check(TR.d)) { play('chime'); trainGo(TR.i + 1); return; }
-    if (st.hint && !TR.hinted && G.now - TR.t > (st.hintAfter || 15)) { TR.hinted = true; renderCoach(); }
+    const c = cctx();
+    if (st.tick) st.tick(c);
+    if (st.check && st.check(c)) { play('chime'); coachGo(TR.i + 1); return; }
+    if (st.hint && !TR.hinted && c.since > (st.hintAfter || 15)) { TR.hinted = true; renderCoach(); }
   }
   function drawCoachMark() {
-    const st = G.training ? TSTEPS[TR.i] : null;
+    const st = RUN && G.mode === 'play' ? steps()[TR.i] : null;
     if (!st || !st.mark) return;
-    const m = st.mark(TR.d);
+    const m = st.mark(cctx());
     if (!m) return;
     const p = S2(m.x, m.y), r = Math.max(14, m.r * scale()), pulse = 0.5 + 0.5 * Math.sin(G.now * 4);
     ctx.strokeStyle = m.lock ? `rgba(255,94,77,${0.55 + 0.4 * pulse})` : `rgba(255,200,103,${0.5 + 0.45 * pulse})`;
@@ -2144,11 +2043,50 @@
   $('coach').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'coach-skip') { store.set('trained', true); toTitle(); return; }
-    const a = b.dataset.act;
-    if (a === 'tr-next') { play('tick'); trainGo(TR.i + 1); }
-    else if (a === 'tr-play') startRound(false);
-    else if (a === 'tr-title') toTitle();
+    if (b.id === 'coach-skip') { TR.i = steps().length; renderCoach(); return; }
+    if (b.dataset.act === 'tr-next') { play('tick'); coachGo(TR.i + 1); }
+  });
+
+  // the campaign screen: chapters, scenarios, stars, and a briefing before each scenario
+  const starStr = st => [0, 1, 2].map(i => `<i class="${st && st[i] ? 'on' : ''}" aria-hidden="true">★</i>`).join('');
+  const scenTag = id => { const sc = CAMP.SCENARIOS[id]; return `Chapter ${sc.chapter} · Scenario ${sc.n}`; };
+  function openCampaign(briefId) {
+    if (G.mode !== 'title') toTitle();
+    $('ov-title').hidden = true; $('ov-camp').hidden = false;
+    if (briefId) renderBrief(briefId); else renderCampaign();
+  }
+  function closeCampaign() { $('ov-camp').hidden = true; $('ov-title').hidden = false; syncTitle(); }
+  function renderCampaign() {
+    const prog = campProg(), total = CAMP.ORDER.length * 3;
+    setText('camp-k', `Campaign · ${CAMP.starCount(prog)} of ${total} stars`);
+    setText('camp-h', 'The season');
+    $('camp-body').innerHTML = `<p class="camp-lede">Short scenarios, one lesson each. The first chapter teaches the game; the skirmish stays open whenever you want it.</p>` +
+      CAMP.CHAPTERS.map(ch => `<section class="chap"><h3><span>Chapter ${ch.n} · ${ch.title}</span><small>${CAMP.starCount(prog, ch.scenarios)} / ${ch.scenarios.length * 3} ★</small></h3><p>${ch.line}</p><div class="scen-grid">` +
+        ch.scenarios.map(id => {
+          const sc = CAMP.SCENARIOS[id], open = CAMP.isOpen(prog, id), p = prog[id];
+          return `<button class="scen${p && p.won ? ' won' : ''}" data-id="${id}"${open ? '' : ' disabled'}><span class="sn">${ch.n}.${sc.n}</span><b>${sc.title}</b><small>${open ? sc.line : 'Win the one before to open it'}</small><span class="st">${starStr(p && p.stars)}</span></button>`;
+        }).join('') + '</div></section>').join('') +
+      '<p class="camp-more">More chapters are on the way.</p>';
+    $('camp-btns').innerHTML = '<button class="btn" data-act="camp-back">Title screen</button>';
+  }
+  function renderBrief(id) {
+    const sc = CAMP.SCENARIOS[id], p = campProg()[id];
+    setText('camp-k', scenTag(id));
+    setText('camp-h', sc.title);
+    $('camp-body').innerHTML = sc.brief.map(t => `<p>${t}</p>`).join('') +
+      `<p class="camp-goal"><b>Objective:</b> ${sc.goal}${sc.limit && !sc.full ? ` Time: ${CAMP.clock(sc.limit)}.` : ''}</p>` +
+      `<ul class="camp-stars">${['Complete the objective'].concat(sc.stars.map(s => s.text)).map((t, i) => `<li class="${p && p.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</li>`).join('')}</ul>`;
+    $('camp-btns').innerHTML = `<button class="btn primary" data-act="camp-start" data-id="${id}">Start</button><button class="btn" data-act="camp-list">All scenarios</button>`;
+    $('camp-btns').querySelector('.primary').focus({ preventScroll: true });
+  }
+  $('ov-camp').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    play('tick');
+    if (b.dataset.id && b.classList.contains('scen')) renderBrief(b.dataset.id);
+    else if (b.dataset.act === 'camp-start') startRound(b.dataset.id);
+    else if (b.dataset.act === 'camp-list') renderCampaign();
+    else if (b.dataset.act === 'camp-back') closeCampaign();
   });
 
   // ---------- input ----------
@@ -2254,7 +2192,7 @@
     const tg = e.target && e.target.tagName;
     if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
     if (tg === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
-    if (G.mode === 'title') { if (e.key === 'Enter' && $('lobby').hidden) startRound(false); return; }
+    if (G.mode === 'title') { if (e.key === 'Enter' && $('lobby').hidden && $('ov-camp').hidden) startRound(false); return; }
     if (G.mode !== 'play') return;
     if (G.sheet) { if (e.key === 'Escape') closeSheet(); return; }
     if (e.key === 'Escape') {
@@ -2349,13 +2287,16 @@
   });
   $('btn-newmap').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); syncTitle(); newSim('title'); });
   $('btn-go').addEventListener('click', () => startRound(false));
-  $('btn-train').addEventListener('click', () => startRound(true));
+  $('btn-camp').addEventListener('click', () => openCampaign());
   $('btn-resume').addEventListener('click', resume);
-  $('btn-restart').addEventListener('click', () => startRound(G.training));
-  $('btn-quit').addEventListener('click', () => (NET.live ? leaveGame() : toTitle()));
-  $('btn-again').addEventListener('click', () => startRound(false));
-  $('btn-next').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); startRound(false); });
-  $('btn-title').addEventListener('click', () => (G.wasNet ? leaveGame() : toTitle()));
+  $('btn-restart').addEventListener('click', () => startRound(RUN ? RUN.id : null));
+  $('btn-quit').addEventListener('click', () => (NET.live ? leaveGame() : RUN ? openCampaign() : toTitle()));
+  $('btn-again').addEventListener('click', () => startRound(RUN ? RUN.id : false));
+  $('btn-next').addEventListener('click', () => {
+    if (RUN) { const nx = CAMP.next(RUN.id); if (nx) openCampaign(nx); else openCampaign(); return; }
+    G.seed = randSeed(); store.set('seed', G.seed); startRound(false);
+  });
+  $('btn-title').addEventListener('click', () => (G.wasNet ? leaveGame() : RUN ? openCampaign() : toTitle()));
 
   // ---------- dock tabs ----------
   function setTab(t) {
@@ -2396,7 +2337,7 @@
     app.classList.remove('sheet-on');
     G.last = 0; G.ctxKey = ''; G.listKeys = {};
     if (sh.kind === 'squad') G.sqKey = '';
-    if (sh.kind === 'plan' && G.training) TR.d.planSeen = true;
+    if (sh.kind === 'plan' && RUN) TR.planSeen = true;
   }
   function openPlanSheet() { openSheet({ kind: 'plan' }); }
   function openSquadSheet(i) { disarm(); openSheet({ kind: 'squad', i }); }
@@ -2425,7 +2366,7 @@
         <div class="sh-row"><span class="sh-l">Start from</span><div class="chips">${Object.keys(PRESETS).map(n => `<button class="chip" data-act="preset" data-k="${n}">${n}</button>`).join('')}</div></div>
         <p class="sh-note">With Auto on, the hive keeps two items queued: the first row below its target, saving up for it rather than skipping ahead. Units in the air count, so losses are rebuilt. A type can appear twice to build in stages. Posts add what they need above these rows.</p>
         <ol class="plan-rows">${rows || '<li class="empty">No rows. Add a type below or start from a preset.</li>'}</ol>
-        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
+        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.filter(t => DS.canBuild(sim, ME, t)).map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
     } else if (sh.kind === 'squad') {
       const sq = G.squads[sh.i];
       h = `Squad ${sh.i + 1}: ${sq.name}`;
@@ -2689,10 +2630,11 @@
     const h0 = G.rateHist[0], dt = sim.t - h0.t;
     G.rateNow = dt > 2 ? (S0.harvested - h0.h) / dt : 0;
     setText('rate', `+${G.rateNow.toFixed(1)}/s`);
-    setText('clock', G.training ? `${TR.i + 1}/${TSTEPS.length}` : clockStr(C.round - sim.t));
-    setText('phase', G.training ? 'Training' : sim.phases[sim.phase].name);
-    trainTick();
-    if (G.training) placeCoach();
+    const lim = RUN && RUN.sc.limit;
+    setText('clock', RUN && !RUN.sc.full ? clockStr(lim ? lim - sim.t : sim.t) : clockStr((lim || C.round) - sim.t));
+    setText('phase', RUN && !RUN.sc.full ? RUN.prog.text : sim.phases[sim.phase].name);
+    coachTick();
+    if (RUN) { placeCoach(); while (RUN.msgs.length) { const m = RUN.msgs.shift(); toast(m.text, m.kind); } }
     $('clockbox').classList.toggle('late', sim.phase === 3);
     setText('sc0', Math.floor(S0.score)); setText('sc1', Math.floor(sim.sides[OP].score));
     $('hold').className = 'hold' + (sim.t >= C.bloomScore && sim.holder >= 0 ? ' h' + vs(sim.holder) : '');
@@ -2723,7 +2665,7 @@
     // your drones going blind
     let jam = null, nj = 0;
     for (const u of sim.units) if (u.side === ME && u.jam && !u.parked && u.hp > 0) { nj++; jam = jam || u; }
-    if (nj && !G.jamWas && !G.training) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
+    if (nj && !G.jamWas) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
     G.jamWas = nj > 0;
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
@@ -2746,42 +2688,57 @@
   }
 
   // ---------- modes ----------
-  function newSim(mode, net) {
-    const seed = mode === 'training' ? TRAIN_SEED : net ? net.seed : G.seed;
-    G.sim = mode === 'training' ? DS.createSim({ seed, diff: 'normal', mode: 'training', ai: [] })
-      : net ? DS.createSim({ seed, diff: 'normal', mode: net.round, ai: [] })     // two players: no computer on either side
-      : DS.createSim({ seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1], aiStyle: mode === 'play' && G.style !== 'any' ? { 1: G.style } : null });
+  // mode: 'title' (two computers play behind the title), 'play' (a skirmish, or two players with net), 'camp' (a scenario)
+  function newSim(mode, net, campId) {
+    RUN = null;
+    if (mode === 'camp') { RUN = CAMP.start(campId); G.sim = RUN.sim; }
+    else G.sim = net ? DS.createSim({ seed: net.seed, diff: 'normal', mode: net.round, ai: [] })     // two players: no computer on either side
+      : DS.createSim({ seed: G.seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1], aiStyle: mode === 'play' && G.style !== 'any' ? { 1: G.style } : null });
+    const seed = G.sim.seed;
     G.fx = []; G.trails.clear(); G.acc = 0; G.vis = []; G.visT = -1;
     disarm(); G.pkgSeq = 1; G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; G.again = null; closeMenu();
     G.rateHist = []; G.rateNow = 0; G.endShown = false; G.ctxKey = ''; G.qKey = '-'; G.sqKey = ''; G.listKeys = {};
     if (mode === 'play') { act('setPlan', ME, G.plan); act('setAuto', ME, G.auto); }
-    if (mode === 'training') DS.setPlan(G.sim, ME, G.plan);   // Auto starts off: the lesson turns it on
+    if (mode === 'camp') { DS.setPlan(G.sim, ME, G.plan); DS.setAuto(G.sim, ME, RUN.sc.chapter > 1 && G.auto); }   // chapter 1 teaches Auto
     G.agg = { mine: {}, theirs: {}, t: 0, val: 0 }; G.thr = {}; G.raidT = -99; G.overT = 0; G.warnedLL = false; G.firstNest = true;
     if (G.terrainSeed !== seed) { G.terrain = renderTerrain(G.sim.map); G.terrainSeed = seed; }
   }
-  function hideOverlays() { $('ov-title').hidden = true; $('ov-pause').hidden = true; $('ov-end').hidden = true; app.classList.remove('overlay-on'); }
-  // net = { seed, round, me } for a two-player round; otherwise a round against the computer (or training)
-  function startRound(training, net) {
+  function hideOverlays() { $('ov-title').hidden = true; $('ov-camp').hidden = true; $('ov-pause').hidden = true; $('ov-end').hidden = true; app.classList.remove('overlay-on'); }
+  // Only the build buttons a scenario allows show; the grid closes up around them.
+  function applyKit() {
+    let n = 0;
+    for (const t of DS.BUILD_ORDER) { const ok = DS.canBuild(G.sim, ME, t); $('buy-' + t).hidden = !ok; if (ok) n++; }
+    document.querySelector('.bbtns').style.gridTemplateColumns = `repeat(${n}, minmax(0, 1fr))`;
+  }
+  // campId: a campaign scenario to play; net = { seed, round, me } for a two-player round; otherwise a skirmish
+  function startRound(campId, net) {
     audioInit();
     if (G.sheet) closeSheet();
     if (!net && NET.role) { send({ t: 'bye' }); netReset(); dropJoinParam(); }
     hideOverlays(); closeLobby(); hideRival(); $('ov-net').hidden = true; $('wait').hidden = true;
-    G.mode = 'play'; G.paused = false; G.training = training === true; G.wasNet = !!net;
+    G.mode = 'play'; G.paused = false; G.wasNet = !!net;
     ME = net ? net.me : 0; OP = 1 - ME; cam.flip = ME === 1;
     app.className = 'mode-play';
     $('toasts').innerHTML = '';
-    newSim(G.training ? 'training' : 'play', net);
+    newSim(campId ? 'camp' : 'play', net, campId);
+    applyKit();
     renderSquads(); G.ctxKey = ''; renderCtx();   // fill the dock before measuring it, so the map's orientation is picked right
     cam.z = 1;
     layout();
     G.tipI = 0; G.tipT = G.now; G.tab = 'build'; setTab('build');
-    if (G.training) { banner('Training', 'Learn the hive in about five minutes'); play('chime'); trainStart(); return; }
+    if (RUN) {
+      TR.planSeen = false; TR.i = -1;
+      banner(RUN.sc.title, RUN.sc.goal); play('chime');
+      if (steps().length) coachGo(0); else renderCoach();
+      if (RUN.sc.rival) showRival();
+      return;
+    }
     renderCoach();
     banner('Pollination', G.sim.phases[0].line);
     play('chime');
     if (!net) showRival();
     setTimeout(() => {
-      if (G.mode !== 'play' || G.training) return;
+      if (G.mode !== 'play' || RUN) return;
       const mine = cam.portrait ? 'at the bottom' : 'on the left', theirs = cam.portrait ? 'at the top' : 'on the right';
       toast(net ? `Two players: you are amber, ${mine}. Your friend is cobalt, ${theirs}.` : `Your Heart is amber, ${mine}. Cobalt is ${theirs}.`, 'amber');
     }, 900);
@@ -2813,7 +2770,7 @@
     hideRival();
     if (G.sheet) closeSheet();
     hideOverlays(); $('ov-net').hidden = true; $('wait').hidden = true;
-    G.mode = 'title'; G.paused = false; G.training = false; G.wasNet = false;
+    G.mode = 'title'; G.paused = false; G.wasNet = false; $('ov-camp').hidden = true;
     ME = 0; OP = 1; cam.flip = false;
     renderCoach();
     app.className = 'mode-title';
@@ -2830,12 +2787,18 @@
     closeMenu(); hideRival();
     G.paused = true; gest = null; ptrs.clear();
     if (NET.live && fromRival !== true) send({ t: 'pause' });
-    setText('pause-k', fromRival === true ? 'Paused by your rival' : `Paused at ${clockStr(G.sim.cfg.round - G.sim.t)} left`);
-    const ai = G.training ? null : rivalAI(), pr = $('pause-rival');
-    pr.hidden = !ai;
-    if (ai) pr.innerHTML = `<b>Cobalt plays ${ai.st.name}.</b> ${ai.st.line} <b>How to beat it:</b> ${ai.st.beat}`;
+    const lim = RUN && RUN.sc.limit, left = RUN && !RUN.sc.full ? (lim ? lim - G.sim.t : null) : (lim || G.sim.cfg.round) - G.sim.t;
+    setText('pause-k', fromRival === true ? 'Paused by your rival' : left == null ? 'Paused' : `Paused at ${clockStr(left)} left`);
+    const ai = rivalAI(), pr = $('pause-rival');
+    pr.hidden = !ai && !RUN;
+    if (RUN) {
+      const sc = RUN.sc, p = campProg()[RUN.id];
+      pr.innerHTML = `<b>${scenTag(RUN.id)}: ${sc.title}.</b> ${sc.goal} <span class="pr-now">${RUN.prog.text}</span>` +
+        `<span class="camp-stars inline">${['Complete the objective'].concat(sc.stars.map(x => x.text)).map((t, i) => `<span class="${p && p.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</span>`).join('')}</span>` +
+        (ai ? ` <b>Cobalt plays ${ai.st.name}.</b> <b>How to beat it:</b> ${ai.st.beat}` : '');
+    } else if (ai) pr.innerHTML = `<b>Cobalt plays ${ai.st.name}.</b> ${ai.st.line} <b>How to beat it:</b> ${ai.st.beat}`;
+    setText('btn-quit', NET.live ? 'Leave game' : RUN ? 'Campaign' : 'Title screen');
     $('btn-restart').hidden = NET.live;
-    setText('btn-quit', NET.live ? 'Leave game' : 'Title screen');
     $('ov-pause').hidden = false;
     app.classList.add('overlay-on');
     $('btn-resume').focus({ preventScroll: true });
@@ -2850,7 +2813,7 @@
   }
   function syncTitle() {
     setText('mapno', String(G.seed));
-    $('train-hint').hidden = !!store.get('trained', false);
+    $('train-hint').hidden = CAMP.starCount(campProg(), CAMP.CHAPTERS[0].scenarios) > 0 || !!store.get('trained', false);
     for (const b of $('seg-diff').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.d === G.diff));
     for (const b of $('seg-round').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.r === G.round));
     for (const b of $('seg-style').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.s === G.style));
@@ -2885,14 +2848,49 @@
     }
     return lines;
   }
+  // A scenario's end: what happened, the stars, and on to the next one.
+  function showCampEnd() {
+    const sim = G.sim, r = CAMP.settle(RUN) || RUN.result, sc = RUN.sc, a = sim.sides[ME];
+    const prog = CAMP.record(campProg(), RUN); store.set('camp1', prog);
+    const nx = r.won ? CAMP.next(RUN.id) : null, ch = CAMP.chapterOf(RUN.id), chDone = r.won && ch.scenarios.every(id => prog[id] && prog[id].won) && ch.scenarios[ch.scenarios.length - 1] === RUN.id;
+    setText('end-k', `${scenTag(RUN.id)} · ${sc.title}`);
+    const h = $('end-h');
+    h.textContent = r.won ? 'Scenario complete' : 'Not this time';
+    h.className = r.won ? 'win-a' : 'win-c';
+    $('end-p').innerHTML = `<span>${r.text}</span>` +
+      (chDone ? ` <span>Chapter ${ch.n}, ${ch.title}, is complete.${nx ? ` Chapter ${CAMP.chapterOf(nx).n} is open.` : ' That is the campaign so far: more chapters are on the way.'}</span>` : '') +
+      (!r.won ? ' <span>Read the objective again on the pause card, and try once more.</span>' : '');
+    const ce = a.destroyed / Math.max(1, a.lost);
+    const rows = [
+      ['Time', clockStr(sim.t)],
+      ['Cost exchange', `${ce.toFixed(1)} : 1`],
+      ['Destroyed', `${a.kills} · ◆${a.droneDestroyed}`],
+      ['Lost', `${a.losses} · ◆${a.droneLost}`],
+    ];
+    $('end-stats').innerHTML = `<div class="wide stars-row"><dt>Stars</dt><dd><ul class="camp-stars">${['Complete the objective'].concat(sc.stars.map(x => x.text)).map((t, i) => `<li class="${r.stars[i] ? 'on' : ''}"><i aria-hidden="true">★</i>${t}</li>`).join('')}</ul></dd></div>` +
+      rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+    setText('btn-again', r.won ? 'Play it again' : 'Retry');
+    setText('btn-next', 'Next scenario'); $('btn-next').hidden = !nx;
+    setText('btn-title', 'Campaign'); $('btn-again').hidden = false; $('btn-rematch').hidden = true;
+    $('btn-again').classList.toggle('primary', !nx); $('btn-next').classList.toggle('primary', !!nx);
+    const note = $('end-net'); if (note) note.textContent = '';
+    $('ov-end').hidden = false;
+    app.classList.add('overlay-on');
+    play(r.won ? 'win' : 'lose');
+    (nx ? $('btn-next') : $('btn-again')).focus({ preventScroll: true });
+  }
   function showEnd() {
     if (G.endShown || G.mode !== 'play') return;
     G.endShown = true; G.mode = 'end'; hideRival();
+    if (RUN) { renderCoach(); showCampEnd(); return; }
+    setText('btn-again', 'Play this map again'); setText('btn-next', 'New map'); $('btn-next').hidden = false;
+    $('btn-again').classList.add('primary'); $('btn-next').classList.remove('primary');
     const sim = G.sim, a = sim.sides[ME], b = sim.sides[OP], won = sim.winner === ME, lost = sim.winner === OP, C = sim.cfg;
     const recKey = G.wasNet ? `2p-${NET.round}` : `${G.diff}-${G.round}`;
     const rec = store.get('record2', {});
     const r = rec[recKey] || { w: 0, l: 0, d: 0 };
-    if (!G.training) { if (won) r.w++; else if (lost) r.l++; else r.d++; rec[recKey] = r; store.set('record2', rec); }
+    if (won) r.w++; else if (lost) r.l++; else r.d++;
+    rec[recKey] = r; store.set('record2', rec);
     setText('end-k', sim.reason === 'heart' ? `Heart destroyed with ${clockStr(C.round - sim.t)} left` : 'Frost at 0:00');
     const h = $('end-h');
     h.textContent = sim.reason === 'heart' ? (won ? 'Cobalt Heart destroyed' : 'Your Heart has fallen') : won ? 'Amber holds the valley' : lost ? 'Cobalt holds the valley' : 'Stalemate at frost';
@@ -2955,7 +2953,7 @@
     if (now - G.hudT > 0.1) { G.hudT = now; hud(); audioFrame(); }
   }
 
-  if (/debug/.test(location.search)) window.__ds = { G, DS, cam, TR, TSTEPS, NET, hashSim, get ME() { return ME; }, layout, S2, toWorld, computeM, draw, drawFog, computeVis, drawFields, drawUnits, drawLabels };
+  if (/debug/.test(location.search)) window.__ds = { G, DS, cam, TR, CAMP, get RUN() { return RUN; }, NET, hashSim, get ME() { return ME; }, layout, S2, toWorld, computeM, draw, drawFog, computeVis, drawFields, drawUnits, drawLabels };
 
   // ---------- boot ----------
   function boot(data) {
