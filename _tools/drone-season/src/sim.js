@@ -1,4 +1,4 @@
-/* Drone Season · simulation core (milestone 2). Pure logic, no DOM, deterministic per seed. */
+/* Drone Season · simulation core (milestone 2.5, Command). Pure logic, no DOM, deterministic per seed. */
 (function (root) {
   'use strict';
 
@@ -11,6 +11,10 @@
   const LOCK_MEMORY = 3, CONTACT_MEMORY = 6;
   const QUEUE_MAX = 8, NEST_MAX = 2, NEST_FROM_HEART = 560, NEST_FROM_NEST = 300, NEST_ENEMY_CLEAR = 520;
   const BLAST_R = 30, WARDEN_ENGAGE = 210, WARDEN_LEASH = 320;
+  const NEST_GUARD_R = 120, AUTO_QUEUE = 2, POST_MAX = 5, PLAN_MAX_ROWS = 12;
+  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider'];
+  const POST_TYPES = ['glint', 'warden', 'decoy'];
+  const POST_CAP = { glint: 2, warden: 3, decoy: 4 };
 
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
@@ -305,6 +309,7 @@
       droneDestroyed: 0, droneLost: 0, heartDealt: 0, heartTaken: 0,
       heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, recovered: 0, returns: 0, decoyDrew: 0,
       fieldDanger: new Float32Array(map.fields.length).fill(-999), best: null,
+      plan: [], auto: false, autoSkip: null, posts: [], postSeq: 1,
     }));
     for (let s = 0; s < 2; s++) {
       const hp = map.hearts[s];
@@ -377,13 +382,17 @@
     if (!near) return 'Grow Nests within reach of your Heart or another Nest.';
     return '';
   }
-  function build(sim, side, type, site) {
+  // Auto items (from the production plan) wait behind anything you queue yourself, except the one already in the vat.
+  function build(sim, side, type, site, opts) {
     const S = sim.sides[side], b = BUILD[type];
     if (!b || sim.over || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
     if (b.site && (!site || nestSiteError(sim, side, site.x, site.y))) return null;
     S.nectar -= b.cost; S.spent += b.cost;
-    const q = { id: S.qid++, type, t: b.time, total: b.time, site: b.site ? { x: site.x, y: site.y } : null };
-    S.queue.push(q);
+    const auto = !!(opts && opts.auto);
+    const q = { id: S.qid++, type, t: b.time, total: b.time, site: b.site ? { x: site.x, y: site.y } : null, auto };
+    let at = S.queue.length;
+    if (!auto) { const i = S.queue.findIndex((x, k) => k > 0 && x.auto); if (i > 0) at = i; }
+    S.queue.splice(at, 0, q);
     return q;
   }
   function cancelBuild(sim, side, qid) {
@@ -391,6 +400,7 @@
     if (i < 0 || sim.over) return null;
     const q = S.queue.splice(i, 1)[0], c = BUILD[q.type].cost;
     S.nectar += c; S.spent -= c;
+    if (q.auto) S.autoSkip = { type: q.type, until: sim.t + 15 };   // cancelling an auto item skips that row for a while
     return q;
   }
   function parkedOf(sim, side, type) {
@@ -426,7 +436,7 @@
     const so = {
       id: sim.nextSortie++, side, type, units: [], route: rt, ox: base.x, oy: base.y,
       stance: opts.stance || 'quiet', mode: opts.mode || 'route', target: opts.target || 0,
-      cost: 0, destroyed: 0, killed: {}, born: sim.t, label: opts.label || '', n: k, pkg: opts.pkg || 0,
+      cost: 0, destroyed: 0, killed: {}, born: sim.t, label: opts.label || '', n: k, pkg: opts.pkg || 0, post: opts.post || 0,
     };
     for (let i = 0; i < k; i++) {
       const u = avail[i];
@@ -444,7 +454,7 @@
     opts = opts || {};
     const so = sim.sorties.get(sortieId);
     if (!so || sim.over) return false;
-    so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0;
+    so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0; so.post = 0;
     if (opts.stance) so.stance = opts.stance;
     for (const id of so.units) {
       const u = sim.byId.get(id);
@@ -457,6 +467,7 @@
   function recall(sim, sortieId) {
     const so = sim.sorties.get(sortieId);
     if (!so || sim.over) return false;
+    so.post = 0;
     if (TYPES[so.type].reuse) { for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.homing = true; u.target = 0; } } }
     else if (so.type === 'sting') { so.mode = 'home'; for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.target = 0; u.diving = false; } } }
     else return false;
@@ -686,7 +697,8 @@
       sim.events.push({ k: 'killed', side: u.side, type: u.type, x: u.x, y: u.y, by });
     } else if (how === 'expired') {
       if (TYPES[u.type].reuse) { S.lost += v; S.droneLost += v; S.losses++; S.lostBy[u.type] = (S.lostBy[u.type] || 0) + 1; }
-      sim.events.push({ k: 'fizzle', side: u.side, type: u.type, x: u.x, y: u.y });
+      const so = sim.sorties.get(u.sortie);
+      sim.events.push({ k: 'fizzle', side: u.side, type: u.type, x: u.x, y: u.y, post: so ? so.post : 0 });
     }
   }
   function damage(sim, tgt, amt, src) {
@@ -997,23 +1009,31 @@
         if (hit) damage(sim, best, 1, h);
       }
     }
-    // guard: parked Stings intercept tracked drones near the Heart
+    // guard: parked Stings intercept tracked drones near the Heart or a Nest
     if (S.guard && sim.tick % 3 === 0) {
-      let parked = null;
+      let parked = null, bases = null;
       for (const c of S.pic.values()) {
         if (c.grade < 2 || c.static) continue;
         const e = sim.byId.get(c.id);
         if (!e || e.hp <= 0 || e.parked || isStructure(e)) continue;
-        if (Math.hypot(e.x - h.x, e.y - h.y) > GUARD_R) continue;
-        const need = e.diving ? 2 : Math.min(2, TYPES[c.type].hp);
+        if (!bases) bases = basesOf(sim, s);
+        // the Heart guards against anything close; a Nest only against Stings and Raiders closing on it
+        let at = null;
+        const striker = c.type === 'sting' || c.type === 'raider';
+        for (const b of bases) {
+          const dx = b.x - e.x, dy = b.y - e.y;
+          if (b.type === 'heart' ? dx * dx + dy * dy <= GUARD_R * GUARD_R : striker && dx * dx + dy * dy <= NEST_GUARD_R * NEST_GUARD_R && dx * c.vx + dy * c.vy > 0) { at = b; break; }
+        }
+        if (!at) continue;
+        const need = at.type === 'nest' ? 1 : e.diving ? 2 : Math.min(2, TYPES[c.type].hp);
         let have = targetedBy(sim, s, e.id);
         if (have >= need) continue;
         if (!parked) parked = parkedOf(sim, s, 'sting');
         while (have < need && parked.length) {
-          const so = launch(sim, s, 'sting', 1, [], { mode: 'guard', target: e.id, stance: 'dash', label: 'Guard', fromHeart: true });
+          const so = launch(sim, s, 'sting', 1, [], { mode: 'guard', target: e.id, stance: 'dash', label: 'Guard', fromHeart: at.type === 'heart' });
           parked.shift(); have++;
           if (!so) break;
-          sim.events.push({ k: 'guard', side: s, type: c.type, x: e.x, y: e.y });
+          sim.events.push({ k: 'guard', side: s, type: c.type, x: e.x, y: e.y, at: at.type });
         }
         if (!parked.length) break;
       }
@@ -1105,6 +1125,7 @@
     }
     sim.holder = holder;
 
+    if (sim.tick % 15 === 7) for (let s = 0; s < 2; s++) { postTick(sim, s); autoTick(sim, s); }
     if (sim.tick % 15 === 0) for (const ai of sim.ai) if (ai) aiTick(sim, ai);
 
     if (t >= C.round) {
@@ -1137,6 +1158,155 @@
       if (forceCount(sim, side, type) < want) return S.nectar >= BUILD[type].cost ? build(sim, side, type) : null;
     }
     return null;
+  }
+
+  // ---------- command: production plan, auto build and posts ----------
+  // The plan is a priority list of [type, target]; a type may appear more than once to build in stages.
+  function setPlan(sim, side, rows) {
+    sim.sides[side].plan = (rows || []).filter(r => r && PLAN_TYPES.includes(r.type || r[0]))
+      .slice(0, PLAN_MAX_ROWS).map(r => ({ type: r.type || r[0], want: Math.max(0, Math.min(60, (r.want != null ? r.want : r[1]) | 0)) }));
+  }
+  function setAuto(sim, side, on) { const S = sim.sides[side]; S.auto = !!on; S.autoSkip = null; }
+
+  const byPri = posts => posts.slice().sort((a, b) => b.pri - a.pri || a.id - b.id);
+  function postUnits(sim, side, post, type) {
+    const out = [];
+    for (const so of sim.sorties.values()) {
+      if (so.side !== side || so.post !== post.id || (type && so.type !== type)) continue;
+      for (const id of so.units) { const u = sim.byId.get(id); if (u && u.hp > 0 && !u.parked) out.push(u); }
+    }
+    return out;
+  }
+  // A unit counts as on station until it has to leave: a Warden going home to rearm, or a Glint or Decoy
+  // whose battery is down to the time a fresh one needs to fly out (so the relief arrives as it fades).
+  function onStation(sim, side, post, u) {
+    if (u.homing) return false;
+    const T = TYPES[u.type];
+    if (u.type === 'warden') return u.nets > 0 && u.battery >= 25 && u.hp >= T.hp;
+    const b = nearestBase(sim, side, post.x, post.y);
+    return u.battery > dist(b.x, b.y, post.x, post.y) / T.speed + 6;
+  }
+  function postStaff(sim, side, post) {
+    const out = {};
+    for (const type of POST_TYPES) {
+      const need = post.need[type] | 0;
+      if (!need) continue;
+      let on = 0, out2 = 0;
+      for (const u of postUnits(sim, side, post, type)) { out2++; if (onStation(sim, side, post, u)) on++; }
+      out[type] = { need, on, assigned: out2 };
+    }
+    return out;
+  }
+  // Send ready units to any post that is short, highest priority first.
+  function postTick(sim, side) {
+    const S = sim.sides[side];
+    if (!S.posts.length || sim.over) return;
+    for (const p of byPri(S.posts)) {
+      for (const type of POST_TYPES) {
+        const need = p.need[type] | 0;
+        if (!need) continue;
+        let on = 0;
+        for (const u of postUnits(sim, side, p, type)) if (onStation(sim, side, p, u)) on++;
+        if (on >= need) continue;
+        const so = launch(sim, side, type, need - on, [{ x: p.x, y: p.y }], { post: p.id, label: 'Post', stance: 'quiet' });
+        if (so) sim.events.push({ k: 'postSent', side, post: p.id, type, n: so.n, x: p.x, y: p.y });
+      }
+    }
+  }
+  // What the posts are short of, beyond what is ready or queued. Glints and Decoys keep one spare per post for relief;
+  // a Warden on its way home or rearming does not count, so the hive builds a spare to cover it.
+  function postShort(sim, side) {
+    const S = sim.sides[side], want = {}, order = [];
+    for (const p of byPri(S.posts)) for (const type of POST_TYPES) {
+      const n = p.need[type] | 0;
+      if (!n) continue;
+      want[type] = (want[type] || 0) + n + (type === 'warden' ? 0 : 1);
+      if (!order.includes(type)) order.push(type);
+    }
+    const out = [];
+    for (const type of order) {
+      let have = 0;
+      for (const u of sim.units) {
+        if (u.side !== side || u.type !== type || u.hp <= 0) continue;
+        if (u.parked) { if (!(u.rearmT > 0)) have++; continue; }
+        const so = sim.sorties.get(u.sortie);
+        if (!so || !so.post) continue;                       // busy on your own orders
+        const p = S.posts.find(q => q.id === so.post);
+        if (p && onStation(sim, side, p, u)) have++;
+      }
+      for (const q of S.queue) if (q.type === type) have += BUILD[type].n;
+      if (have < want[type]) out.push([type, want[type] - have]);
+    }
+    return out;
+  }
+  // The list auto build works through: what posts are short of first, then the plan.
+  function planList(sim, side) {
+    const S = sim.sides[side], rows = [];
+    for (const [type, short] of postShort(sim, side)) rows.push([type, forceCount(sim, side, type) + short, 'post']);
+    for (const r of S.plan) rows.push([r.type, r.want, 'plan']);
+    return rows;
+  }
+  // The first row below its target: what auto build will queue next (it saves up for it rather than skipping ahead).
+  function autoNext(sim, side) {
+    const S = sim.sides[side], skip = S.autoSkip && S.autoSkip.until > sim.t ? S.autoSkip.type : null;
+    for (const [type, want, from] of planList(sim, side)) {
+      if (type === skip) continue;
+      const have = forceCount(sim, side, type);
+      if (have < want) return { type, cost: BUILD[type].cost, have, want, from };
+    }
+    return null;
+  }
+  function autoTick(sim, side) {
+    const S = sim.sides[side];
+    if (!S.auto || sim.over || S.queue.length >= AUTO_QUEUE) return null;
+    const nx = autoNext(sim, side);
+    if (!nx || S.nectar < nx.cost) return null;
+    const q = build(sim, side, nx.type, null, { auto: true });
+    if (q && S.autoSkip && S.autoSkip.type !== nx.type) S.autoSkip = null;
+    return q;
+  }
+  function cleanNeed(need) {
+    const out = {};
+    for (const t of POST_TYPES) out[t] = Math.max(0, Math.min(POST_CAP[t], (need && need[t]) | 0));
+    return out;
+  }
+  function addPost(sim, side, x, y, need, pri, name) {
+    const S = sim.sides[side];
+    if (S.posts.length >= POST_MAX) return null;
+    const p = { id: S.postSeq++, x: clamp(x, 10, W - 10), y: clamp(y, 10, H - 10), need: cleanNeed(need), pri: clamp(pri == null ? 1 : pri | 0, 0, 2), name: name || '' };
+    S.posts.push(p);
+    return p;
+  }
+  function editPost(sim, side, id, patch) {
+    const p = sim.sides[side].posts.find(q => q.id === id);
+    if (!p) return null;
+    if (patch.need) p.need = cleanNeed(Object.assign({}, p.need, patch.need));
+    if (patch.pri != null) p.pri = clamp(patch.pri | 0, 0, 2);
+    if (patch.name != null) p.name = patch.name;
+    if (patch.x != null && patch.y != null) {
+      p.x = clamp(patch.x, 10, W - 10); p.y = clamp(patch.y, 10, H - 10);
+      for (const so of sim.sorties.values()) if (so.side === side && so.post === id) { so.route = [{ x: p.x, y: p.y }]; for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } } }
+    }
+    // drop units the post no longer needs: Wardens go home, Glints and Decoys stay where they are until their batteries fade
+    for (const type of POST_TYPES) {
+      const list = postUnits(sim, side, p, type), extra = list.length - p.need[type];
+      for (let i = 0; i < extra; i++) {
+        const so = sim.sorties.get(list[i].sortie);
+        if (so && so.post === id) { so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; } }
+      }
+    }
+    return p;
+  }
+  function removePost(sim, side, id) {
+    const S = sim.sides[side], i = S.posts.findIndex(q => q.id === id);
+    if (i < 0) return false;
+    S.posts.splice(i, 1);
+    for (const so of sim.sorties.values()) {
+      if (so.side !== side || so.post !== id) continue;
+      so.post = 0;
+      if (TYPES[so.type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
+    }
+    return true;
   }
 
   // ---------- rival hive ----------
@@ -1339,9 +1509,11 @@
 
   root.DS = {
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
+    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT,
     createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
+    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

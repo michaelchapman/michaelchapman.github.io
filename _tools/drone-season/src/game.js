@@ -1,4 +1,4 @@
-/* Drone Season · rendering, input, sound and overlays (milestone 2). */
+/* Drone Season · rendering, input, sound and overlays (milestone 2.5, Command). */
 (function () {
   'use strict';
   const DS = window.DS, W = DS.W, H = DS.H, TAU = Math.PI * 2, T = DS.TYPES;
@@ -11,8 +11,24 @@
   const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const FONT_D = '"Chakra Petch", "Bahnschrift", "Segoe UI", sans-serif';
   const FONT_M = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
-  const LAUNCH = ['glint', 'sting', 'decoy', 'warden', 'raider'];
-  const COUNTS = { sting: [1, 4, 'all'], decoy: [1, 2, 'all'], warden: [1, 2, 'all'], raider: [1, 2, 'all'] };
+  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider'];
+  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3 };
+  const SQUAD_STEP = { sting: 2 };
+  const DEFAULT_SQUADS = [
+    { name: 'Scout', mix: { glint: 1 } },
+    { name: 'Strike', mix: { sting: 4 } },
+    { name: 'Swarm', mix: { sting: 8, decoy: 2 } },
+    { name: 'Bomb run', mix: { raider: 1, decoy: 2 } },
+    { name: 'Patrol', mix: { warden: 1 } },
+  ];
+  const PRESETS = {
+    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['sting', 28]],
+    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['glint', 2], ['sting', 36]],
+    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
+    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['sting', 16], ['warden', 3], ['glint', 2], ['sting', 28]],
+  };
+  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6 };
+  const PRI = ['Low', 'Normal', 'High'];
   const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
   const nameN = (type, n) => (n === 1 ? T[type].name : PLURAL[type]);
   const units = (n, type) => `${n} ${nameN(type, n)}`;
@@ -25,11 +41,27 @@
     set(k, v) { try { localStorage.setItem('ds1.' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
   };
   const randSeed = () => 1000 + Math.floor(Math.random() * 9000);
+  const copySquads = list => list.map(q => ({ name: q.name, mix: Object.assign({}, q.mix) }));
+  function cleanSquads(v) {
+    if (!Array.isArray(v) || v.length !== DEFAULT_SQUADS.length) return copySquads(DEFAULT_SQUADS);
+    return v.map((q, i) => {
+      const mix = {};
+      for (const t of SQUAD_TYPES) { const n = q && q.mix ? q.mix[t] | 0 : 0; if (n > 0) mix[t] = Math.min(SQUAD_MAX[t], n); }
+      const name = q && typeof q.name === 'string' && q.name.trim() ? q.name.trim().slice(0, 12) : DEFAULT_SQUADS[i].name;
+      return { name, mix };
+    });
+  }
+  function cleanPlan(v) {
+    if (!Array.isArray(v)) return PRESETS.Balanced.map(([type, want]) => ({ type, want }));
+    return v.filter(r => r && DS.PLAN_TYPES.includes(r.type)).slice(0, DS.PLAN_MAX_ROWS).map(r => ({ type: r.type, want: clamp(r.want | 0, 0, PLAN_MAX[r.type]) }));
+  }
 
   const G = {
     sim: null, mode: 'title', paused: false,
     seed: store.get('seed', randSeed()), diff: store.get('diff', 'normal'), round: store.get('round', 'short'), muted: store.get('muted', false),
-    armed: null, group: [], pkgSeq: 1, stance: 'quiet', counts: { sting: 4, decoy: 2, warden: 1, raider: 1 }, sel: null, placing: false,
+    squads: cleanSquads(store.get('squads', null)), plan: cleanPlan(store.get('plan', null)), auto: store.get('auto', true) !== false,
+    tab: 'build', sheet: null, menu: null, again: null, mix: {}, armedSq: [], placingPost: false, movingPost: 0, listKeys: {},
+    armed: null, group: [], pkgSeq: 1, stance: 'quiet', sel: null, placing: false,
     focus: false, meter: 1, acc: 0, last: 0, now: 0,
     terrain: null, terrainSeed: -1, vis: [], visT: -1, fx: [], trails: new Map(), shake: 0,
     hover: null, rateHist: [], hudT: 0, raidT: -99, thr: {}, ctxKey: '', qKey: '', endShown: false, overT: 0,
@@ -578,7 +610,18 @@
     const sim = G.sim, s = scale(), h = sim.hearts[0], S0 = sim.sides[0];
     if (G.mode === 'play' && S0.guard) {
       ctx.strokeStyle = 'rgba(245,165,36,0.14)'; ctx.lineWidth = 1 / s; ctx.setLineDash([3 / s, 7 / s]);
-      ring(h.x, h.y, DS.GUARD_R); ctx.stroke(); ctx.setLineDash([]);
+      ring(h.x, h.y, DS.GUARD_R); ctx.stroke();
+      for (const b of DS.basesOf(sim, 0)) if (b.type === 'nest') { ring(b.x, b.y, DS.NEST_GUARD_R); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+    // posts: the Warden patrol ring, strong when the post is selected
+    if (G.mode === 'play') {
+      const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+      for (const p of S0.posts) {
+        if (!p.need.warden && p.id !== selP) continue;
+        ctx.strokeStyle = p.id === selP ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.13)'; ctx.lineWidth = 1 / s;
+        ctx.setLineDash([2 / s, 6 / s]); ring(p.x, p.y, p.need.warden ? DS.WARDEN_ENGAGE : 90); ctx.stroke(); ctx.setLineDash([]);
+      }
     }
     // where a Nest may grow
     if (G.placing) {
@@ -619,7 +662,7 @@
       const pts = so.route.slice(lead.wp);
       const end = so.route[so.route.length - 1];
       if (pts.length) {
-        ctx.strokeStyle = sel ? 'rgba(255,200,103,0.9)' : so.mode === 'raid' ? 'rgba(255,94,77,0.4)' : 'rgba(245,165,36,0.34)';
+        ctx.strokeStyle = sel ? 'rgba(255,200,103,0.9)' : so.mode === 'raid' ? 'rgba(255,94,77,0.4)' : so.post ? 'rgba(245,165,36,0.16)' : 'rgba(245,165,36,0.34)';
         ctx.lineWidth = (sel ? 1.7 : 1.1) / s;
         ctx.setLineDash([6 / s, 6 / s]); ctx.lineDashOffset = -G.now * 24 / s;
         ctx.beginPath(); ctx.moveTo(lead.x, lead.y);
@@ -627,7 +670,7 @@
         ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
         ctx.beginPath(); ctx.arc(end.x, end.y, 3.5 / s, 0, TAU); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
       }
-      if (so.type === 'warden' && end) {
+      if (so.type === 'warden' && end && (!so.post || sel)) {
         ctx.strokeStyle = sel ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.16)'; ctx.lineWidth = 1 / s;
         ctx.setLineDash([2 / s, 6 / s]); ring(end.x, end.y, DS.WARDEN_ENGAGE); ctx.stroke(); ctx.setLineDash([]);
       }
@@ -738,7 +781,7 @@
     const sim = G.sim, m = sim.map, s = scale(), k = uk(), C = sim.cfg;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     // canopy names: strong while learning the map or giving orders, quiet otherwise
-    const loud = G.mode === 'play' && (sim.phase === 0 || G.armed || G.placing || (gest && gest.kind === 'route'));
+    const loud = G.mode === 'play' && (sim.phase === 0 || G.armed || G.placing || G.placingPost || (gest && gest.kind === 'route'));
     ctx.font = `600 ${8.5 * k}px ${FONT_D}`;
     ctx.fillStyle = loud ? 'rgba(127,209,164,0.75)' : 'rgba(127,209,164,0.32)';
     for (const pa of m.patches) { const p = S2(pa.x, pa.y); ctx.fillText('CANOPY', p.x, p.y - 4); }
@@ -762,6 +805,41 @@
     ctx.fillStyle = 'rgba(160,205,200,0.42)';
     for (const pk of m.peaks) { const p = S2(pk.x, pk.y); ctx.fillText('▲' + pk.elev, p.x, p.y - 5); }
     ctx.textBaseline = 'alphabetic';
+  }
+  // A post: a flag-like diamond with one pip per unit it keeps (filled when that unit is on station).
+  function postMark(x, y, k, col, alpha) {
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = 'rgba(6,9,12,0.8)'; ctx.strokeStyle = col; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x, y - 9 * k); ctx.lineTo(x + 7 * k, y); ctx.lineTo(x, y + 9 * k); ctx.lineTo(x - 7 * k, y); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 2.2 * k, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function drawPosts() {
+    const sim = G.sim, k = uk(), S0 = sim.sides[0];
+    if (G.mode !== 'play' || !S0.posts.length) return;
+    const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+    for (const p of S0.posts) {
+      const q = S2(p.x, p.y), st = staffOf(p), short = isShort(st), moving = G.movingPost === p.id;
+      if (p.id === selP) { ctx.strokeStyle = COL.amberHi; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 15 * k, 0, TAU); ctx.stroke(); }
+      postMark(q.x, q.y, k, short ? COL.lock : COL.amberHi, moving ? 0.4 : 1);
+      // pips
+      const pips = [];
+      for (const t of DS.POST_TYPES) if (st[t]) for (let i = 0; i < st[t].need; i++) pips.push(i < st[t].on);
+      const pw = 5 * k, gap = 2 * k, total = pips.length * pw + (pips.length - 1) * gap;
+      let x0 = q.x - total / 2;
+      const y0 = q.y + 12 * k;
+      for (const on of pips) {
+        ctx.fillStyle = on ? COL.amber : 'rgba(6,9,12,0.8)'; ctx.strokeStyle = on ? COL.amber : short ? COL.lock : COL.dim; ctx.lineWidth = 1;
+        ctx.fillRect(x0, y0, pw, pw); ctx.strokeRect(x0 + 0.5, y0 + 0.5, pw - 1, pw - 1);
+        x0 += pw + gap;
+      }
+      const bloomNamed = sim.map.fields.some(f => (f.centre ? 'Crown' : f.name) === p.name);
+      ctx.font = `700 ${8.5 * k}px ${FONT_D}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = short ? 'rgba(255,94,77,0.9)' : 'rgba(255,200,103,0.9)';
+      ctx.fillText(bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`, q.x, q.y - 11 * k);
+      ctx.textBaseline = 'alphabetic';
+    }
   }
   function routeOrigin(pt) {
     const sim = G.sim;
@@ -804,6 +882,14 @@
       }
     }
     if (!G.hover || !G.hover.mouse || (gest && gest.kind === 'route')) return;
+    if (G.placingPost || G.movingPost) {
+      const w = toWorld(G.hover.x, G.hover.y);
+      postMark(G.hover.x, G.hover.y, uk(), COL.amberHi, 0.8);
+      ctx.strokeStyle = 'rgba(255,200,103,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.arc(G.hover.x, G.hover.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      label(G.hover.x, G.hover.y - 20, `POST: ${postName(w.x, w.y).toUpperCase()}`, COL.amberHi);
+      return;
+    }
     if (G.placing) {
       const w = toWorld(G.hover.x, G.hover.y), err = DS.nestSiteError(sim, 0, w.x, w.y);
       drawNest(w.x, w.y, 0, uk(), err ? 0.4 : 0.85, null, true);
@@ -836,9 +922,10 @@
   }
   function tooltip(X, Y) {
     const sim = G.sim;
-    const c = hitContact(X, Y);
+    const c = hitContact(X, Y), post = hitPost(X, Y);
     let text = '';
-    if (c) {
+    if (post) text = `Post ${post.name} · ${PRI[post.pri].toLowerCase()} priority · ${staffText(post)}`;
+    else if (c) {
       if (c.type === 'heart') text = `Cobalt Heart · ${sim.hearts[1].hp} left`;
       else if (c.type === 'nest') { const e = sim.byId.get(c.id); text = c.grade >= 2 && e ? `Cobalt Nest · ${e.hp} left` : 'Cobalt Nest · last seen here'; }
       else {
@@ -882,6 +969,7 @@
     drawWorldOverlays();
     setScreen();
     drawLabels();
+    drawPosts();
     drawUnits();
     drawFx();
     if (G.mode === 'play') drawPreview();
@@ -980,7 +1068,7 @@
         break;
       case 'fizzle':
         fx('fizzle', e.x, e.y, { life: 0.6 });
-        if (live && e.side === 0 && e.type === 'glint') toastOnce('fz', 'A Glint ran out of battery.', '', 4);
+        if (live && e.side === 0 && e.type === 'glint' && !e.post) toastOnce('fz', 'A Glint ran out of battery.', '', 4);
         if (live && e.side === 0 && (e.type === 'raider' || e.type === 'warden')) toast(`A ${T[e.type].name} ran out of battery before it got home.`, 'lock');
         break;
       case 'flak':
@@ -1018,7 +1106,13 @@
         if (live && e.side === 0) toastOnce('nh', `Your Nest is under attack. ${e.hp} left.`, 'lock', 4);
         break;
       case 'guard':
-        if (live && e.side === 0) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your Heart.`, 'amber', 8);
+        if (live && e.side === 0) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your ${e.at === 'nest' ? 'Nest' : 'Heart'}.`, 'amber', 8);
+        break;
+      case 'postSent':
+        if (live && e.side === 0) {
+          const p = postById(e.post);
+          if (p && e.type !== 'glint') toastOnce('ps' + e.post + e.type, `${units(e.n, e.type)} on the way to the ${p.name} post.`, '', 25);
+        }
         break;
       case 'built':
         if (e.side !== 0) break;
@@ -1063,16 +1157,37 @@
   }
   function onScreen(x, y) { const p = S2(x, y); return p.x > -20 && p.y > -20 && p.x < VW + 20 && p.y < VH + 20; }
   function flashTile(type) {
-    const t = $('arm-' + type) || $('buy-' + type);
-    if (!t) return;
-    t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+    const els = [];
+    G.squads.forEach((q, i) => { if (q.mix[type]) els.push($('sq-' + i)); });
+    if (!els.length && $('buy-' + type)) els.push($('buy-' + type));
+    for (const t of els) { t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); }
   }
 
   // ---------- orders ----------
   const readyOf = type => DS.parkedCount(G.sim, 0, type);
-  // Armed launch tiles form a group: G.group lists them, G.armed is the one added last.
-  function setArm(list) { G.group = list; G.armed = list.length ? list[list.length - 1] : null; }
-  // The selected sorties: one sortie, or every sortie launched together as a group.
+  const mixTypes = mix => SQUAD_TYPES.filter(t => mix[t] > 0);
+  const mixSize = mix => mixTypes(mix).reduce((n, t) => n + mix[t], 0);
+  const MIX_ORDER = ['sting', 'raider', 'warden', 'glint', 'decoy'];
+  const mixText = (mix, sep) => MIX_ORDER.filter(t => mix[t] > 0).map(t => units(mix[t], t)).join(sep || ' + ');
+  function mixReady(mix) {
+    let r = 0;
+    for (const t of mixTypes(mix)) r += Math.min(mix[t], readyOf(t));
+    return r;
+  }
+  // The armed squads' units, merged into one mix: G.group lists its types, G.armed is set while anything is armed.
+  function setMix(mix) {
+    G.mix = mix; G.group = mixTypes(mix);
+    G.armed = G.group.length ? G.group[G.group.length - 1] : null;
+    if (!G.armed) G.armedSq = [];
+  }
+  function rebuildMix() {
+    const mix = {};
+    for (const i of G.armedSq) for (const t of mixTypes(G.squads[i].mix)) mix[t] = (mix[t] || 0) + G.squads[i].mix[t];
+    setMix(mix);
+  }
+  const armName = () => G.armedSq.map(i => G.squads[i].name).join(' + ') || 'Squad';
+  function disarm() { G.armedSq = []; setMix({}); }
+  // The selected sorties: one sortie, or every sortie launched together as a package.
   function selSorties() {
     if (!G.sel || G.sel.kind !== 'sortie') return [];
     const sim = G.sim, out = [];
@@ -1082,19 +1197,22 @@
   const selSet = () => new Set(selSorties().map(so => so.id));
   const activeTypes = () => (G.armed ? G.group.slice() : [...new Set(selSorties().map(so => so.type))]);
   const isStriker = t => t === 'sting' || t === 'raider';
-  function arm(type) {
-    if (G.mode !== 'play' || G.paused) return;
-    G.placing = false;
-    if (G.group.includes(type)) { setArm(G.group.filter(t => t !== type)); play('tick'); return; }
-    if (!readyOf(type)) {
+  const busy = () => G.mode !== 'play' || G.paused || !!G.sheet;
+  function armSquad(i) {
+    if (busy()) return;
+    const sq = G.squads[i];
+    G.placing = false; G.placingPost = false; G.movingPost = 0; closeMenu();
+    if (G.armedSq.includes(i)) { G.armedSq = G.armedSq.filter(k => k !== i); rebuildMix(); play('tick'); return; }
+    if (!mixSize(sq.mix)) { openSquadSheet(i); return; }
+    if (!mixReady(sq.mix)) {
       play('deny');
-      const re = DS.rearmingCount(G.sim, 0, type);
-      toastOnce('nr' + type, re ? `${units(re, type)} rearming. Ready in a few seconds.` : `No ${PLURAL[type]} ready. Build ${type === 'raider' || type === 'warden' || type === 'glint' ? 'one' : 'some'} in the Build row.`, '', 2);
+      const t = mixTypes(sq.mix)[0], re = DS.rearmingCount(G.sim, 0, t);
+      toastOnce('nr' + i, re ? `${sq.name}: ${units(re, t)} rearming. Ready in a few seconds.` : `${sq.name}: nothing ready. Build ${PLURAL[t]} in the Build tab, or turn on Auto.`, '', 2);
       return;
     }
-    setArm(G.group.concat([type])); G.sel = null; play('tick');
+    G.armedSq = G.armedSq.concat([i]); rebuildMix(); G.sel = null; play('tick');
   }
-  function cancel() { setArm([]); G.sel = null; G.placing = false; }
+  function cancel() { disarm(); G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; closeMenu(); }
   function contactWorld(c) {
     const e = G.sim.byId.get(c.id);
     if (c.static) return { x: c.x, y: c.y };
@@ -1140,25 +1258,46 @@
     const route = pts.length ? pts : [end];
     return { route, opts: {}, what: type === 'glint' ? `scouting ${placeOf(end.x, end.y)}` : `drawing fire ${placeOf(end.x, end.y)}` };
   }
-  // Launch every armed type along the same gesture. A mixed group shares a package id so it can be selected and retasked as one.
-  function launchGroup(planFor) {
-    const sim = G.sim, types = G.group.slice();
+  // Launch a mix of units along one gesture as one package, so it can be selected and retasked as one.
+  function launchMix(mix, planFor, name) {
+    const sim = G.sim, types = mixTypes(mix);
     const strike = types.some(isStriker), lead = strike && types.includes('decoy');
-    const pkg = types.length > 1 ? G.pkgSeq++ : 0;
+    const pkg = G.pkgSeq++;
     const sent = [];
-    let what = '';
+    let what = '', want = 0, got = 0;
     for (const t of types) {
+      want += mix[t];
       const p = planFor(t);
       if (!p) continue;
-      const so = DS.launch(sim, 0, t, t === 'glint' ? 1 : G.counts[t], p.route, Object.assign({ stance: t === 'decoy' && lead ? 'dash' : G.stance, pkg }, p.opts));
+      const so = DS.launch(sim, 0, t, mix[t], p.route, Object.assign({ stance: t === 'decoy' && lead ? 'dash' : G.stance, pkg, label: name }, p.opts));
       if (!so) continue;
+      got += so.n;
       sent.push(units(so.n, t));
       if (!what || isStriker(t)) what = p.what;
     }
-    if (!sent.length) { play('deny'); toastOnce('nrg', 'Nothing armed is ready to fly.', '', 2); return; }
+    if (!sent.length) { play('deny'); toastOnce('nrg', `${name}: nothing ready to fly.`, '', 2); return false; }
     play('launch');
-    toast(`${sent.join(' + ')} away: ${what}${lead ? '. Decoys lead.' : ''}`, 'amber');
-    setArm(G.group.filter(t => readyOf(t) > 0));
+    toast(`${name}: ${sent.join(' + ')} away, ${what}${got < want ? ` (${got} of ${want} were ready)` : ''}${lead ? '. Decoys lead.' : ''}`, 'amber');
+    return true;
+  }
+  // g is a gesture: a list of route points, or a contact.
+  function sendMix(mix, g, name) {
+    const ok = launchMix(mix, t => plan(t, g.pts, g.c), name);
+    if (ok) G.again = { mix: Object.assign({}, mix), name, pts: g.pts.slice(), cid: g.c ? g.c.id : 0, cpos: g.c ? contactWorld(g.c) : null, stance: G.stance };
+    return ok;
+  }
+  function fireArmed(g) { if (sendMix(G.mix, g, armName())) disarm(); }
+  function again() {
+    const a = G.again;
+    if (!a || busy()) return;
+    const sim = G.sim, cc = a.cid ? sim.sides[0].pic.get(a.cid) : null;
+    const c = cc && sim.byId.get(cc.id) ? cc : null;
+    const pts = c ? [] : a.pts.length ? a.pts : a.cpos ? [a.cpos] : [];
+    if (!c && !pts.length) return;
+    const st = G.stance;
+    G.stance = a.stance;
+    launchMix(a.mix, t => plan(t, pts, c), a.name);
+    G.stance = st;
   }
   function retaskSel(planFor) {
     const list = selSorties();
@@ -1177,26 +1316,36 @@
     const sim = G.sim;
     if (G.armed && pts.length > 1) { const b = DS.nearestBase(sim, 0, pts[0].x, pts[0].y); if (Math.hypot(pts[0].x - b.x, pts[0].y - b.y) < 70) pts.shift(); }
     if (!pts.length) return;
-    if (G.armed) { launchGroup(t => plan(t, pts, null)); return; }
+    if (G.armed) { fireArmed({ pts, c: null }); return; }
     if (G.sel && G.sel.kind === 'sortie') retaskSel(t => plan(t, pts, null));
   }
   function placeNest(w) {
     const sim = G.sim, err = DS.nestSiteError(sim, 0, w.x, w.y);
-    if (err) { play('deny'); toastOnce('ne', err, 'lock', 1.2); return; }
-    if (sim.sides[0].nectar < DS.BUILD.nest.cost) { play('deny'); toast(`Need ◆${DS.BUILD.nest.cost} nectar for a Nest.`, ''); G.placing = false; return; }
-    if (DS.build(sim, 0, 'nest', w)) { play('tick'); toast('Nest queued. It grows when it reaches the front of the queue.', 'amber'); G.placing = false; }
+    if (err) { play('deny'); toastOnce('ne', err, 'lock', 1.2); return false; }
+    if (sim.sides[0].nectar < DS.BUILD.nest.cost) { play('deny'); toast(`Need ◆${DS.BUILD.nest.cost} nectar for a Nest.`, ''); G.placing = false; return false; }
+    if (DS.build(sim, 0, 'nest', w)) { play('tick'); toast('Nest queued. It grows when it reaches the front of the queue.', 'amber'); G.placing = false; return true; }
+    return false;
   }
   function tapAt(X, Y) {
     const sim = G.sim, w = toWorld(X, Y);
     if (G.placing) { placeNest(w); return; }
+    if (G.placingPost) { G.placingPost = false; openPostSheet(null, w); return; }
+    if (G.movingPost) {
+      const p = postById(G.movingPost);
+      G.movingPost = 0;
+      if (p) { DS.editPost(sim, 0, p.id, { x: w.x, y: w.y, name: postName(w.x, w.y) }); G.sel = { kind: 'post', id: p.id }; play('tick'); toast(`Post moved to ${p.name}.`, 'amber'); }
+      return;
+    }
     const c = hitContact(X, Y);
-    if (G.armed) { launchGroup(t => plan(t, c ? [] : [w], c)); return; }
+    if (G.armed) { fireArmed({ pts: c ? [] : [w], c }); return; }
     if (G.sel && G.sel.kind === 'sortie') {
       const set = selSet();
       if (!set.size) { G.sel = null; return; }
       const own = hitOwn(X, Y);
       if (own && own.sortie && !set.has(own.sortie)) { selectSortie(own.sortie); play('tick'); return; }
+      const posted = selSorties().some(so => so.post);
       retaskSel(t => { const useC = c && t !== 'glint' && t !== 'decoy' ? c : null; return plan(t, useC ? [] : [c ? contactWorld(c) : w], useC); });
+      if (posted) toastOnce('rel', 'Released from its post. The hive will send another.', '', 3);
       return;
     }
     if (G.sel && G.sel.kind === 'forager') {
@@ -1210,6 +1359,9 @@
         return;
       }
     }
+    const post = hitPost(X, Y);
+    if (post) { G.sel = { kind: 'post', id: post.id }; play('tick'); return; }
+    if (c) { contactMenu(X, Y, c); return; }
     const u = hitOwn(X, Y);
     if (u) {
       if (u.type === 'forager') G.sel = { kind: 'forager', id: u.id };
@@ -1253,22 +1405,22 @@
     return best;
   }
   function pickForager() {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     const list = G.sim.units.filter(u => u.side === 0 && u.type === 'forager' && u.hp > 0).sort((a, b) => a.id - b.id);
-    if (!list.length) { toastOnce('nof', 'No Foragers. Build one in the Build row.', '', 2); return; }
-    setArm([]); G.placing = false;
+    if (!list.length) { toastOnce('nof', 'No Foragers. Build one in the Build tab.', '', 2); return; }
+    disarm(); G.placing = false; G.placingPost = false; closeMenu();
     const cur = G.sel && G.sel.kind === 'forager' ? list.findIndex(u => u.id === G.sel.id) : -1;
     G.sel = { kind: 'forager', id: list[(cur + 1) % list.length].id };
     play('tick');
   }
   function buy(type) {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     const sim = G.sim, S0 = sim.sides[0], b = DS.BUILD[type];
     if (S0.queue.length >= DS.QUEUE_MAX) { play('deny'); toastOnce('qf', `The queue is full at ${DS.QUEUE_MAX}. Tap an item in it to cancel.`, '', 2); return; }
     if (S0.nectar < b.cost) { play('deny'); toastOnce('nn', `Need ◆${b.cost} nectar. Foragers bring it home from the blooms.`, '', 2); return; }
     if (type === 'nest') {
       if (DS.nestCount(sim, 0) >= DS.NEST_MAX) { play('deny'); toastOnce('nm', 'You can have two Nests at a time.', '', 2); return; }
-      G.placing = !G.placing; setArm([]); G.sel = null; play('tick');
+      G.placing = !G.placing; G.placingPost = false; G.movingPost = 0; disarm(); G.sel = null; closeMenu(); play('tick');
       return;
     }
     if (DS.build(sim, 0, type)) play('tick');
@@ -1278,10 +1430,10 @@
     if (!q) return;
     const b = DS.BUILD[q.type];
     play('refund');
-    toast(`Cancelled ${b.n > 1 ? units(b.n, q.type) : T[q.type].name}. ◆${b.cost} refunded.`, '');
+    toast(`Cancelled ${b.n > 1 ? units(b.n, q.type) : T[q.type].name}. ◆${b.cost} refunded.${q.auto ? ' Auto skips it for now.' : ''}`, '');
   }
   function toggleFocus() {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     if (!G.focus && G.meter < 0.12) { play('deny'); return; }
     G.focus = !G.focus;
     play('tick');
@@ -1289,6 +1441,11 @@
   function toggleGuard() {
     if (G.mode !== 'play') return;
     DS.setGuard(G.sim, 0, !G.sim.sides[0].guard);
+    play('tick');
+  }
+  function setAuto(on) {
+    G.auto = !!on; store.set('auto', G.auto);
+    if (G.sim && G.mode === 'play') DS.setAuto(G.sim, 0, G.auto);
     play('tick');
   }
   function setStance(st) {
@@ -1303,32 +1460,121 @@
     toast(`${done.map(so => units(so.units.length, so.type)).join(' + ')} heading home${done.some(so => T[so.type].reuse) ? ' to rearm' : ''}.`, 'amber');
     play('tick'); G.sel = null;
   }
-  function cycleCount() {
-    const type = G.armed;
-    if (!type || !COUNTS[type]) return;
-    const opts = COUNTS[type], i = opts.indexOf(G.counts[type]);
-    G.counts[type] = opts[(i + 1) % opts.length];
+
+  // ---------- posts ----------
+  const postById = id => (G.sim ? G.sim.sides[0].posts.find(p => p.id === id) : null);
+  function postName(x, y) {
+    const sim = G.sim, m = sim.map;
+    let best = null, bd = 160;
+    for (const f of m.fields) { const d = Math.hypot(f.x - x, f.y - y); if (d < bd) { bd = d; best = f; } }
+    if (best) return best.centre ? 'Crown' : best.name;
+    for (const pk of m.peaks) if (Math.hypot(pk.x - x, pk.y - y) < 90) return `Ridge ▲${pk.elev}`;
+    if (DS.ridgeAt(m, x, y)) return 'Ridge';
+    if (DS.canopyAt(m, x, y)) return 'Canopy';
+    for (const b of DS.basesOf(sim, 0)) if (Math.hypot(b.x - x, b.y - y) < 200) return b.type === 'heart' ? 'Heart' : 'Nest';
+    if (Math.hypot(x - W / 2, y - H / 2) < 260) return 'Midfield';
+    bd = 340; best = null;
+    for (const f of m.fields) { const d = Math.hypot(f.x - x, f.y - y); if (d < bd) { bd = d; best = f; } }
+    return best ? `${best.centre ? 'Crown' : best.name} approach` : 'Open ground';
+  }
+  function staffOf(p) { return DS.postStaff(G.sim, 0, p); }
+  const isShort = st => Object.values(st).some(v => v.on < v.need);
+  function staffText(p, sep) {
+    const st = staffOf(p);
+    return DS.POST_TYPES.filter(t => st[t]).map(t => `${st[t].need === 1 ? T[t].name : PLURAL[t]} ${st[t].on}/${st[t].need}`).join(sep || ' · ');
+  }
+  function hitPost(X, Y) {
+    if (!G.sim) return null;
+    let best = null, bd = 16;
+    for (const p of G.sim.sides[0].posts) { const q = S2(p.x, p.y), d = Math.hypot(q.x - X, q.y - Y); if (d < bd) { bd = d; best = p; } }
+    return best;
+  }
+  function startPost() {
+    if (busy()) return;
+    if (G.sim.sides[0].posts.length >= DS.POST_MAX) { play('deny'); toastOnce('pm', `You can keep ${DS.POST_MAX} posts. Remove one first.`, '', 2); return; }
+    disarm(); G.sel = null; G.placing = false; G.movingPost = 0; closeMenu();
+    G.placingPost = !G.placingPost; play('tick');
+  }
+  function removePostSel(id) {
+    const p = postById(id);
+    if (!p) return;
+    DS.removePost(G.sim, 0, id);
+    if (G.sel && G.sel.kind === 'post' && G.sel.id === id) G.sel = null;
+    toast(`${p.name} post removed. Its Wardens head home.`, '');
     play('tick');
+  }
+
+  // ---------- quick menus ----------
+  function openMenu(X, Y, title, items) {
+    const el = $('qmenu');
+    el.innerHTML = `<div class="qm-h">${title}</div>` + items.map((it, i) =>
+      `<button role="menuitem" data-i="${i}"${it.off ? ' disabled' : ''}><svg class="i"><use href="#g-${it.icon}"/></svg><span class="qm-l">${it.label}</span><span class="qm-s">${it.sub || ''}</span></button>`).join('');
+    el.hidden = false;
+    const r = el.getBoundingClientRect(), top = $('top').offsetHeight + 4, bot = VH - $('dock').offsetHeight - 4;
+    let x = X + 14, y = Y - r.height / 2;
+    if (x + r.width > VW - 8) x = X - 14 - r.width;
+    x = clamp(x, 8, Math.max(8, VW - r.width - 8)); y = clamp(y, top, Math.max(top, bot - r.height));
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    G.menu = { items, X, Y };
+    play('tick');
+  }
+  function closeMenu() { if (!G.menu) return; G.menu = null; $('qmenu').hidden = true; }
+  const readyLine = (n, t) => `${units(n, t)} · ${readyOf(t)} ready`;
+  function contactMenu(X, Y, c) {
+    const st = !!c.static, look = c.known ? c.type : null;
+    const k = st ? 6 : look && T[look].hp >= 2 ? 3 : 2;
+    const g = { pts: [], c }, items = [];
+    items.push({ icon: 'sting', label: st ? 'Raid' : 'Strike', sub: readyLine(k, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: k }, g, st ? 'Raid' : 'Strike') });
+    if (st || look === 'forager' || look === 'nest' || !look) items.push({ icon: 'raider', label: 'Bomb', sub: readyLine(1, 'raider'), off: !readyOf('raider'), run: () => sendMix({ raider: 1 }, g, 'Bomb run') });
+    if (!st) items.push({ icon: 'warden', label: 'Intercept', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Intercept') });
+    openMenu(X, Y, cname(c), items);
+  }
+  function groundMenu(X, Y) {
+    const sim = G.sim, w = toWorld(X, Y), g = { pts: [w], c: null }, S0 = sim.sides[0];
+    const nestErr = DS.nestSiteError(sim, 0, w.x, w.y) || (S0.nectar < DS.BUILD.nest.cost ? `Need ◆${DS.BUILD.nest.cost}` : '');
+    const items = [
+      { icon: 'glint', label: 'Scout here', sub: readyLine(1, 'glint'), off: !readyOf('glint'), run: () => sendMix({ glint: 1 }, g, 'Scout') },
+      { icon: 'sting', label: 'Hunt here', sub: readyLine(4, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: 4 }, g, 'Hunt') },
+      { icon: 'warden', label: 'Patrol here', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Patrol') },
+      { icon: 'post', label: 'Post here', sub: S0.posts.length >= DS.POST_MAX ? `${DS.POST_MAX} posts already` : 'the hive keeps it staffed', off: S0.posts.length >= DS.POST_MAX, run: () => openPostSheet(null, w) },
+      { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
+    ];
+    openMenu(X, Y, postName(w.x, w.y), items);
   }
 
   // ---------- input ----------
   const ptrs = new Map();
   let gest = null;
   function local(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  const LONG_PRESS = 480;
+  function clearHold() { if (gest && gest.hold) { clearTimeout(gest.hold); gest.hold = 0; } }
   cv.addEventListener('pointerdown', e => {
-    if (G.mode !== 'play' || G.paused) return;
+    if (busy()) return;
     audioInit();
+    if (G.menu) { closeMenu(); return; }
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
     const p = local(e);
     ptrs.set(e.pointerId, p);
     computeM(false);
     if (ptrs.size === 2) {
+      clearHold();
       const [a, b] = [...ptrs.values()], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       gest = { kind: 'pinch', d0: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), z0: cam.z, mid, wmid: toWorld(mid.x, mid.y) };
       return;
     }
     if (e.button === 1 || e.button === 2) { gest = { kind: 'pan', lx: p.x, ly: p.y }; return; }
-    gest = { kind: 'press', sx: p.x, sy: p.y, lx: p.x, ly: p.y, pts: [toWorld(p.x, p.y)], cur: null };
+    gest = { kind: 'press', sx: p.x, sy: p.y, lx: p.x, ly: p.y, pts: [toWorld(p.x, p.y)], cur: null, hold: 0 };
+    // press and hold with nothing armed or selected: quick orders for that spot or contact
+    if (!G.armed && !G.sel && !G.placing && !G.placingPost && !G.movingPost) {
+      const g0 = gest;
+      g0.hold = setTimeout(() => {
+        if (gest !== g0 || g0.kind !== 'press' || ptrs.size !== 1 || busy()) return;
+        g0.kind = 'held'; g0.hold = 0;
+        computeM(false);
+        const c = hitContact(g0.sx, g0.sy);
+        if (c) contactMenu(g0.sx, g0.sy, c); else groundMenu(g0.sx, g0.sy);
+      }, LONG_PRESS);
+    }
   });
   cv.addEventListener('pointermove', e => {
     const p = local(e);
@@ -1346,7 +1592,8 @@
       return;
     }
     if (gest.kind === 'press' && Math.hypot(p.x - gest.sx, p.y - gest.sy) > 9) {
-      gest.kind = !G.placing && (G.armed || (G.sel && G.sel.kind === 'sortie')) ? 'route' : 'pan';
+      clearHold();
+      gest.kind = !G.placing && !G.placingPost && (G.armed || (G.sel && G.sel.kind === 'sortie')) ? 'route' : 'pan';
     }
     if (gest.kind === 'pan') { panBy(p.x - gest.lx, p.y - gest.ly); gest.lx = p.x; gest.ly = p.y; return; }
     if (gest.kind === 'route') {
@@ -1359,6 +1606,7 @@
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (!gest) return;
+    clearHold();
     if (gest.kind === 'pinch') { if (!ptrs.size) gest = null; return; }
     const p = local(e);
     computeM(false);
@@ -1385,21 +1633,31 @@
   }, { passive: false });
 
   const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'nest' };
-  const ARM_KEYS = { q: 'glint', w: 'sting', e: 'decoy', r: 'warden', t: 'raider' };
+  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4 };
   window.addEventListener('keydown', e => {
-    if (e.target && e.target.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
+    const tg = e.target && e.target.tagName;
+    if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
+    if (tg === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
     if (G.mode === 'title') { if (e.key === 'Enter') startRound(); return; }
     if (G.mode !== 'play') return;
-    if (e.key === 'Escape') { if (G.paused) resume(); else if (G.armed || G.sel || G.placing) cancel(); else pause(); return; }
+    if (G.sheet) { if (e.key === 'Escape') closeSheet(); return; }
+    if (e.key === 'Escape') {
+      if (G.menu) closeMenu();
+      else if (G.paused) resume();
+      else if (G.armed || G.sel || G.placing || G.placingPost || G.movingPost) cancel();
+      else pause();
+      return;
+    }
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key.toLowerCase();
     if (k === 'p') { G.paused ? resume() : pause(); return; }
     if (G.paused) return;
     if (BUILD_KEYS[k]) buy(BUILD_KEYS[k]);
-    else if (ARM_KEYS[k]) arm(ARM_KEYS[k]);
+    else if (k in SQUAD_KEYS) armSquad(SQUAD_KEYS[k]);
+    else if (k === 'a') again();
+    else if (k === 'b') setAuto(!G.auto);
     else if (k === 'f') pickForager();
     else if (k === 'd') setStance(G.stance === 'dash' ? 'quiet' : 'dash');
-    else if (k === 'c') cycleCount();
     else if (k === 'x') recallSel();
     else if (k === 'g') toggleGuard();
     else if (e.key === ' ') { e.preventDefault(); toggleFocus(); }
@@ -1407,11 +1665,44 @@
   });
 
   // dock and overlay buttons
-  for (const t of LAUNCH) $('arm-' + t).addEventListener('click', () => arm(t));
+  for (let i = 0; i < DEFAULT_SQUADS.length; i++) {
+    const el = $('sq-' + i);
+    let hold = 0, held = false;
+    el.addEventListener('click', () => { if (held) { held = false; return; } armSquad(i); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); if (!busy()) openSquadSheet(i); });
+    el.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      held = false; clearTimeout(hold);
+      hold = setTimeout(() => { if (!busy()) { held = true; openSquadSheet(i); } }, 520);
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, () => clearTimeout(hold));
+  }
   for (const t of DS.BUILD_ORDER) $('buy-' + t).addEventListener('click', () => buy(t));
   $('queue').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (b) cancelQueued(+b.dataset.q); });
   $('btn-focus').addEventListener('click', toggleFocus);
   $('btn-guard').addEventListener('click', toggleGuard);
+  $('btn-auto').addEventListener('click', () => { if (G.mode === 'play') setAuto(!G.auto); });
+  $('btn-plan').addEventListener('click', () => { if (!busy()) openPlanSheet(); });
+  for (const t of ['build', 'posts', 'flying']) $('tab-' + t).addEventListener('click', () => setTab(t));
+  $('body-posts').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || busy()) return;
+    if (b.dataset.act === 'addpost') { startPost(); return; }
+    if (b.dataset.post) { const id = +b.dataset.post; disarm(); G.placing = false; G.sel = G.sel && G.sel.kind === 'post' && G.sel.id === id ? null : { kind: 'post', id }; play('tick'); }
+  });
+  $('body-flying').addEventListener('click', e => {
+    const b = e.target.closest('[data-so]');
+    if (!b || busy()) return;
+    disarm(); G.placing = false; G.placingPost = false; selectSortie(+b.dataset.so); play('tick');
+  });
+  app.addEventListener('pointerdown', e => { if (G.menu && e.target !== cv && !e.target.closest('#qmenu')) closeMenu(); }, true);
+  $('qmenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]');
+    if (!b || !G.menu) return;
+    const it = G.menu.items[+b.dataset.i];
+    closeMenu();
+    if (it && !it.off) it.run();
+  });
   $('btn-sound').addEventListener('click', () => { audioInit(); setMuted(!G.muted); });
   $('btn-pause').addEventListener('click', () => (G.paused ? resume() : pause()));
   $('ctx-main').addEventListener('click', e => {
@@ -1421,7 +1712,11 @@
     if (a === 'cancel') { cancel(); play('tick'); }
     else if (a === 'recall') recallSel();
     else if (a === 'quiet' || a === 'dash') setStance(a);
-    else if (a && a[0] === 'n' && G.armed) { const v = a.slice(1); G.counts[G.armed] = v === 'all' ? 'all' : +v; play('tick'); }
+    else if (a === 'again') again();
+    else if (a === 'edit-sq' && G.armedSq.length) openSquadSheet(G.armedSq[G.armedSq.length - 1]);
+    else if (a === 'post-edit' && G.sel && G.sel.kind === 'post') openPostSheet(G.sel.id);
+    else if (a === 'post-move' && G.sel && G.sel.kind === 'post') { G.movingPost = G.sel.id; G.sel = null; play('tick'); }
+    else if (a === 'post-del' && G.sel && G.sel.kind === 'post') removePostSel(G.sel.id);
   });
   $('seg-diff').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -1442,89 +1737,315 @@
   $('btn-next').addEventListener('click', () => { G.seed = randSeed(); store.set('seed', G.seed); startRound(); });
   $('btn-title').addEventListener('click', toTitle);
 
+  // ---------- dock tabs ----------
+  function setTab(t) {
+    G.tab = t;
+    for (const k of ['build', 'posts', 'flying']) {
+      $('tab-' + k).setAttribute('aria-selected', String(k === t));
+      $('body-' + k).hidden = k !== t;
+    }
+    G.listKeys = {};
+    play('tick');
+  }
+
+  // ---------- sheets: the plan, a squad, a post (the round pauses while one is open) ----------
+  const glyph = t => `<svg class="i"><use href="#g-${t}"/></svg>`;
+  function stepper(act, idx, val, lo, hi) {
+    return `<span class="step"><button data-act="${act}-" data-r="${idx}" aria-label="Fewer"${val <= lo ? ' disabled' : ''}>&minus;</button><b>${val}</b><button data-act="${act}+" data-r="${idx}" aria-label="More"${val >= hi ? ' disabled' : ''}>+</button></span>`;
+  }
+  function openSheet(sheet) {
+    closeMenu(); G.focus = false; gest = null; ptrs.clear();
+    G.sheet = sheet; G.sheetAt = performance.now();
+    $('sheet').hidden = false;
+    app.classList.add('sheet-on');
+    renderSheet();
+    $('sheet-done').focus({ preventScroll: true });
+  }
+  function closeSheet() {
+    const sh = G.sheet;
+    if (!sh) return;
+    if (sh.kind === 'post' && sh.isNew) {
+      if (DS.POST_TYPES.some(t => sh.need[t] > 0)) {
+        const p = DS.addPost(G.sim, 0, sh.x, sh.y, sh.need, sh.pri, sh.name);
+        if (p) { G.sel = { kind: 'post', id: p.id }; toast(`Post set at ${p.name}: ${staffText(p, ', ')}. The hive keeps it staffed.`, 'amber'); }
+      } else toast('No post set: it needed at least one unit.', '');
+    }
+    G.sheet = null;
+    $('sheet').hidden = true;
+    app.classList.remove('sheet-on');
+    G.last = 0; G.ctxKey = ''; G.listKeys = {};
+    if (sh.kind === 'squad') G.sqKey = '';
+  }
+  function openPlanSheet() { openSheet({ kind: 'plan' }); }
+  function openSquadSheet(i) { disarm(); openSheet({ kind: 'squad', i }); }
+  function openPostSheet(id, w) {
+    if (id) { const p = postById(id); if (!p) return; openSheet({ kind: 'post', id }); return; }
+    if (G.sim.sides[0].posts.length >= DS.POST_MAX) { play('deny'); return; }
+    disarm(); G.sel = null;
+    const near = Math.hypot(w.x - W / 2, w.y - H / 2) < 160;
+    openSheet({ kind: 'post', isNew: true, x: w.x, y: w.y, name: postName(w.x, w.y), need: near ? { glint: 1, warden: 2, decoy: 0 } : { glint: 1, warden: 1, decoy: 0 }, pri: near ? 2 : 1 });
+  }
+  function savePlan() {
+    store.set('plan', G.plan);
+    if (G.sim && G.mode === 'play') DS.setPlan(G.sim, 0, G.plan);
+  }
+  function renderSheet() {
+    const sh = G.sheet, sim = G.sim;
+    if (!sh) return;
+    let k = 'Paused while you plan', h = '', body = '', done = 'Done';
+    if (sh.kind === 'plan') {
+      h = 'Production plan';
+      const rows = G.plan.map((r, i) => {
+        const now = DS.forceCount(sim, 0, r.type), step = DS.BUILD[r.type].n;
+        return `<li${now >= r.want ? ' class="met"' : ''}><span class="pr-i">${i + 1}</span><span class="pr-mv"><button data-act="up" data-r="${i}" aria-label="Move up"${i ? '' : ' disabled'}>&#9650;</button><button data-act="down" data-r="${i}" aria-label="Move down"${i < G.plan.length - 1 ? '' : ' disabled'}>&#9660;</button></span>${glyph(r.type)}<span class="pr-n">${PLURAL[r.type]}<small>up to</small></span>${stepper('w', i, r.want, 0, PLAN_MAX[r.type]).replace(/data-act="w([-+])"/g, (m, sg) => `data-act="w${sg}" data-s="${step}"`)}<span class="pr-now">have ${now}</span><button class="pr-x" data-act="del" data-r="${i}" aria-label="Remove row">&times;</button></li>`;
+      }).join('');
+      body = `<div class="sh-row"><span class="sh-l">Auto build</span><div class="seg" role="group" aria-label="Auto build"><button data-act="auto1" aria-pressed="${G.auto}">On</button><button data-act="auto0" aria-pressed="${!G.auto}">Off</button></div></div>
+        <div class="sh-row"><span class="sh-l">Start from</span><div class="chips">${Object.keys(PRESETS).map(n => `<button class="chip" data-act="preset" data-k="${n}">${n}</button>`).join('')}</div></div>
+        <p class="sh-note">With Auto on, the hive keeps two items queued: the first row below its target, saving up for it rather than skipping ahead. Units in the air count, so losses are rebuilt. A type can appear twice to build in stages. Posts add what they need above these rows.</p>
+        <ol class="plan-rows">${rows || '<li class="empty">No rows. Add a type below or start from a preset.</li>'}</ol>
+        <div class="sh-row"><span class="sh-l">Add a row</span><div class="chips">${DS.PLAN_TYPES.map(t => `<button class="chip" data-act="add" data-t="${t}"${G.plan.length >= DS.PLAN_MAX_ROWS ? ' disabled' : ''}>${glyph(t)}${T[t].name}</button>`).join('')}</div></div>`;
+    } else if (sh.kind === 'squad') {
+      const sq = G.squads[sh.i];
+      h = `Squad ${sh.i + 1}: ${sq.name}`;
+      body = `<div class="sh-row"><label class="sh-l" for="sq-name">Name</label><input id="sq-name" maxlength="12" value="${sq.name.replace(/"/g, '&quot;')}" autocomplete="off" spellcheck="false"></div>
+        <ul class="mix-rows">${SQUAD_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('m', t, sq.mix[t] || 0, 0, SQUAD_MAX[t])}<span class="pr-now">${readyOf(t)} ready</span></li>`).join('')}</ul>
+        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERT'[sh.i]} arms it from the keyboard.</p>
+        <div class="btn-row"><button class="btn" data-act="sq-reset">Reset to ${DEFAULT_SQUADS[sh.i].name}</button></div>`;
+    } else if (sh.kind === 'post') {
+      const p = sh.isNew ? null : postById(sh.id);
+      if (!sh.isNew && !p) { closeSheet(); return; }
+      const need = sh.isNew ? sh.need : p.need, pri = sh.isNew ? sh.pri : p.pri, st = p ? staffOf(p) : {};
+      h = sh.isNew ? `New post: ${sh.name}` : `Post: ${p.name}`;
+      done = sh.isNew ? 'Set post' : 'Done';
+      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint or Decoy before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>
+        <ul class="mix-rows">${DS.POST_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('n', t, need[t] || 0, 0, DS.POST_CAP[t])}<span class="pr-now">${st[t] ? `${st[t].on} on station` : `${readyOf(t)} ready`}</span></li>`).join('')}</ul>
+        <div class="sh-row"><span class="sh-l">Priority</span><div class="seg" role="group" aria-label="Priority">${[2, 1, 0].map(v => `<button data-act="pri" data-v="${v}" aria-pressed="${pri === v}">${PRI[v]}</button>`).join('')}</div></div>
+        <div class="btn-row">${sh.isNew ? '<button class="btn" data-act="post-cancel">Cancel</button>' : '<button class="btn" data-act="post-move">Move</button><button class="btn danger" data-act="post-del">Remove post</button>'}</div>`;
+      k = 'Paused while you set it';
+    }
+    setText('sheet-k', k); setText('sheet-h', h); setText('sheet-done', done);
+    $('sheet-body').innerHTML = body;
+  }
+  // A long-press that opened the sheet can end with a stray tap on whatever now sits under the finger.
+  const sheetFresh = () => performance.now() - (G.sheetAt || 0) < 350;
+  $('sheet-done').addEventListener('click', () => { if (!sheetFresh()) closeSheet(); });
+  $('sheet').addEventListener('click', e => { if (e.target === $('sheet') && !sheetFresh()) closeSheet(); });
+  $('sheet-body').addEventListener('input', e => {
+    if (e.target.id !== 'sq-name' || !G.sheet || G.sheet.kind !== 'squad') return;
+    G.squads[G.sheet.i].name = e.target.value.trim().slice(0, 12) || DEFAULT_SQUADS[G.sheet.i].name;
+    store.set('squads', G.squads); G.sqKey = '';
+    setText('sheet-h', `Squad ${G.sheet.i + 1}: ${G.squads[G.sheet.i].name}`);
+  });
+  $('sheet-body').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    const sh = G.sheet;
+    if (!b || !sh || b.disabled || sheetFresh()) return;
+    const a = b.dataset.act, r = b.dataset.r;
+    if (sh.kind === 'plan') {
+      const i = +r, P = G.plan;
+      if (a === 'auto1' || a === 'auto0') setAuto(a === 'auto1');
+      else if (a === 'preset') { G.plan = PRESETS[b.dataset.k].map(([type, want]) => ({ type, want })); toast(`Plan set to ${b.dataset.k}.`, 'amber'); }
+      else if (a === 'up' && i > 0) [P[i - 1], P[i]] = [P[i], P[i - 1]];
+      else if (a === 'down' && i < P.length - 1) [P[i + 1], P[i]] = [P[i], P[i + 1]];
+      else if (a === 'del') P.splice(i, 1);
+      else if (a === 'w-' || a === 'w+') { const st = +b.dataset.s || 1; P[i].want = clamp(P[i].want + (a === 'w+' ? st : -st), 0, PLAN_MAX[P[i].type]); }
+      else if (a === 'add' && P.length < DS.PLAN_MAX_ROWS) { const t = b.dataset.t, have = DS.forceCount(G.sim, 0, t), st = DS.BUILD[t].n; P.push({ type: t, want: clamp(Math.ceil((have + st) / st) * st, st, PLAN_MAX[t]) }); }
+      else return;
+      savePlan();
+    } else if (sh.kind === 'squad') {
+      const sq = G.squads[sh.i];
+      if (a === 'm-' || a === 'm+') { const st = SQUAD_STEP[r] || 1; sq.mix[r] = clamp((sq.mix[r] || 0) + (a === 'm+' ? st : -st), 0, SQUAD_MAX[r]); if (!sq.mix[r]) delete sq.mix[r]; }
+      else if (a === 'sq-reset') G.squads[sh.i] = copySquads([DEFAULT_SQUADS[sh.i]])[0];
+      else return;
+      store.set('squads', G.squads); G.sqKey = '';
+    } else if (sh.kind === 'post') {
+      const p = sh.isNew ? null : postById(sh.id);
+      if (a === 'n-' || a === 'n+') {
+        const cur = sh.isNew ? sh.need : p.need, v = clamp((cur[r] || 0) + (a === 'n+' ? 1 : -1), 0, DS.POST_CAP[r]);
+        if (sh.isNew) sh.need[r] = v; else DS.editPost(G.sim, 0, p.id, { need: { [r]: v } });
+      } else if (a === 'pri') { const v = +b.dataset.v; if (sh.isNew) sh.pri = v; else DS.editPost(G.sim, 0, p.id, { pri: v }); }
+      else if (a === 'post-cancel') { sh.isNew = false; G.sheet = null; $('sheet').hidden = true; app.classList.remove('sheet-on'); G.last = 0; G.ctxKey = ''; return; }
+      else if (a === 'post-move' && p) { closeSheet(); G.movingPost = p.id; G.sel = null; toast('Tap the map where the post should move.', ''); return; }
+      else if (a === 'post-del' && p) { closeSheet(); removePostSel(p.id); return; }
+      else return;
+    }
+    play('tick');
+    renderSheet();
+  });
+
   // ---------- HUD ----------
   const setText = (id, v) => { const el = $(id); const s = String(v); if (el && el.textContent !== s) el.textContent = s; };
   function clockStr(t) { const s = Math.max(0, Math.ceil(t)); return `${(s / 60) | 0}:${String(s % 60).padStart(2, '0')}`; }
   const TIPS = [
-    'Build a <b>Forager</b> or two early. Nectar buys everything else.',
-    'Tap <b>Glint</b>, then drag a route. Perch it on a ridge to see further.',
-    'Tap <b>Stings</b>, then tap a blue contact to strike it.',
-    '<b>Raiders</b> bomb what they find along a route, then fly home to rearm.',
-    '<b>Wardens</b> patrol where you tap and net drones that come close.',
+    'Tap a <b>squad</b>, then tap the map or drag a route. Tap two squads to send them together.',
+    '<b>Auto</b> keeps the queue full from your plan. Tap <b>Plan</b> to set what it builds.',
+    'Tap a blue contact for quick orders: <b>Strike</b>, <b>Bomb</b> or <b>Intercept</b>.',
+    'Press and hold open ground to scout, hunt, patrol, set a <b>post</b> or grow a Nest there.',
+    'A <b>post</b> is a spot the hive keeps staffed. Put one on the Crown before Last Light.',
+    'Long-press or right-click a squad to change its mix.',
+    'Perch a <b>Glint</b> on a ridge to see further. Canopy hides what sits under it.',
     '<b>Decoys</b> look like Raiders to the rival and draw its fire.',
-    'A <b>Nest</b> is a forward base: drones launch from the nearest one.',
-    'Green dashed edges mark canopy. Drones under it are hard to see.',
-    'Tap a queued item in the Build row to cancel it for a full refund.',
-    'Tap two launch tiles to form a group, such as Raiders with Decoys. One route for all.',
+    'A <b>Nest</b> is a forward base. Parked Stings guard it as well as the Heart.',
     'Tap a Forager on the map, then a bloom, to move your harvest.',
   ];
   function ctxKey() {
-    const sim = G.sim;
     const sel = selSorties().map(so => so.type + so.units.length + so.stance).join(',');
-    return [G.group.join(','), G.group.map(t => G.counts[t] + ':' + readyOf(t)).join(','), G.placing, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, G.tipI].join('|');
+    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri : '';
+    return [G.armedSq.join(','), G.group.map(t => G.mix[t] + ':' + readyOf(t)).join(','), G.placing, G.placingPost, G.movingPost, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, post, G.again ? G.again.name : '', G.tipI].join('|');
   }
   function stanceSeg(st) {
     return `<div class="seg" role="group" aria-label="Stance"><button data-act="quiet" aria-pressed="${st === 'quiet'}">Quiet</button><button data-act="dash" aria-pressed="${st === 'dash'}">Dash</button></div>`;
   }
   function cancelBtn(word) { return `<button class="chip cancel" data-act="cancel" aria-label="${word}"><span class="x" aria-hidden="true">&times;</span><span class="w">${word}</span></button>`; }
-  function countSeg(type) {
-    return `<div class="seg" role="group" aria-label="How many">${COUNTS[type].map(v => `<button data-act="n${v}" aria-pressed="${G.counts[type] === v}">${v === 'all' ? 'All' : v}</button>`).join('')}</div>`;
+  function armHint(types) {
+    const one = types.length === 1 ? types[0] : null;
+    if (one === 'glint') return 'Tap a point or drag a route.';
+    if (one === 'warden') return 'Tap where to patrol, or a contact to intercept.';
+    if (one === 'decoy') return 'They read as Raiders. Drag a route.';
+    if (one === 'raider') return 'Drag a bombing route or tap a target.';
+    return types.some(isStriker) ? 'Tap a contact or drag a route.' : 'Tap a point or drag a route.';
   }
-  const ARM_TEXT = {
-    glint: 'Drag a route or tap a point.',
-    sting: 'Tap a contact or drag a route.',
-    decoy: 'They read as Raiders. Drag a route.',
-    warden: 'Tap where to patrol, or a contact.',
-    raider: 'Drag a bombing route or tap a target.',
-  };
   function renderCtx() {
     const key = ctxKey();
     if (key === G.ctxKey) return;
     G.ctxKey = key;
-    const sim = G.sim;
     let html = '';
     if (G.placing) {
       html = `<span class="ctx-text"><b>Placing a Nest.</b> Tap inside the amber rings.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
+    } else if (G.placingPost || G.movingPost) {
+      html = `<span class="ctx-text"><b>${G.movingPost ? 'Moving a post.' : 'Setting a post.'}</b> Tap where the hive should keep watch: a ridge, a bloom, the Crown.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
     } else if (G.armed) {
-      const nOf = t => { const r = readyOf(t), c = G.counts[t]; return t === 'glint' ? 1 : c === 'all' ? r : Math.min(c, r); };
-      const t = G.armed, gs = G.group;
-      if (gs.length > 1) {
-        const lead = gs.includes('decoy') && gs.some(isStriker);
-        html = `<span class="ctx-text"><b>Group: ${gs.map(x => units(nOf(x), x)).join(' + ')}.</b> One route for all${lead ? '; Decoys lead' : ''}.</span><span class="ctx-ctl">${COUNTS[t] ? `<span class="seg-l">${PLURAL[t]}</span>${countSeg(t)}` : ''}${stanceSeg(G.stance)}${cancelBtn('Cancel')}</span>`;
-      } else {
-        const more = isStriker(t) && readyOf('decoy') ? ' Tap Decoys to add them.' : '';
-        html = `<span class="ctx-text"><b>${units(nOf(t), t)} armed.</b> ${ARM_TEXT[t]}${more}</span><span class="ctx-ctl">${COUNTS[t] ? countSeg(t) : ''}${t === 'warden' ? '' : stanceSeg(G.stance)}${cancelBtn('Cancel')}</span>`;
-      }
+      const n = mixReady(G.mix), tot = mixSize(G.mix), lead = G.group.includes('decoy') && G.group.some(isStriker);
+      html = `<span class="ctx-text"><b>${armName()}: ${mixText(G.mix)}${n < tot ? ` (${n} ready)` : ''}.</b> ${armHint(G.group)}${lead ? ' Decoys lead.' : ''}</span><span class="ctx-ctl">${G.group.length === 1 && G.group[0] === 'warden' ? '' : stanceSeg(G.stance)}${G.armedSq.length === 1 ? '<button class="chip" data-act="edit-sq">Edit</button>' : ''}${cancelBtn('Cancel')}</span>`;
     } else if (G.sel && G.sel.kind === 'sortie') {
       const list = selSorties();
       if (list.length) {
         const types = list.map(so => so.type), one = list.length === 1 ? list[0] : null;
         const canRecall = types.some(t => t === 'sting' || T[t].reuse);
         const hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
-        const name = list.map(so => units(so.units.length, so.type)).join(' + ');
-        html = `<span class="ctx-text"><b>${one ? name : 'Group: ' + name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
+        const name = list.slice().sort((a, b) => MIX_ORDER.indexOf(a.type) - MIX_ORDER.indexOf(b.type)).map(so => units(so.units.length, so.type)).join(' + ');
+        const lbl = list[0].post ? `${(postById(list[0].post) || {}).name || 'Post'} post: ` : list[0].label && list[0].label !== 'Guard' ? `${list[0].label}: ` : one ? '' : 'Group: ';
+        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
       } else G.sel = null;
     } else if (G.sel && G.sel.kind === 'forager') {
       html = `<span class="ctx-text"><b>Forager selected.</b> Tap a bloom to send it there.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
+    } else if (G.sel && G.sel.kind === 'post') {
+      const p = postById(G.sel.id);
+      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
+      else G.sel = null;
     }
-    if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>`;
+    if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>${G.again ? `<span class="ctx-ctl"><button class="chip again" data-act="again" title="Send ${G.again.name} again the same way (A)">Again: ${G.again.name}</button></span>` : ''}`;
     $('ctx-main').innerHTML = html;
+  }
+  function renderSquads() {
+    const key = G.squads.map(q => q.name + JSON.stringify(q.mix)).join('|');
+    if (key !== G.sqKey) {
+      G.sqKey = key;
+      G.squads.forEach((q, i) => {
+        const types = mixTypes(q.mix), main = ['raider', 'warden', 'sting', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
+        const el = $('sq-' + i);
+        el.innerHTML = `<svg class="i gly"><use href="#g-${main}"/></svg><span class="nm">${q.name}</span><span class="sub">${types.length ? mixText(q.mix, ' · ') : 'empty: tap to set'}</span><span class="ct" id="sqr-${i}">0</span><span class="meter"><i id="sqm-${i}"></i></span>`;
+        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERT'[i]}). Long-press or right-click to edit.`;
+        el.setAttribute('aria-label', `${q.name}: ${types.length ? mixText(q.mix) : 'empty'}. Long-press or right-click to edit.`);
+      });
+    }
+    G.squads.forEach((q, i) => {
+      const tot = mixSize(q.mix), r = tot ? mixReady(q.mix) : 0;
+      setText('sqr-' + i, r);
+      $('sq-' + i).classList.toggle('part', r > 0 && r < tot);
+      $('sqm-' + i).style.setProperty('--m', tot ? (r / tot).toFixed(3) : '0');
+      const el = $('sq-' + i);
+      el.classList.toggle('armed', G.armedSq.includes(i));
+      el.classList.toggle('empty', !r);
+    });
   }
   function renderQueue() {
     const S0 = G.sim.sides[0], q = S0.queue;
-    const key = q.map(x => x.id).join(',');
+    const key = q.map(x => x.id + (x.auto ? 'a' : '')).join(',');
     const box = $('queue');
     if (key !== G.qKey) {
       G.qKey = key;
       box.innerHTML = q.map((it, i) => {
-        const b = DS.BUILD[it.type];
-        return `<button class="qchip${i === 0 ? ' head' : ''}" data-q="${it.id}" aria-label="Cancel ${b.n > 1 ? units(b.n, it.type) : T[it.type].name}, refund ${b.cost} nectar" title="Cancel and refund ◆${b.cost}"><svg class="i"><use href="#g-${it.type}"/></svg>${b.n > 1 ? `<span class="n">×${b.n}</span>` : ''}<span class="x" aria-hidden="true">×</span><i class="qp"></i></button>`;
+        const b = DS.BUILD[it.type], nm = b.n > 1 ? units(b.n, it.type) : T[it.type].name;
+        return `<button class="qchip${i === 0 ? ' head' : ''}${it.auto ? ' auto' : ''}" data-q="${it.id}" aria-label="Cancel ${nm}${it.auto ? ' (auto)' : ''}, refund ${b.cost} nectar" title="${it.auto ? 'Queued by Auto. ' : ''}Cancel and refund ◆${b.cost}"><svg class="i"><use href="#g-${it.type}"/></svg>${b.n > 1 ? `<span class="n">×${b.n}</span>` : ''}<span class="x" aria-hidden="true">×</span><i class="qp"></i></button>`;
       }).join('');
-      $('q-empty').hidden = q.length > 0;
-      setText('q-count', q.length ? `${q.length}/${DS.QUEUE_MAX}` : '');
+      setText('q-count', q.length > 2 ? `${q.length}/${DS.QUEUE_MAX}` : '');
     }
     const head = box.firstElementChild;
     if (head && q[0]) head.style.setProperty('--p', (1 - q[0].t / q[0].total).toFixed(3));
+    // what auto build is doing
+    let st = '', warn = false;
+    if (!S0.auto) st = q.length ? '' : 'Queue empty. Tap a button below, or turn on Auto.';
+    else {
+      const nx = DS.autoNext(G.sim, 0);
+      if (!nx) st = q.length ? 'Auto: plan met' : 'Auto: plan met. Raise a target in Plan to build more.';
+      else {
+        const nm = DS.BUILD[nx.type].n > 1 ? PLURAL[nx.type] : T[nx.type].name;
+        if (q.length >= DS.AUTO_QUEUE) st = `Auto, next: ${nm}${nx.from === 'post' ? ' for a post' : ''}`;
+        else {
+          const rate = G.rateNow || 0, short = nx.cost - S0.nectar;
+          st = `Auto: saving for ${nm} ◆${nx.cost}${rate > 0.2 ? `, about ${Math.ceil(short / rate)} s` : ''}`;
+          warn = true;
+        }
+      }
+    }
+    setText('q-status', st);
+    $('q-status').classList.toggle('wait', warn);
+  }
+  const SO_STATE = so => {
+    const sim = G.sim;
+    let lead = null;
+    for (const id of so.units) { const u = sim.byId.get(id); if (u) { lead = u; break; } }
+    if (!lead) return '';
+    if (lead.homing || so.mode === 'home') return 'heading home';
+    if (lead.diving) return 'diving';
+    if (so.mode === 'raid') return 'raiding';
+    if (so.mode === 'strike') return 'striking';
+    if (so.mode === 'guard') return 'intercepting';
+    if (lead.wp < so.route.length) return 'en route';
+    if (so.type === 'warden') return 'patrolling';
+    if (so.mode === 'hunt' || so.type === 'sting') return 'hunting';
+    if (so.type === 'raider') return 'bombing';
+    return so.type === 'glint' ? 'watching' : 'loitering';
+  };
+  function renderLists() {
+    const sim = G.sim, S0 = sim.sides[0];
+    // posts
+    const posts = S0.posts;
+    let short = 0;
+    const pinfo = posts.map(p => { const st = staffOf(p), sh = isShort(st); if (sh) short++; return { p, st, sh }; });
+    const tbp = $('tb-posts');
+    tbp.textContent = posts.length ? String(posts.length) : '';
+    tbp.className = 'tb' + (short ? ' warn' : '');
+    // flying: packages in the air on your orders (not guard or posts)
+    const pk = new Map();
+    for (const so of sim.sorties.values()) {
+      if (so.side !== 0 || !so.units.length || so.label === 'Guard' || so.post) continue;
+      const k = so.pkg ? 'p' + so.pkg : 's' + so.id;
+      if (!pk.has(k)) pk.set(k, { id: so.id, label: so.label, mix: {}, born: so.born, list: [] });
+      const e = pk.get(k);
+      e.mix[so.type] = (e.mix[so.type] || 0) + so.units.length; e.list.push(so);
+    }
+    const fl = [...pk.values()].sort((a, b) => b.born - a.born);
+    setText('tb-flying', fl.length ? String(fl.length) : '');
+    if (G.tab === 'posts') {
+      const sel = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
+      const key = pinfo.map(({ p, st, sh }) => p.id + p.name + p.pri + JSON.stringify(st) + sh).join('|') + sel + G.placingPost;
+      if (key !== G.listKeys.posts) {
+        G.listKeys.posts = key;
+        const add = `<button class="dcard add${G.placingPost ? ' on' : ''}" data-act="addpost"${posts.length >= DS.POST_MAX ? ' disabled' : ''}><span class="c-n">+ Post</span><span class="c-s">${posts.length >= DS.POST_MAX ? `${DS.POST_MAX} at most` : 'then tap the map'}</span></button>`;
+        const cards = pinfo.map(({ p, st, sh }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
+        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens or Decoys. Press and hold the map for <b>Post here</b>.</p>');
+      }
+    } else if (G.tab === 'flying') {
+      const sel = selSet();
+      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + e.list.some(so => sel.has(so.id))).join('|');
+      if (key !== G.listKeys.flying) {
+        G.listKeys.flying = key;
+        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
+          : '<p class="cards-note">Nothing in the air on your orders. Tap a squad, then the map. Guard and post flights are not listed here.</p>';
+      }
+    }
   }
   function hud() {
     const sim = G.sim;
@@ -1534,25 +2055,15 @@
     G.rateHist.push({ t: sim.t, h: S0.harvested });
     while (G.rateHist.length > 2 && sim.t - G.rateHist[0].t > 30) G.rateHist.shift();
     const h0 = G.rateHist[0], dt = sim.t - h0.t;
-    setText('rate', `+${dt > 2 ? ((S0.harvested - h0.h) / dt).toFixed(1) : '0.0'}/s`);
+    G.rateNow = dt > 2 ? (S0.harvested - h0.h) / dt : 0;
+    setText('rate', `+${G.rateNow.toFixed(1)}/s`);
     setText('clock', clockStr(C.round - sim.t));
     setText('phase', sim.phases[sim.phase].name);
     $('clockbox').classList.toggle('late', sim.phase === 3);
     setText('sc0', Math.floor(S0.score)); setText('sc1', Math.floor(sim.sides[1].score));
     $('hold').className = 'hold' + (sim.t >= C.bloomScore && sim.holder >= 0 ? ' h' + sim.holder : '');
-    // launch row
-    for (const t of LAUNCH) {
-      const r = readyOf(t), out = DS.outCount(sim, 0, t), re = DS.rearmingCount(sim, 0, t);
-      setText('ct-' + t, r);
-      const bits = [];
-      if (out) bits.push(`${out} out`);
-      if (re) bits.push(`${re} rearming`);
-      setText('sub-' + t, bits.length ? bits.join(' · ') : r ? 'ready' : 'none');
-      const el = $('arm-' + t);
-      el.classList.toggle('armed', G.group.includes(t));
-      el.classList.toggle('empty', !r);
-    }
-    // build row
+    renderSquads();
+    // build tab
     let nF = 0;
     for (const u of sim.units) if (u.side === 0 && u.type === 'forager' && u.hp > 0) nF++;
     setText('bk-forager', nF);
@@ -1563,6 +2074,9 @@
       if (t === 'nest') el.classList.toggle('armed', G.placing);
     }
     renderQueue();
+    const ab = $('btn-auto');
+    ab.classList.toggle('on', S0.auto); ab.setAttribute('aria-pressed', String(S0.auto));
+    renderLists();
     $('m-focus').style.setProperty('--m', G.meter.toFixed(3));
     $('btn-focus').classList.toggle('on', G.focus);
     $('btn-focus').setAttribute('aria-pressed', String(G.focus));
@@ -1576,7 +2090,8 @@
     flushAgg();
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
-      toast('Last Light in 20 seconds. Get drones onto the Crown bloom.', 'bloom');
+      const onCrown = S0.posts.some(p => Math.hypot(p.x - W / 2, p.y - H / 2) < DS.HOLD_R);
+      toast(onCrown ? 'Last Light in 20 seconds. Your Crown post is staffed; add Stings to hold it.' : 'Last Light in 20 seconds. Get drones onto the Crown bloom, or set a post there.', 'bloom');
       play('chime');
     }
     // raid warning
@@ -1597,7 +2112,9 @@
   function newSim(mode) {
     G.sim = DS.createSim({ seed: G.seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1] });
     G.fx = []; G.trails.clear(); G.acc = 0; G.vis = []; G.visT = -1;
-    setArm([]); G.pkgSeq = 1; G.sel = null; G.placing = false; G.focus = false; G.meter = 1; G.rateHist = []; G.endShown = false; G.ctxKey = ''; G.qKey = '-';
+    disarm(); G.pkgSeq = 1; G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; G.again = null; closeMenu();
+    G.focus = false; G.meter = 1; G.rateHist = []; G.rateNow = 0; G.endShown = false; G.ctxKey = ''; G.qKey = '-'; G.sqKey = ''; G.listKeys = {};
+    if (mode === 'play') { DS.setPlan(G.sim, 0, G.plan); DS.setAuto(G.sim, 0, G.auto); }
     G.agg = { mine: {}, theirs: {}, t: 0, val: 0 }; G.thr = {}; G.raidT = -99; G.overT = 0; G.warnedLL = false; G.firstNest = true;
     if (G.terrainSeed !== G.seed) { G.terrain = renderTerrain(G.sim.map); G.terrainSeed = G.seed; }
   }
@@ -1615,9 +2132,14 @@
     banner('Pollination', G.sim.phases[0].line);
     play('chime');
     setTimeout(() => { if (G.mode === 'play') toast(`Your Heart is amber, on the ${cam.portrait ? 'bottom' : 'left'}. Cobalt is ${cam.portrait ? 'at the top' : 'on the right'}.`, 'amber'); }, 900);
+    if (G.auto && !store.get('autoTold', false)) {
+      store.set('autoTold', true);
+      setTimeout(() => { if (G.mode === 'play') toast('Auto build is on: the hive keeps your plan topped up. Tap Plan to change it.', 'amber'); }, 3200);
+    }
     store.set('seed', G.seed);
   }
   function toTitle() {
+    if (G.sheet) closeSheet();
     hideOverlays();
     G.mode = 'title'; G.paused = false;
     app.className = 'mode-title';
@@ -1629,6 +2151,8 @@
   }
   function pause() {
     if (G.mode !== 'play' || G.paused) return;
+    if (G.sheet) closeSheet();
+    closeMenu();
     G.paused = true; G.focus = false; gest = null; ptrs.clear();
     setText('pause-k', `Paused at ${clockStr(G.sim.cfg.round - G.sim.t)} left`);
     $('ov-pause').hidden = false;
@@ -1724,7 +2248,7 @@
     G.now = now;
     const sim = G.sim;
     if (sim) {
-      const running = !G.paused && !sim.over && (G.mode === 'play' || G.mode === 'title');
+      const running = !G.paused && !G.sheet && !sim.over && (G.mode === 'play' || G.mode === 'title');
       if (running) {
         if (G.mode === 'play') {
           if (G.focus) { G.meter -= rdt / 8; if (G.meter <= 0) { G.meter = 0; G.focus = false; } }
