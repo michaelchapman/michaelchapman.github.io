@@ -1,4 +1,4 @@
-/* Drone Season · rendering, input, sound and overlays (milestone 3: links, Relays and Harriers). */
+/* Drone Season · rendering, input, sound and overlays (milestone 4: rival styles). */
 (function () {
   'use strict';
   const DS = window.DS, W = DS.W, H = DS.H, TAU = Math.PI * 2, T = DS.TYPES;
@@ -69,6 +69,8 @@
     hover: null, rateHist: [], hudT: 0, raidT: -99, thr: {}, ctxKey: '', qKey: '', endShown: false, overT: 0,
     agg: { mine: {}, theirs: {}, t: 0, val: 0 }, tipI: 0, tipT: 0, sfxT: {}, warnedLL: false, firstNest: true,
   };
+  G.style = store.get('style', 'any');
+  if (G.style !== 'any' && !DS.STYLES[G.style]) G.style = 'any';
   if (!DS.DIFF[G.diff]) G.diff = 'normal';
   if (!DS.MODES[G.round]) G.round = 'short';
   if (!(G.seed >= 1000 && G.seed <= 9999)) G.seed = randSeed();
@@ -1518,7 +1520,7 @@
       NET.role = ''; NET.live = false;
       $('ov-net').hidden = true; app.classList.remove('overlay-on');
       G.paused = false; G.last = 0; $('wait').hidden = true;
-      toast('The computer has taken over the cobalt hive.', 'cobalt');
+      showRival(true);
     } else if (b.dataset.act === 'net-title') { $('ov-net').hidden = true; leaveGame(); }
   });
   function leaveGame() {
@@ -2335,6 +2337,11 @@
     if (!b) return;
     G.diff = b.dataset.d; store.set('diff', G.diff); syncTitle();
   });
+  $('seg-style').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    G.style = b.dataset.s; store.set('style', G.style); syncTitle();
+  });
   $('seg-round').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -2743,7 +2750,7 @@
     const seed = mode === 'training' ? TRAIN_SEED : net ? net.seed : G.seed;
     G.sim = mode === 'training' ? DS.createSim({ seed, diff: 'normal', mode: 'training', ai: [] })
       : net ? DS.createSim({ seed, diff: 'normal', mode: net.round, ai: [] })     // two players: no computer on either side
-      : DS.createSim({ seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1] });
+      : DS.createSim({ seed, diff: G.diff, mode: G.round, ai: mode === 'title' ? [0, 1] : [1], aiStyle: mode === 'play' && G.style !== 'any' ? { 1: G.style } : null });
     G.fx = []; G.trails.clear(); G.acc = 0; G.vis = []; G.visT = -1;
     disarm(); G.pkgSeq = 1; G.sel = null; G.placing = false; G.placingPost = false; G.movingPost = 0; G.again = null; closeMenu();
     G.rateHist = []; G.rateNow = 0; G.endShown = false; G.ctxKey = ''; G.qKey = '-'; G.sqKey = ''; G.listKeys = {};
@@ -2758,7 +2765,7 @@
     audioInit();
     if (G.sheet) closeSheet();
     if (!net && NET.role) { send({ t: 'bye' }); netReset(); dropJoinParam(); }
-    hideOverlays(); closeLobby(); $('ov-net').hidden = true; $('wait').hidden = true;
+    hideOverlays(); closeLobby(); hideRival(); $('ov-net').hidden = true; $('wait').hidden = true;
     G.mode = 'play'; G.paused = false; G.training = training === true; G.wasNet = !!net;
     ME = net ? net.me : 0; OP = 1 - ME; cam.flip = ME === 1;
     app.className = 'mode-play';
@@ -2772,6 +2779,7 @@
     renderCoach();
     banner('Pollination', G.sim.phases[0].line);
     play('chime');
+    if (!net) showRival();
     setTimeout(() => {
       if (G.mode !== 'play' || G.training) return;
       const mine = cam.portrait ? 'at the bottom' : 'on the left', theirs = cam.portrait ? 'at the top' : 'on the right';
@@ -2783,7 +2791,26 @@
     }
     store.set('seed', G.seed);
   }
+  // ---------- the rival's style ----------
+  // Named at the start of a round against the computer, with how to beat it; kept on the pause card and the end screen.
+  const rivalAI = () => (G.sim && G.sim.ai[OP]) || null;
+  function showRival(took) {
+    const ai = rivalAI();
+    hideRival();
+    if (!ai) return;
+    setText('rival-k', took ? 'The computer takes over cobalt' : 'Your rival');
+    setText('rival-h', `Cobalt plays ${ai.st.name}`);
+    setText('rival-p', ai.st.line);
+    $('rival-b').innerHTML = `<b>How to beat it:</b> ${ai.st.beat}`;
+    $('rival').hidden = false;
+    app.classList.add('rival-on');
+    requestAnimationFrame(() => { const el = $('rival'); app.style.setProperty('--rival-b', `${el.offsetTop + el.offsetHeight}px`); });
+    G.rivalT = setTimeout(hideRival, 16000);
+  }
+  function hideRival() { clearTimeout(G.rivalT); $('rival').hidden = true; app.classList.remove('rival-on'); }
+  $('rival-x').addEventListener('click', hideRival);
   function toTitle() {
+    hideRival();
     if (G.sheet) closeSheet();
     hideOverlays(); $('ov-net').hidden = true; $('wait').hidden = true;
     G.mode = 'title'; G.paused = false; G.training = false; G.wasNet = false;
@@ -2800,10 +2827,13 @@
   function pause(fromRival) {
     if (G.mode !== 'play' || G.paused) return;
     if (G.sheet) closeSheet();
-    closeMenu();
+    closeMenu(); hideRival();
     G.paused = true; gest = null; ptrs.clear();
     if (NET.live && fromRival !== true) send({ t: 'pause' });
     setText('pause-k', fromRival === true ? 'Paused by your rival' : `Paused at ${clockStr(G.sim.cfg.round - G.sim.t)} left`);
+    const ai = G.training ? null : rivalAI(), pr = $('pause-rival');
+    pr.hidden = !ai;
+    if (ai) pr.innerHTML = `<b>Cobalt plays ${ai.st.name}.</b> ${ai.st.line} <b>How to beat it:</b> ${ai.st.beat}`;
     $('btn-restart').hidden = NET.live;
     setText('btn-quit', NET.live ? 'Leave game' : 'Title screen');
     $('ov-pause').hidden = false;
@@ -2823,6 +2853,7 @@
     $('train-hint').hidden = !!store.get('trained', false);
     for (const b of $('seg-diff').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.d === G.diff));
     for (const b of $('seg-round').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.r === G.round));
+    for (const b of $('seg-style').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.s === G.style));
     const md = DS.MODES[G.round];
     setText('kick-mode', `${md.name.toLowerCase()}, ${md.minutes} minutes`);
   }
@@ -2847,11 +2878,16 @@
     }
     const lt = topKey(a.lostTo);
     if (lost && lt && a.lostTo[lt] >= 60) lines.push(`Your heaviest losses came from their ${PLURAL[lt] || lt}: ◆${a.lostTo[lt]} of units.`);
+    const ai = sim.ai[OP];
+    if (ai) {
+      lines.push(`Cobalt played ${ai.st.name}.${ai.notes.length ? ` It adapted to you: ${ai.notes.map(n => n.text.replace(/\.$/, '').replace(/^./, c => c.toLowerCase())).join('; ')}.` : ''}`);
+      if (lost) lines.push(`Next time against ${ai.st.name}: ${ai.st.beat.replace(/^./, c => c.toLowerCase())}`);
+    }
     return lines;
   }
   function showEnd() {
     if (G.endShown || G.mode !== 'play') return;
-    G.endShown = true; G.mode = 'end';
+    G.endShown = true; G.mode = 'end'; hideRival();
     const sim = G.sim, a = sim.sides[ME], b = sim.sides[OP], won = sim.winner === ME, lost = sim.winner === OP, C = sim.cfg;
     const recKey = G.wasNet ? `2p-${NET.round}` : `${G.diff}-${G.round}`;
     const rec = store.get('record2', {});

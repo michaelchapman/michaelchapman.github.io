@@ -1,4 +1,4 @@
-/* Drone Season · simulation core (milestone 3, Links). Pure logic, no DOM, deterministic per seed and across browsers. */
+/* Drone Season · simulation core (milestone 4, Rivals). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -58,9 +58,9 @@
   };
   const BUILD_ORDER = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier', 'nest'];
   const DIFF = {
-    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7, jam: false },
-    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1, jam: true },
-    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2, jam: true },
+    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7, jam: false, adapt: 90 },
+    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1, jam: true, adapt: 60 },
+    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2, jam: true, adapt: 30 },
   };
 
   // ---------- helpers ----------
@@ -356,7 +356,7 @@
       for (let i = 0; i < 4; i++) addUnit(sim, s, 'sting', hp.x, hp.y);
     }
     const aiSides = opts.ai || [1];
-    for (const s of aiSides) sim.ai[s] = createAI(sim, s, (opts.aiDiff && opts.aiDiff[s]) || diff);
+    for (const s of aiSides) sim.ai[s] = createAI(sim, s, (opts.aiDiff && opts.aiDiff[s]) || diff, opts.aiStyle && opts.aiStyle[s]);
     return sim;
   }
 
@@ -1471,32 +1471,79 @@
   }
 
   // ---------- rival hive ----------
-  const AI_FORCE = [
-    [['forager', 4], ['glint', 1], ['sting', 8], ['glint', 2], ['sting', 10]],
-    [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['raider', 1], ['decoy', 2], ['sting', 14], ['glint', 2]],
-    [['forager', 5], ['glint', 1], ['sting', 10], ['warden', 2], ['raider', 2], ['decoy', 4], ['sting', 18], ['glint', 2]],
-    [['glint', 1], ['sting', 10], ['warden', 2], ['raider', 1], ['decoy', 2], ['sting', 22]],
-  ];
-  // Hand a side to the computer (diff) or take it away (null). A side without an AI earns at the standard rate.
-  function setAI(sim, side, diff) {
-    sim.ai[side] = diff ? createAI(sim, side, diff) : null;
+  // Four styles. Each sets the force the hive keeps, when and how it raids, how it holds the Crown, and its tricks.
+  // Difficulty (DIFF) sets how fast it reacts and adapts, how much it earns and, on easy, how many units it fields.
+  const STYLES = {
+    reaper: {
+      name: 'Reaper', line: 'An early swarm of Stings and Decoys. It raids early and often, hunts Foragers at the blooms and floods the Crown.',
+      beat: 'Wardens on posts and Guard blunt the swarm. Raiders on its thin harvest starve it.',
+      force: [
+        [['forager', 4], ['glint', 1], ['sting', 10], ['decoy', 2], ['sting', 12]],
+        [['forager', 5], ['glint', 1], ['sting', 10], ['decoy', 4], ['raider', 1], ['sting', 16]],
+        [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 6], ['warden', 1], ['sting', 20]],
+        [['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24]],
+      ],
+      raidAt: 0.2, raidGap: 1.15, raidSize: -1, harvest: 0.5, hold: 0, guard: 0, rush: true,
+    },
+    bulwark: {
+      name: 'Bulwark', line: 'A turtle. Wardens hold its blooms, Nests and the Crown, it grows a second Nest early and parks a Harrier over the Crown late. It raids rarely, but big.',
+      beat: 'Out-harvest it early, drain its nets with Decoys, blind its Wardens with a Harrier, and mass on the Crown late.',
+      force: [
+        [['forager', 5], ['glint', 1], ['sting', 6], ['warden', 1], ['sting', 8]],
+        [['forager', 5], ['glint', 1], ['warden', 2], ['sting', 10], ['relay', 1], ['decoy', 2], ['warden', 3], ['sting', 14]],
+        [['forager', 5], ['glint', 1], ['warden', 3], ['relay', 1], ['harrier', 1], ['sting', 12], ['raider', 1], ['warden', 4], ['sting', 22]],
+        [['glint', 1], ['warden', 4], ['harrier', 1], ['sting', 14], ['decoy', 4], ['sting', 30]],
+      ],
+      raidAt: 0.42, raidGap: 1.3, raidSize: 2, harvest: 0.2, hold: 0, guard: 1, nests: 1, posts: true, crownJam: 30, queue: 3,
+    },
+    listener: {
+      name: 'Listener', line: 'Eyes everywhere. Its Glints perch on the ridges and quick, precise strikes follow, at your Harriers, Raiders and Relays first.',
+      beat: 'Kill its Glints, keep to canopy, and feed its strikes Decoys.',
+      force: [
+        [['forager', 4], ['glint', 2], ['sting', 8], ['glint', 3], ['sting', 10]],
+        [['forager', 5], ['glint', 3], ['sting', 8], ['warden', 1], ['raider', 1], ['sting', 14]],
+        [['forager', 5], ['glint', 3], ['sting', 10], ['warden', 2], ['raider', 1], ['sting', 18]],
+        [['glint', 3], ['sting', 10], ['warden', 1], ['sting', 22]],
+      ],
+      raidAt: 0.3, raidGap: 1.15, raidSize: 0, harvest: 0.3, hold: 0, guard: 0, scout: 0.55, glints: 3, perch: true, react: 0.9, strikeK: 1,
+    },
+    mimic: {
+      name: 'Mimic', line: 'Decoys everywhere. A feint on one flank comes before the real raid on the other, its Raiders creep through canopy, and a Harrier rides with the raid.',
+      beat: 'Get a Glint close to a raid to see through its Decoys before you chase. Keep Guard on and hold back from the first wave.',
+      force: [
+        [['forager', 4], ['glint', 1], ['sting', 8], ['decoy', 4], ['sting', 10]],
+        [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['decoy', 6], ['raider', 1], ['sting', 14]],
+        [['forager', 5], ['glint', 1], ['sting', 10], ['warden', 2], ['decoy', 8], ['raider', 1], ['harrier', 1], ['sting', 20]],
+        [['glint', 1], ['decoy', 6], ['sting', 10], ['warden', 2], ['harrier', 1], ['sting', 24]],
+      ],
+      raidAt: 0.27, raidGap: 1, raidSize: 0, harvest: 0.35, hold: 1, guard: 1, feint: true, canopy: true,
+    },
+  };
+  const STYLE_KEYS = ['reaper', 'bulwark', 'listener', 'mimic'];
+  // Hand a side to the computer (diff, and a style or a random one) or take it away (null).
+  // A side without an AI earns at the standard rate.
+  function setAI(sim, side, diff, style) {
+    sim.ai[side] = diff ? createAI(sim, side, diff, style) : null;
     if (!diff) sim.sides[side].mult = 1;
   }
-  function createAI(sim, s, diff) {
+  function createAI(sim, s, diff, style) {
     const cfg = DIFF[diff] || DIFF.normal;
     sim.sides[s].mult = cfg.income;
     const R = sim.cfg.round, rnd = mulberry32((sim.seed + 977 * (s + 1)) >>> 0);
+    const key = STYLES[style] ? style : STYLE_KEYS[Math.floor(rnd() * STYLE_KEYS.length) % STYLE_KEYS.length];
+    const st = STYLES[key];
     return {
-      side: s, cfg, diff, rnd, scoutT: 5 + s * 2, raidT: R * 0.29, holdT: 0, glintHoldT: 0, centreSent: 0,
-      nestT: R * (0.15 + 0.06 * rnd()), raiderT: R * 0.2, scouted: new Map(), raids: 0, fieldSeen: new Map(),
+      side: s, cfg, diff, rnd, style: key, st, scoutT: 5 + s * 2, raidT: R * st.raidAt, holdT: 0, glintHoldT: 0, centreSent: 0,
+      nestT: R * ((st.nests ? 0.08 : 0.15) + 0.06 * rnd()), raiderT: R * 0.2, scouted: new Map(), raids: 0, fieldSeen: new Map(),
+      pending: null, postT: 0, jamT: 0, seen: new Map(), seenIds: new Set(), adapt: {}, adaptT: cfg.adapt, notes: [],
     };
   }
   function aiScoutPoint(sim, ai) {
-    const s = ai.side, m = sim.map, cands = [];
+    const s = ai.side, m = sim.map, cands = [], perch = ai.st.perch;
     m.fields.forEach((f, i) => { if (f.side !== s) cands.push({ x: f.x, y: f.y, key: 'f' + i }); });
     m.peaks.forEach((p, i) => {
-      const enemyHalf = s === 1 ? p.x < W * 0.62 : p.x > W * 0.38;
-      if (enemyHalf) cands.push({ x: p.x, y: p.y, key: 'p' + i, bonus: 0.35 });
+      const enemyHalf = s === 1 ? p.x < W * 0.62 : p.x > W * 0.38, middle = p.x > W * 0.28 && p.x < W * 0.72;
+      if (enemyHalf || (perch && middle)) cands.push({ x: p.x, y: p.y, key: 'p' + i, bonus: perch ? 1.1 : 0.35 });
     });
     const eh = sim.hearts[1 - s];
     cands.push({ x: eh.x + (s ? 1 : -1) * -250, y: eh.y + (ai.rnd() - 0.5) * 240, key: 'h' });
@@ -1513,6 +1560,23 @@
     const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
     const a = datan2(to.y - from.y, to.x - from.x) + Math.PI / 2, off = (ai.rnd() - 0.5) * 260 * (wob == null ? 1 : wob);
     return [{ x: mx + dcos(a) * off, y: my + dsin(a) * off }, { x: to.x, y: to.y }];
+  }
+  // A Mimic's Raiders creep through the canopy patch that costs the least detour, if one is on the way.
+  function aiSneakRoute(sim, ai, from, to, wob) {
+    if (!ai.st.canopy) return aiRoute(ai, from, to, wob);
+    const direct = dist(from.x, from.y, to.x, to.y);
+    let best = null, bd = direct * 1.4;
+    for (const p of sim.map.patches) {
+      const d = dist(from.x, from.y, p.x, p.y) + dist(p.x, p.y, to.x, to.y);
+      if (d < bd && dist(from.x, from.y, p.x, p.y) > 90 && dist(p.x, p.y, to.x, to.y) > 60) { bd = d; best = p; }
+    }
+    return best ? [{ x: best.x, y: best.y }, { x: to.x, y: to.y }] : aiRoute(ai, from, to, wob);
+  }
+  // A Mimic sends a pair of Decoys along a Raider's route, a little wide of it, to draw the fire meant for it.
+  function aiEscort(sim, ai, rt, parked, take) {
+    if (!ai.st.feint || parked.decoy.length < 2) return;
+    const wide = rt.map(p => ({ x: clamp(p.x + (ai.rnd() - 0.5) * 70, 10, W - 10), y: clamp(p.y + (ai.rnd() - 0.5) * 70, 10, H - 10) }));
+    if (launch(sim, ai.side, 'decoy', 2, wide, { stance: 'dash', label: 'Decoys' })) take('decoy', 2);
   }
   function aiNestSite(sim, ai) {
     const s = ai.side, h = sim.hearts[s], m = sim.map;
@@ -1549,8 +1613,68 @@
     for (const [fi, t] of ai.fieldSeen) if (t > bt && sim.map.fields[fi].side !== ai.side) { bt = t; best = sim.map.fields[fi]; }
     return best;
   }
+  // A Bulwark keeps posts: Wardens on its two busiest blooms and its Nests, then the Crown late on.
+  // The posts take Relays out where they need them, as a player's do.
+  function aiPosts(sim, ai) {
+    const s = ai.side, S = sim.sides[s], m = sim.map, C = sim.cfg, ci = m.fields.length - 1;
+    const want = [{ x: sim.hearts[s].x + (s ? -70 : 70), y: sim.hearts[s].y, need: { warden: sim.phase >= 2 ? 2 : 1 }, pri: 1, name: 'Heart' }];
+    if (sim.t >= C.bloomScore - 60) want.push({ x: m.fields[ci].x, y: m.fields[ci].y, need: { warden: 3, glint: 1 }, pri: 2, name: 'Crown' });
+    for (const u of sim.units) if (u.side === s && u.type === 'nest' && u.hp > 0) want.push({ x: u.x, y: u.y, need: { warden: 1 }, pri: 1, name: 'Nest' });
+    let blooms = 0;
+    for (const sp of aiPatrolSpots(sim, ai)) {
+      if (blooms >= 2 || want.some(w => dist(w.x, w.y, sp.x, sp.y) < 90)) continue;
+      want.push({ x: sp.x, y: sp.y, need: { warden: 1 }, pri: 0, name: 'Bloom' }); blooms++;
+    }
+    for (const w of want) {
+      if (S.posts.length >= POST_MAX - (w.name === 'Crown' ? 0 : 1)) continue;   // one place is kept for the Crown
+      const have = S.posts.find(p => dist(p.x, p.y, w.x, w.y) < 90);
+      if (have) { if (have.name === 'Heart' && have.need.warden !== w.need.warden) editPost(sim, s, have.id, { need: w.need }); continue; }
+      addPost(sim, s, w.x, w.y, w.need, w.pri, w.name);
+    }
+    // a post whose Nest has gone is taken down
+    for (const p of S.posts.slice()) if (p.name === 'Nest' && !sim.units.some(u => u.side === s && u.type === 'nest' && u.hp > 0 && dist(u.x, u.y, p.x, p.y) < 20)) removePost(sim, s, p.id);
+  }
+  // What the hive has learned about you changes what it builds. It looks again every so often; harder hives sooner.
+  function aiAdapt(sim, ai) {
+    const S = sim.sides[ai.side], seen = t => ai.seen.get(t) || 0, a = ai.adapt, note = text => ai.notes.push({ t: Math.round(sim.t), text });
+    if (seen('warden') >= 5 && !a.decoy) { a.decoy = 4; note('More Decoys to draw your Wardens’ nets.'); return true; }
+    if (((S.lostBy && S.lostBy.forager) || 0) >= 6 && !a.warden) { a.warden = 1; note('More Wardens over its blooms after your strikes on its Foragers.'); return true; }
+    if (seen('harrier') >= 1 && !a.sting) { a.sting = 6; note('More Stings to hunt your Harriers.'); return true; }
+    if (seen('decoy') >= 8 && !a.glint) { a.glint = 1; note('An extra Glint to look through your Decoys.'); return true; }
+    if (seen('relay') >= 2 && !a.relayHunt) { a.relayHunt = true; note('Hunting your Relays.'); return true; }
+    return false;
+  }
+  function aiForce(sim, ai) {
+    const cfg = ai.cfg;
+    let force = ai.st.force[sim.phase].filter(([t]) => cfg.jam || t !== 'harrier');
+    if (cfg.force) force = force.map(([t, n]) => [t, t === 'forager' || t === 'glint' || t === 'relay' || t === 'harrier' ? n : Math.max(1, Math.round(n * cfg.force))]);
+    const extra = [];
+    for (const t of ['decoy', 'warden', 'glint', 'sting']) {
+      if (!ai.adapt[t]) continue;
+      const top = force.reduce((m, [ty, n]) => (ty === t ? Math.max(m, n) : m), 0);
+      extra.push([t, top + ai.adapt[t]]);
+    }
+    return extra.length ? force.slice(0, -1).concat(extra, force.slice(-1)) : force;
+  }
+  // A raid on the Heart: Decoys run ahead, Stings follow along a flank, a Raider and a Harrier join late in the round.
+  function aiHeartRaid(sim, ai, plan, parked, take, spare) {
+    const s = ai.side, eh = sim.hearts[1 - s], { fp, mid, sg } = plan;
+    if (parked.decoy.length) {
+      launch(sim, s, 'decoy', 'all', [{ x: fp.x, y: fp.y - sg * 90 }, { x: mid.x, y: mid.y - sg * 70 }, { x: eh.x + (s ? 60 : -60), y: eh.y }], { stance: 'dash', label: 'Decoys' });
+      parked.decoy.length = 0;
+    }
+    const k = Math.min(spare(), plan.k);
+    if (k >= 4 && launch(sim, s, 'sting', k, [fp, mid, { x: eh.x, y: eh.y }], { stance: 'quiet', mode: 'raid', target: eh.id, label: 'Raid' })) take('sting', k);
+    if (sim.phase >= 2 && parked.raider.length) {
+      if (launch(sim, s, 'raider', 1, [fp, mid, { x: eh.x, y: eh.y }], { mode: 'raid', target: eh.id, label: 'Raid' })) take('raider', 1);
+    }
+    if (parked.harrier.length && sim.t >= ai.jamT) {   // a Harrier rides in behind and jams the defenders near the Heart
+      const jp = { x: eh.x + (fp.x - eh.x) * 0.45, y: eh.y + (fp.y - eh.y) * 0.45 };
+      if (launch(sim, s, 'harrier', 1, [fp, jp], { label: 'Jam' })) { take('harrier', 1); ai.jamT = sim.t + 40; }
+    }
+  }
   function aiTick(sim, ai) {
-    const s = ai.side, o = 1 - s, S = sim.sides[s], cfg = ai.cfg, t = sim.t, m = sim.map, C = sim.cfg;
+    const s = ai.side, o = 1 - s, S = sim.sides[s], cfg = ai.cfg, st = ai.st, t = sim.t, m = sim.map, C = sim.cfg;
     const h = sim.hearts[s], eh = sim.hearts[o], ci = m.fields.length - 1, cf = m.fields[ci];
     const parked = { sting: [], glint: [], decoy: [], warden: [], raider: [], relay: [], harrier: [] };
     let glOut = 0;
@@ -1559,35 +1683,39 @@
       if (parked[u.type] && u.parked && !(u.rearmT > 0)) parked[u.type].push(u);
       else if (u.type === 'glint' && !u.parked) glOut++;
     }
-    const spare = () => parked.sting.length - cfg.guard;
+    const guard = cfg.guard + (st.guard || 0);
+    const spare = () => parked.sting.length - guard;
     const take = (type, n) => parked[type].splice(0, n);
 
-    // remember where enemy foragers were seen working
+    // remember where enemy foragers were seen working, and what of the rival it has seen
     for (const c of S.pic.values()) {
-      if (c.type !== 'forager' || !c.known || c.grade < 2) continue;
+      if (c.grade < 2 || !c.known) continue;
+      if (!ai.seenIds.has(c.id)) { ai.seenIds.add(c.id); ai.seen.set(c.type, (ai.seen.get(c.type) || 0) + 1); }
+      if (c.type !== 'forager') continue;
       for (let i = 0; i < m.fields.length; i++) if (dist(m.fields[i].x, m.fields[i].y, c.x, c.y) < 60) ai.fieldSeen.set(i, t);
     }
+    ai.adaptT -= 0.5;
+    if (ai.adaptT <= 0) ai.adaptT = aiAdapt(sim, ai) ? cfg.adapt : 15;
 
-    // build: a forward Nest, then the force mix for this phase
-    if (t >= ai.nestT && nestCount(sim, s) < cfg.nests && S.queue.length < 3 && S.nectar >= BUILD.nest.cost && t < C.round * 0.75) {
+    // build: forward Nests, then the force mix for this phase
+    if (t >= ai.nestT && nestCount(sim, s) < cfg.nests + (st.nests || 0) && S.queue.length < 3 && S.nectar >= BUILD.nest.cost && t < C.round * 0.75) {
       ai.nestT = t + C.round * 0.12;
       const site = aiNestSite(sim, ai);
       if (site) build(sim, s, 'nest', site);
     }
-    let force = cfg.force ? AI_FORCE[sim.phase].map(([t, n]) => [t, t === 'forager' || t === 'glint' ? n : Math.max(1, Math.round(n * cfg.force))]) : AI_FORCE[sim.phase];
-    if (cfg.jam && sim.phase >= 2) { force = force.slice(); force.splice(force.length - 1, 0, ['harrier', 1]); }
-    maintain(sim, s, force, 2);
+    maintain(sim, s, aiForce(sim, ai), st.queue || 2);
 
     // scout
     ai.scoutT -= 0.5;
-    if (ai.scoutT <= 0 && parked.glint.length && glOut < 2) {
-      ai.scoutT = cfg.scout * (0.75 + ai.rnd() * 0.5);
+    if (ai.scoutT <= 0 && parked.glint.length && glOut < (st.glints || 2)) {
+      ai.scoutT = cfg.scout * (st.scout || 1) * (0.75 + ai.rnd() * 0.5);
       const wp = aiScoutPoint(sim, ai);
-      if (launch(sim, s, 'glint', 1, aiRoute(ai, h, wp), { stance: 'quiet', label: 'Scout' })) take('glint', 1);
+      if (launch(sim, s, 'glint', 1, aiRoute(ai, h, wp, st.perch ? 0.4 : 1), { stance: 'quiet', label: 'Scout' })) take('glint', 1);
     }
 
-    // wardens patrol the busiest blooms, the Nest, and the Crown late on
-    if (parked.warden.length) {
+    // Wardens: a Bulwark keeps posts; the others patrol the busiest blooms, the Nest, and the Crown late on
+    if (st.posts) { ai.postT -= 0.5; if (ai.postT <= 0) { ai.postT = 10; aiPosts(sim, ai); } }
+    else if (parked.warden.length) {
       for (const sp of aiPatrolSpots(sim, ai)) {
         if (!parked.warden.length) break;
         if (aiCovered(sim, s, sp)) continue;
@@ -1598,17 +1726,18 @@
     // Sting strikes on tracked units, most valuable first
     const contacts = [];
     for (const c of S.pic.values()) {
-      if (c.grade < 2 || !c.known || c.held < cfg.react || c.static) continue;
+      if (c.grade < 2 || !c.known || c.held < cfg.react * (st.react || 1) || c.static) continue;
       if (c.type === 'sting' || c.type === 'decoy') continue;
       contacts.push(c);
     }
-    contacts.sort((a, b) => TYPES[b.type].cost - TYPES[a.type].cost);
+    const worth = c => TYPES[c.type].cost + (ai.adapt.relayHunt && c.type === 'relay' ? 30 : 0);
+    contacts.sort((a, b) => worth(b) - worth(a));
     for (const c of contacts) {
       const e = sim.byId.get(c.id);
       if (!e || e.hp <= 0 || targetedBy(sim, s, c.id) > 0) continue;
       const b = nearestBase(sim, s, e.x, e.y), d = dist(e.x, e.y, b.x, b.y);
       if (d > 1050) continue;
-      const k = TYPES[c.type].hp >= 2 ? 3 : 2;
+      const k = (TYPES[c.type].hp >= 2 ? 3 : 2) + (st.strikeK && TYPES[c.type].cost >= 30 ? st.strikeK : 0);
       if (spare() < k) break;
       if (launch(sim, s, 'sting', k, [], { mode: 'strike', target: c.id, stance: d < 450 ? 'dash' : 'quiet', label: 'Strike' })) take('sting', k);
     }
@@ -1620,12 +1749,14 @@
         if (c.type !== 'nest' || !c.known) continue;
         const e = sim.byId.get(c.id);
         if (!e || e.hp <= 0) continue;
-        if (launch(sim, s, 'raider', Math.min(2, parked.raider.length), aiRoute(ai, h, c, 0.6), { mode: 'raid', target: c.id, label: 'Nest strike' })) { take('raider', 2); sent = true; }
+        const rt = aiSneakRoute(sim, ai, h, c, 0.6);
+        if (launch(sim, s, 'raider', Math.min(2, parked.raider.length), rt, { mode: 'raid', target: c.id, label: 'Nest strike' })) { take('raider', 2); sent = true; aiEscort(sim, ai, rt, parked, take); }
         break;
       }
       if (!sent) {
         const f = aiForagerField(sim, ai);
-        if (f && launch(sim, s, 'raider', 1, aiRoute(ai, h, f, 0.8), { label: 'Harvest raid' })) { take('raider', 1); sent = true; }
+        const rt = f ? aiSneakRoute(sim, ai, h, f, 0.8) : null;
+        if (f && launch(sim, s, 'raider', 1, rt, { label: 'Harvest raid' })) { take('raider', 1); sent = true; aiEscort(sim, ai, rt, parked, take); }
       }
       ai.raiderT = t + (sent ? 18 : 6) + ai.rnd() * 12;
     }
@@ -1636,14 +1767,16 @@
       if (cand && assignForager(sim, cand.id, ci)) ai.centreSent++;
     }
 
-    // hold the Crown
-    if (t >= C.bloomScore - 20) {
+    // hold the Crown (a Reaper floods it well before it scores)
+    if (t >= C.bloomScore - (st.rush ? 45 : 20)) {
       ai.holdT -= 0.5;
-      if (ai.holdT <= 0 && sim.presence[s] < cfg.hold && spare() >= 4) {
+      if (ai.holdT <= 0 && sim.presence[s] < cfg.hold + (st.hold || 0) && spare() >= 4) {
         ai.holdT = 8;
         const a = ai.rnd() * Math.PI * 2;
         if (launch(sim, s, 'sting', 4, [{ x: cf.x + dcos(a) * 30, y: cf.y + dsin(a) * 30 }], { stance: 'quiet', mode: 'hunt', label: 'Hold' })) take('sting', 4);
       }
+    }
+    if (t >= C.bloomScore - 20 && !st.posts) {
       ai.glintHoldT -= 0.5;
       if (ai.glintHoldT <= 0 && parked.glint.length) {
         ai.glintHoldT = 20;
@@ -1653,35 +1786,33 @@
 
     // a Harrier jams the Crown at Last Light, so the rival's drones there fight half blind
     const harrierOut = sim.units.some(u => u.side === s && u.type === 'harrier' && !u.parked && u.hp > 0);
-    if (parked.harrier.length && !harrierOut && t >= C.bloomScore - 20) {
+    if (parked.harrier.length && !harrierOut && t >= ai.jamT && t >= C.bloomScore - (st.crownJam || 20)) {
       const p = { x: cf.x + (s ? 70 : -70), y: cf.y + (ai.rnd() - 0.5) * 80 };
-      if (launch(sim, s, 'harrier', 1, aiRoute(ai, h, p, 0.4), { label: 'Jam' })) take('harrier', 1);
+      if (launch(sim, s, 'harrier', 1, aiRoute(ai, h, p, 0.4), { label: 'Jam' })) { take('harrier', 1); ai.jamT = t + 40; }
     }
 
-    // raids: on a harvest, or on the Heart with decoys running ahead
-    if (t >= ai.raidT && spare() >= cfg.raid && t < C.round - 25) {
-      ai.raidT = t + C.round * (0.085 + ai.rnd() * 0.05);
+    // raids: on a harvest, or on the Heart with Decoys running ahead (a Mimic sends a feint along the other flank first)
+    if (ai.pending && t >= ai.pending.t) { aiHeartRaid(sim, ai, ai.pending, parked, take, spare); ai.pending = null; }
+    if (!ai.pending && t >= ai.raidT && spare() >= cfg.raid + (st.raidSize || 0) && t < C.round - 25) {
+      ai.raidT = t + C.round * (0.085 + ai.rnd() * 0.05) * (st.raidGap || 1);
       ai.raids++;
-      const k = Math.min(spare(), cfg.raid + 3);
-      const field = ai.rnd() < 0.4 ? aiForagerField(sim, ai) : null;
+      const k = Math.min(spare(), cfg.raid + (st.raidSize || 0) + 3);
+      const field = ai.rnd() < (st.harvest == null ? 0.4 : st.harvest) ? aiForagerField(sim, ai) : null;
       if (field) {
-        if (launch(sim, s, 'sting', Math.min(k, 6), aiRoute(ai, h, field), { stance: 'quiet', mode: 'hunt', label: 'Raid' })) take('sting', 6);
+        const n = Math.min(k, st.rush ? 8 : 6);
+        if (st.feint && parked.decoy.length >= 2) { launch(sim, s, 'decoy', 2, aiRoute(ai, h, field, 0.5), { stance: 'dash', label: 'Decoys' }); take('decoy', 2); }
+        if (launch(sim, s, 'sting', n, aiRoute(ai, h, field), { stance: 'quiet', mode: 'hunt', label: 'Raid' })) take('sting', n);
       } else {
         const sg = ai.rnd() < 0.5 ? 1 : -1;
         const fp = { x: W / 2 + (ai.rnd() - 0.5) * 160, y: H / 2 + sg * (250 + ai.rnd() * 140) };
         const mid = { x: fp.x + (eh.x - fp.x) * 0.55, y: fp.y + (eh.y - fp.y) * 0.55 };
-        if (parked.decoy.length) {
-          launch(sim, s, 'decoy', 'all', [{ x: fp.x, y: fp.y - sg * 90 }, { x: mid.x, y: mid.y - sg * 70 }, { x: eh.x + (s ? 60 : -60), y: eh.y }], { stance: 'dash', label: 'Decoys' });
-          parked.decoy.length = 0;
-        }
-        if (launch(sim, s, 'sting', k, [fp, mid, { x: eh.x, y: eh.y }], { stance: 'quiet', mode: 'raid', target: eh.id, label: 'Raid' })) take('sting', k);
-        if (parked.harrier.length) {   // a Harrier rides in behind and jams the defenders near the Heart
-          const jp = { x: eh.x + (fp.x - eh.x) * 0.45, y: eh.y + (fp.y - eh.y) * 0.45 };
-          if (launch(sim, s, 'harrier', 1, [fp, jp], { label: 'Jam' })) take('harrier', 1);
-        }
-        if (sim.phase >= 2 && parked.raider.length) {
-          if (launch(sim, s, 'raider', 1, [fp, mid, { x: eh.x, y: eh.y }], { mode: 'raid', target: eh.id, label: 'Raid' })) take('raider', 1);
-        }
+        const plan = { fp, mid, sg, k };
+        if (st.feint && parked.decoy.length >= 3) {
+          const n = Math.ceil(parked.decoy.length / 2), ff = { x: fp.x, y: H - fp.y }, fm = { x: mid.x, y: H - mid.y };
+          launch(sim, s, 'decoy', n, [ff, fm, { x: eh.x + (s ? 60 : -60), y: eh.y }], { stance: 'dash', label: 'Feint' });
+          take('decoy', n);
+          plan.t = t + 5; ai.pending = plan;
+        } else aiHeartRaid(sim, ai, plan, parked, take, spare);
       }
     }
   }
@@ -1689,7 +1820,7 @@
   root.DS = {
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
     NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP, LINK_R, JAM_R,
-    MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT,
+    MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT, STYLES, STYLE_KEYS,
     createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,

@@ -111,6 +111,13 @@
     <div class="coach-btns" id="coach-btns"></div>
   </section>
 
+  <section class="coach rival" id="rival" hidden aria-live="polite" aria-labelledby="rival-h">
+    <div class="coach-k"><span id="rival-k">Your rival</span><button class="coach-skip" id="rival-x">Got it</button></div>
+    <h3 id="rival-h"></h3>
+    <p id="rival-p"></p>
+    <p class="coach-hint" id="rival-b"></p>
+  </section>
+
   <section class="sheet-wrap" id="sheet" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h">
       <div class="sheet-head">
@@ -123,7 +130,7 @@
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 3</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 4</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -137,6 +144,7 @@
       <p class="win">Win at frost on <b>Crown score</b>, or end it early by <b>destroying the Cobalt Heart</b>.</p>
       <div class="setup">
         <div class="field-l"><span>Rival hive</span><div class="seg" id="seg-diff" role="group" aria-label="Rival difficulty"><button data-d="easy">Easy</button><button data-d="normal">Normal</button><button data-d="hard">Hard</button></div></div>
+        <div class="field-l"><span>Rival style</span><div class="seg" id="seg-style" role="group" aria-label="Rival style"><button data-s="any">Any</button><button data-s="reaper">Reaper</button><button data-s="bulwark">Bulwark</button><button data-s="listener">Listener</button><button data-s="mimic">Mimic</button></div></div>
         <div class="field-l"><span>Round</span><div class="seg" id="seg-round" role="group" aria-label="Round length"><button data-r="short">12 min</button><button data-r="duel">Duel 6</button></div></div>
         <div class="field-l"><span>Map</span><div class="mapno"><b id="mapno">0000</b><button class="chip" id="btn-newmap">New map</button></div></div>
       </div>
@@ -164,6 +172,7 @@
     <div class="card">
       <div class="kicker" id="pause-k">Paused</div>
       <h2 id="pause-h">Read the picture</h2>
+      <p class="rival-note" id="pause-rival" hidden></p>
       <div class="legend">
         <div><svg><use href="#g-ghost"/></svg><b>Ghost</b><span>Something is there. Type unknown, position rough. Fades in seconds.</span></div>
         <div><svg><use href="#g-track"/></svg><b>Track</b><span>Type and position known while a sensor holds it.</span></div>

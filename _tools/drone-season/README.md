@@ -2,7 +2,18 @@
 
 Source, build scripts and tests for the game at `/drone-season/`. Jekyll does not publish folders whose names start with `_`, so nothing here appears on the site.
 
-The game is built in milestones; the design doc lives in Claude Docs. Milestone 3 (Links) is the current build: links and jamming, with the Relay and the Harrier, on top of milestone 2.6's two-player games (below) and training round, and milestone 2.5's command tools on the milestone 2 skirmish (a 12-minute short game or a 6-minute duel with Glints, Stings, Decoys, Wardens, Raiders and Nests).
+The game is built in milestones; the design doc lives in Claude Docs. Milestone 4 (Rivals) is the current build: four rival styles, on top of milestone 3's links and jamming (the Relay and the Harrier), milestone 2.6's two-player games (below) and training round, and milestone 2.5's command tools on the milestone 2 skirmish (a 12-minute short game or a 6-minute duel with Glints, Stings, Decoys, Wardens, Raiders and Nests). Research (the capability grid) is parked.
+
+**Rival styles** (milestone 4). The computer plays one of four styles, built from the same units, set in `STYLES` in `sim.js`: the force it keeps in each phase, when and how big it raids, how hard it holds the Crown, how many Stings it keeps home, and its tricks.
+
+- **Reaper**: an early swarm of Stings and Decoys; raids early and often, hunts Foragers at the blooms, and floods the Crown 45 seconds before it scores.
+- **Bulwark**: a turtle; keeps posts (the same posts a player sets) with Wardens on its Heart, two blooms, its Nests and, late on, the Crown, whose post takes a Relay out with it; grows a second Nest early, parks a Harrier over the Crown, and raids rarely but big.
+- **Listener**: up to three Glints perched on ridges near the middle, quicker strikes with an extra Sting on anything worth ◆30 or more, so your Harriers, Raiders and Relays go first.
+- **Mimic**: Decoys everywhere; half its Decoys feint along the far flank five seconds before a raid on the Heart, a pair run wide of each Raider, its Raiders go through canopy, and a Harrier rides with its raids.
+
+Every style also adapts. It first looks at what it has seen of you after 60 seconds on normal (90 on easy, 30 on hard), then every 15 seconds, waiting the full time again after each change, and adds to its build once each: more Decoys if it has seen five Wardens, more Wardens once it has lost six Foragers, more Stings once it has seen a Harrier, a Glint once it has seen eight Decoys, and it hunts Relays first once it has seen two. Difficulty still sets reaction time, income and (on easy) force size. The title screen picks a style or Any (random from the map seed, the default). A card at the start of the round names the style and how to beat it; the pause card repeats it, and the end screen says what it was and what it adapted to. AI Harriers now wait 40 seconds between launches. Two-player rounds have no computer, so no style, until a player leaves and the computer takes over (with a random style, named on the same card).
+
+**Links and jamming** (milestone 3). Nothing for the player to configure:
 
 **Links and jamming** (milestone 3). Nothing for the player to configure:
 
@@ -57,8 +68,9 @@ DS_FONTSOURCE="$PWD/node_modules/@fontsource" python3 _tools/drone-season/build/
 The simulation tests need only Node:
 
 - `node test/balance.js [short|duel] [rounds]`: computer against computer. Prints the win split (it should stay close to even), how often a Heart falls, and how often each new unit is built and used.
-- `node test/sim-checks.js`: unit behaviour: Raiders fly their routes; link range, Relays chaining and dropping, jamming (no reports, no orders, no picture for Wardens), posts cut off, jammed and bridged by a Relay, and a sortie split when only part of it is in link.
-- `node test/players.js [short|duel] [easy,normal,hard] [turtle,active,m2,command]`: scripted players against each difficulty: one that only defends, one that contests the Crown, one that also uses the milestone 2 units, and one that sets a plan with Auto and a Crown post and otherwise only strikes and holds. The scripts use `Math.random`, so results move a little between runs.
+- `node test/sim-checks.js`: unit behaviour: Raiders fly their routes; link range, Relays chaining and dropping, jamming (no reports, no orders, no picture for Wardens), posts cut off, jammed and bridged by a Relay, and a sortie split when only part of it is in link; each style's signature (a Reaper's early raid, a Bulwark's posts, a Listener's Glints, a Mimic's feint) and a rival adapting to Wardens it has seen.
+- `node test/styles.js [short|duel] [games per pairing and side] [diff]`: the four styles against each other from both sides. Prints each style's win rate (the milestone 4 gate: none above about 60%), each pairing, and how each style plays (harvest, raids, bombs, Crown score, what it builds and what it adapted to). At 20 games a pairing and side on normal: Reaper 50%, Bulwark 60%, Listener 49%, Mimic 41%. On hard Reaper does better (65%) and Listener worse (30%).
+- `node test/players.js [short|duel] [easy,normal,hard] [turtle,active,m2,command] [reaper,bulwark,listener,mimic|any]`: scripted players against each difficulty and style: one that only defends, one that contests the Crown, one that also uses the milestone 2 units, and one that sets a plan with Auto and a Crown post and otherwise only strikes and holds. `N=16` plays 16 games a line instead of 8. The scripts use `Math.random`, so results move a little between runs. Against the four styles on normal they win about 28% of games, close to the 31% they managed against the single milestone 3 rival; Reaper is the easiest for them and Bulwark the hardest.
 
 The browser tests drive the built page in headless Chromium, so build the site page first and `npm install playwright`:
 
@@ -66,6 +78,7 @@ The browser tests drive the built page in headless Chromium, so build the site p
 - `node test/groups.js`: squad launches (a Raider with Decoys as one package, Again, two squads at once), and that the map never flips orientation or rescales on a small phone unless the phone is turned.
 - `node test/twoplayer.js`: a desktop host and a phone guest in two browsers, meeting through a local Nostr relay (`test/nostr-relay.js`): invite, join, a third person turned away, the turned-round view, orders reaching both battles, shared pause, ten seconds of matching hashes, both ending at the same tick, rematch, leaving (the host finishes against the computer), and the message when no relay answers. Needs `npm install ws` as well.
 - `node test/training.js`: plays the whole training round through the real controls on desktop and phone sizes, including the Relay that carries the link to the Crown post.
+- `node test/rivals.js`: picking a style on the title screen, the card that names it (taps pass through it to the map), the pause card, the end screen, Any, and no card in training.
 - `node test/command.js`: Auto and the production plan sheet (it pauses the round), a post set from the hold menu and staffed by the hive, quick orders on a contact, and the Flying list.
 
 Open the page with `?debug` (for example `drone-season/index.html?debug`) to expose the game's internals as `window.__ds`; the browser tests rely on it.
