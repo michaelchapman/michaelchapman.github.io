@@ -1625,6 +1625,12 @@
   cv.addEventListener('pointercancel', e => endPtr(e, true));
   cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') G.hover = null; });
   cv.addEventListener('contextmenu', e => e.preventDefault());
+  // Phones start a text selection or a callout on a long press; the map uses its own. Pointer events still arrive.
+  cv.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  document.addEventListener('selectstart', e => {
+    const el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement);
+    if (!el || !el.closest('input, textarea')) e.preventDefault();
+  });
   cv.addEventListener('wheel', e => {
     if (G.mode !== 'play') return;
     e.preventDefault();

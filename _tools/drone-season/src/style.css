@@ -30,6 +30,9 @@
 
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+/* No text selection, magnifier or callout anywhere: a long press is a game gesture here. Only the name field takes text. */
+html, body, #app, #app * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#app input { -webkit-user-select: text; user-select: text; }
 body {
   background: var(--deep);
   color: var(--ink);
