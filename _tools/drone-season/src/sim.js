@@ -1,4 +1,4 @@
-/* Drone Season · simulation core (milestone 4, Rivals). Pure logic, no DOM, deterministic per seed and across browsers. */
+/* Drone Season · simulation core (milestone 5, Campaign). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -22,8 +22,6 @@
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
     duel:  { key: 'duel',  name: 'Duel',       minutes: 6,  round: 360, bloomOpen: 150, bloomScore: 270, nectar: 150, phases: [0, 60, 150, 270, 360] },
-    // training: no clock pressure, the Crown open from the start; the lesson switches Crown scoring on when it gets there
-    training: { key: 'training', name: 'Training', minutes: 30, round: 1800, bloomOpen: 0, bloomScore: 1e9, nectar: 200, phases: [0, 1800, 1800, 1800, 1800] },
   };
   const PHASE_INFO = [
     { key: 'pollination', name: 'Pollination', line: 'Scout the valley and claim your blooms' },
@@ -31,7 +29,9 @@
     { key: 'swarming', name: 'Swarming', line: 'The Crown bloom opens at the centre' },
     { key: 'lastlight', name: 'Last Light', line: 'Hold the Crown bloom to score' },
   ];
-  const phasesFor = mode => PHASE_INFO.map((p, i) => Object.assign({ start: MODES[mode].phases[i], end: MODES[mode].phases[i + 1] }, p));
+  const phasesFor = ph => PHASE_INFO.map((p, i) => Object.assign({ start: ph[i], end: ph[i + 1] }, p));
+  // What each hive starts with, unless a scenario says otherwise.
+  const START = { forager: 2, glint: 1, sting: 4 };
 
   const TYPES = {
     heart:   { name: 'Heart',   cost: 300, sig: 10, reach: 230, hp: 30, structure: true },
@@ -331,10 +331,11 @@
     const seed = (opts.seed >>> 0) || 1;
     const diff = DIFF[opts.diff] ? opts.diff : 'normal';
     const mode = MODES[opts.mode] ? opts.mode : 'short';
-    const cfg = Object.assign({}, MODES[mode]);   // a copy, so a round (training) can change its own timings
+    // a copy, so a round can change its own timings; a campaign scenario overrides them (opts.cfg)
+    const cfg = Object.assign({}, MODES[mode], opts.cfg || {});
     const map = genMap(seed);
     const sim = {
-      seed, diff, mode, cfg, phases: phasesFor(mode), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
+      seed, diff, mode, cfg, phases: phasesFor(cfg.phases), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
       units: [], byId: new Map(), nextId: 1, sorties: new Map(), nextSortie: 1,
       events: [], rnd: mulberry32((seed ^ 0x5bd1e995) >>> 0), holder: -1, presence: [0, 0],
       phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false, links: [[], []],
@@ -344,16 +345,19 @@
       destroyed: 0, lost: 0, kills: 0, losses: 0, spent: 0, score: 0,
       unseen: 0, exposure: 0, pic: new Map(), flakCd: 0, mult: 1,
       droneDestroyed: 0, droneLost: 0, heartDealt: 0, heartTaken: 0,
-      heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, recovered: 0, returns: 0, decoyDrew: 0,
+      heartDealtBy: {}, heartTakenBy: {}, lostBy: {}, lostTo: {}, used: {}, recovered: 0, returns: 0, decoyDrew: 0, revealed: 0,
       fieldDanger: new Float32Array(map.fields.length).fill(-999), best: null,
       plan: [], auto: false, autoSkip: null, posts: [], postSeq: 1,
+      kit: (opts.kit && opts.kit[s]) || null,   // what this side may build (a campaign scenario limits it)
     }));
     for (let s = 0; s < 2; s++) {
-      const hp = map.hearts[s];
-      sim.hearts.push(addUnit(sim, s, 'heart', hp.x, hp.y, { parked: false, state: 'heart' }));
-      for (let i = 0; i < 2; i++) addUnit(sim, s, 'forager', hp.x + (s ? -22 : 22), hp.y + (i ? 16 : -16), { parked: false, state: 'idle', hdg: s ? Math.PI : 0 });
-      addUnit(sim, s, 'glint', hp.x, hp.y);
-      for (let i = 0; i < 4; i++) addUnit(sim, s, 'sting', hp.x, hp.y);
+      const hp = map.hearts[s], start = (opts.start && opts.start[s]) || START;
+      if (opts.nectar && opts.nectar[s] != null) sim.sides[s].nectar = opts.nectar[s];
+      const heart = addUnit(sim, s, 'heart', hp.x, hp.y, { parked: false, state: 'heart' });
+      if (opts.heartHp && opts.heartHp[s]) heart.hp = opts.heartHp[s];
+      sim.hearts.push(heart);
+      for (let i = 0; i < (start.forager || 0); i++) addUnit(sim, s, 'forager', hp.x + (s ? -22 : 22), hp.y + (i % 2 ? 16 : -16) + (i >> 1) * 8, { parked: false, state: 'idle', hdg: s ? Math.PI : 0 });
+      for (const [type, n] of Object.entries(start)) if (type !== 'forager') for (let i = 0; i < n; i++) addUnit(sim, s, type, hp.x, hp.y);
     }
     const aiSides = opts.ai || [1];
     for (const s of aiSides) sim.ai[s] = createAI(sim, s, (opts.aiDiff && opts.aiDiff[s]) || diff, opts.aiStyle && opts.aiStyle[s]);
@@ -423,9 +427,10 @@
     return '';
   }
   // Auto items (from the production plan) wait behind anything you queue yourself, except the one already in the vat.
+  const canBuild = (sim, side, type) => !sim.sides[side].kit || sim.sides[side].kit.includes(type);
   function build(sim, side, type, site, opts) {
     const S = sim.sides[side], b = BUILD[type];
-    if (!b || sim.over || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
+    if (!b || sim.over || !canBuild(sim, side, type) || S.nectar < b.cost || S.queue.length >= QUEUE_MAX) return null;
     if (b.site && (!site || nestSiteError(sim, side, site.x, site.y))) return null;
     S.nectar -= b.cost; S.spent += b.cost;
     const auto = !!(opts && opts.auto);
@@ -691,7 +696,7 @@
           pic.set(e.id, c);
         }
         if (isDecoy && reveal && !c.revealed) {
-          c.revealed = true;
+          c.revealed = true; S.revealed++;
           sim.events.push({ k: 'decoyReveal', obs: s, id: e.id, x: e.x, y: e.y });
         }
         const prevGrade = c.grade, wasLocked = c.lockUntil > t;
@@ -783,6 +788,8 @@
       }
       if (u.type === 'forager' && u.field >= 0) S.fieldDanger[u.field] = sim.t;
       sim.events.push({ k: 'killed', side: u.side, type: u.type, x: u.x, y: u.y, by });
+    } else if (how === 'spent') {
+      S.used[u.type] = (S.used[u.type] || 0) + 1;
     } else if (how === 'expired') {
       if (TYPES[u.type].reuse) { S.lost += v; S.droneLost += v; S.losses++; S.lostBy[u.type] = (S.lostBy[u.type] || 0) + 1; }
       const so = sim.sorties.get(u.sortie);
@@ -917,7 +924,7 @@
     u.battery -= dt;
     if (u.battery <= 0) { killUnit(sim, u, null, 'expired'); return; }
     const so = sim.sorties.get(u.sortie);
-    if (!so || u.battery < 30 || u.hp < T.hp) u.homing = true;
+    if (!so || u.battery < 30 || (u.hp < T.hp && !u.stay)) u.homing = true;   // (a scenario can tell one to stay put)
     if (u.homing) { flyHome(sim, u, dt); return; }
     followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);   // then holds station at the end until its battery runs low
   }
@@ -1233,8 +1240,10 @@
 
     if (sim.tick % 15 === 7) for (let s = 0; s < 2; s++) { postTick(sim, s); autoTick(sim, s); }
     if (sim.tick % 15 === 0) for (const ai of sim.ai) if (ai) aiTick(sim, ai);
+    if (sim.hook) sim.hook(sim);   // a campaign scenario's rules
+    if (sim.over) return;
 
-    if (t >= C.round) {
+    if (t >= C.round && !C.noFrost) {
       const a = sim.sides[0], b = sim.sides[1];
       let w = -1;
       if (a.score > b.score + 0.5) w = 0;
@@ -1396,7 +1405,7 @@
   function autoNext(sim, side) {
     const S = sim.sides[side], skip = S.autoSkip && S.autoSkip.until > sim.t ? S.autoSkip.type : null;
     for (const [type, want, from] of planList(sim, side)) {
-      if (type === skip) continue;
+      if (type === skip || !canBuild(sim, side, type)) continue;
       const have = forceCount(sim, side, type);
       if (have < want) return { type, cost: BUILD[type].cost, have, want, from };
     }
@@ -1821,7 +1830,7 @@
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
     NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP, LINK_R, JAM_R,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT, STYLES, STYLE_KEYS,
-    createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
+    createSim, step, endGame, canBuild, START, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
     setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits, postReach, inLink, jammedAt, linkPass,

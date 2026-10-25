@@ -104,7 +104,7 @@
   <div class="qmenu" id="qmenu" role="menu" hidden></div>
 
   <section class="coach" id="coach" hidden aria-live="polite" aria-labelledby="coach-h">
-    <div class="coach-k"><span id="coach-n">Training</span><button class="coach-skip" id="coach-skip">Skip training</button></div>
+    <div class="coach-k"><span id="coach-n">Tips</span><button class="coach-skip" id="coach-skip">Hide tips</button></div>
     <h3 id="coach-h"></h3>
     <p id="coach-p"></p>
     <p class="coach-hint" id="coach-hint" hidden></p>
@@ -130,7 +130,7 @@
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 4</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 5</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -150,10 +150,10 @@
       </div>
       <div class="go-row">
         <button class="go" id="btn-go">Launch round</button>
-        <button class="btn train" id="btn-train">Training</button>
+        <button class="btn train" id="btn-camp">Campaign</button>
         <button class="btn train" id="btn-friend">Play a friend</button>
       </div>
-      <p class="train-hint" id="train-hint">New here? Training takes about five minutes and shows you every control.</p>
+      <p class="train-hint" id="train-hint">New here? The campaign’s first chapter teaches the game in four short scenarios.</p>
       <div class="lobby" id="lobby" hidden aria-live="polite">
         <div class="kicker" id="lobby-k">Two players</div>
         <h2 class="lobby-h" id="lobby-h">Invite a player</h2>
@@ -165,6 +165,15 @@
         <div class="btn-row"><button class="btn" id="btn-lobby-alt" hidden>Play against the computer</button><button class="btn" id="btn-lobby-cancel">Cancel</button></div>
       </div>
       <p class="keys">Keys: Q W E R T Y arm squads &middot; A again &middot; 1&ndash;9 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
+    </div>
+  </section>
+
+  <section class="overlay" id="ov-camp" hidden aria-labelledby="camp-h">
+    <div class="card camp">
+      <div class="kicker" id="camp-k">Campaign</div>
+      <h2 id="camp-h">The season</h2>
+      <div class="camp-body" id="camp-body"></div>
+      <div class="btn-row" id="camp-btns"></div>
     </div>
   </section>
 

@@ -254,8 +254,9 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .coach-btns:empty { display: none; }
 .coach-btns .btn { min-height: 38px; padding: 7px 16px; font-size: 13px; }
 #app.coaching #toasts { top: calc(var(--coach-b, 56px) + 8px); }
-.coach.rival { border-left-color: var(--cobalt); pointer-events: none; }   /* taps go through to the map, but for its button */
-.coach.rival button { pointer-events: auto; }
+.coach { pointer-events: none; }   /* taps go through the coach and rival cards to the map, but for their buttons */
+.coach button { pointer-events: auto; }
+.coach.rival { border-left-color: var(--cobalt); }
 .coach.rival .coach-k { color: var(--cobalt-hi); }
 .coach.rival .coach-hint { color: var(--ink); }
 #app.rival-on #toasts { top: calc(var(--rival-b, 160px) + 8px); }
@@ -414,6 +415,36 @@ svg.i { width: 1em; height: 1em; flex: none; }
 .units th { font-family: var(--f-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); width: 76px; }
 .units .c { font-family: var(--f-data); color: var(--bloom); width: 46px; white-space: nowrap; }
 .units td:last-child { color: var(--ink-dim); }
+/* ---------- campaign ---------- */
+#ov-camp { z-index: 11; background: rgba(5, 8, 11, 0.92); }
+.card.camp { max-width: 760px; }
+.camp-body { display: grid; gap: 22px; }
+.camp-body > p { margin: 0; }
+.camp-lede { color: var(--ink-dim); }
+.chap { display: grid; gap: 8px; }
+.chap h3 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--f-display); font-size: 17px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.chap h3 small { font-family: var(--f-data); font-size: 12px; font-weight: 500; color: var(--amber-hi); letter-spacing: 0.04em; }
+.chap > p { margin: 0; font-size: 14px; color: var(--ink-dim); }
+.scen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+.scen { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto auto; column-gap: 8px; row-gap: 3px; text-align: left; padding: 10px 12px; border: 1px solid var(--rule-hi); background: rgba(255, 255, 255, 0.02); min-height: 92px; align-content: start; }
+.scen:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
+.scen:disabled { opacity: 0.45; cursor: default; }
+.scen .sn { grid-row: 1; font-family: var(--f-data); font-size: 12px; color: var(--ink-faint); align-self: center; }
+.scen b { grid-row: 1; font-family: var(--f-display); font-size: 15px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.scen small { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.35; color: var(--ink-dim); }
+.scen .st { grid-column: 1 / -1; }
+.scen.won { border-color: rgba(245, 165, 36, 0.55); }
+.scen .st i, .camp-stars i { font-style: normal; color: rgba(255, 255, 255, 0.16); margin-right: 2px; }
+.scen .st i.on, .camp-stars .on i { color: var(--amber); }
+.camp-more { font-size: 13px; color: var(--ink-faint); }
+.camp-goal { color: var(--ink) !important; }
+.camp-stars { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--ink-dim); }
+.camp-stars li.on { color: var(--ink); }
+.camp-stars.inline { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 13px; }
+.camp-stars.inline span.on { color: var(--ink); }
+.rival-note .pr-now { display: inline-block; margin-left: 6px; font-family: var(--f-data); font-size: 12px; color: var(--amber-hi); }
+.stats div.stars-row { display: grid; gap: 8px; }
+.stats div.stars-row dd { text-align: left; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
 .stats div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
 .stats dt { font-size: 13px; color: var(--ink-dim); }
