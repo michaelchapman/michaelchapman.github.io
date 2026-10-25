@@ -144,5 +144,35 @@ for (const jam of [false, true]) {
   DS.retask(sim, so.id, [{ x: 300, y: 200 }]);
   ok('retasking a sortie moves only the drones in link', a.sortie === so.id && b.sortie !== so.id && sim.sorties.get(b.sortie).route[0].x === 900);
 }
+// ---------- rival styles ----------
+{
+  const sim0 = DS.createSim({ seed: 4241, mode: 'short', ai: [1] });
+  ok('a rival with no style asked for gets one of the four', DS.STYLE_KEYS.includes(sim0.ai[1].style), sim0.ai[1].style);
+  const watch = (style, until, test) => {
+    const sim = DS.createSim({ seed: 9001, mode: 'short', ai: [0, 1], aiStyle: { 0: 'listener', 1: style } });
+    const seen = {};
+    while (!sim.over && sim.t < until) {
+      DS.step(sim);
+      for (const e of sim.events) if (e.k === 'raidStart') seen.raid = true;
+      sim.events.length = 0;
+      test(sim, seen);
+    }
+    return { sim, seen };
+  };
+  const sortie = (sim, label) => [...sim.sorties.values()].some(so => so.side === 1 && so.label === label && so.units.length);
+  let r = watch('reaper', 720 * 0.3, (sim, seen) => { if (!seen.raidAt && (sortie(sim, 'Raid'))) seen.raidAt = sim.t; });
+  ok('a Reaper raids early', r.seen.raidAt && r.seen.raidAt < 720 * 0.3, `first raid at ${Math.round(r.seen.raidAt || 0)} s`);
+  r = watch('bulwark', 720 * 0.8, (sim, seen) => { seen.posts = Math.max(seen.posts || 0, sim.sides[1].posts.length); if (sim.sides[1].posts.some(p => p.name === 'Crown')) seen.crown = true; });
+  ok('a Bulwark keeps posts, the Crown among them by Last Light', r.seen.posts >= 3 && r.seen.crown, `${r.seen.posts} posts`);
+  r = watch('listener', 720 * 0.5, (sim, seen) => { const n = sim.units.filter(u => u.side === 1 && u.type === 'glint' && !u.parked && u.hp > 0).length; seen.glints = Math.max(seen.glints || 0, n); });
+  ok('a Listener keeps several Glints out', r.seen.glints >= 3, `${r.seen.glints} at once`);
+  r = watch('mimic', 720, (sim, seen) => { if (sortie(sim, 'Feint')) seen.feint = true; });
+  ok('a Mimic sends a feint', r.seen.feint);
+  // it adapts to what it sees
+  const sim = DS.createSim({ seed: 4241, mode: 'short', ai: [1], aiDiff: { 1: 'hard' }, aiStyle: { 1: 'reaper' } });
+  for (let i = 0; i < 6; i++) fly(sim, 0, 'warden', 1180, 260 + i * 90);
+  for (let i = 0; i < 30 * 60 && !sim.ai[1].notes.length; i++) DS.step(sim);
+  ok('a rival that sees Wardens builds more Decoys, and says so', sim.ai[1].adapt.decoy > 0 && /Decoys/.test((sim.ai[1].notes[0] || {}).text), JSON.stringify(sim.ai[1].notes));
+}
 console.log(checks.join('\n'));
 console.log(checks.filter(c => c.startsWith('PASS')).length + '/' + checks.length + ' passed');

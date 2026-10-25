@@ -1,12 +1,12 @@
 // Scripted players against each difficulty: turtle (only defends), active (contests the Crown), m2 (also uses the
 // milestone 2 units), command (sets a production plan with Auto and posts, then only strikes and holds).
-// node players.js [short|duel] [easy,normal,hard] [turtle,active,m2,command]
+// node players.js [short|duel] [easy,normal,hard] [turtle,active,m2,command] [reaper,bulwark,listener,mimic|any]
 // Run from anywhere: node _tools/drone-season/test/players.js
 const path = require('path');
 require(path.join(__dirname, '..', 'src', 'sim.js'));
 const DS = globalThis.DS;
-function play(seed, diff, style, mode) {
-  const sim = DS.createSim({ seed, diff, mode, ai: [1] });
+function play(seed, diff, style, mode, rival) {
+  const sim = DS.createSim({ seed, diff, mode, ai: [1], aiStyle: { 1: rival === 'any' ? null : rival } });
   const C = sim.cfg, cf = sim.map.fields[sim.map.fields.length - 1];
   let next = 0, lastScout = -99, lastStrike = -99, lastHold = -99, lastRaid = -99, lastWard = -99, nestTried = false, crownPost = false;
   if (style === 'command') {
@@ -52,10 +52,12 @@ function play(seed, diff, style, mode) {
   return { win: sim.winner, why: sim.reason, t: Math.round(sim.t), hp: sim.hearts.map(h => h.hp), score: [a.score | 0, b.score | 0] };
 }
 const mode = process.argv[2] || 'short';
-for (const diff of (process.argv[3] || 'easy,normal,hard').split(',')) {
-  for (const style of (process.argv[4] || 'turtle,active,m2,command').split(',')) {
-    let w = 0, heart = 0; const eg = [];
-    for (let s = 1; s <= 8; s++) { const r = play(s * 4241, diff, style, mode); if (r.win === 0) w++; if (r.why === 'heart' && r.win === 1) heart++; if (s <= 2) eg.push(r); }
-    console.log(mode, diff.padEnd(6), style.padEnd(7), 'player wins', w, '/ 8', ' heart lost', heart, ' e.g.', JSON.stringify(eg[0]));
+for (const rival of (process.argv[5] || 'any').split(',')) {
+  for (const diff of (process.argv[3] || 'easy,normal,hard').split(',')) {
+    for (const style of (process.argv[4] || 'turtle,active,m2,command').split(',')) {
+      let w = 0, heart = 0; const eg = [];
+      for (let s = 1; s <= (+process.env.N || 8); s++) { const r = play(s * 4241, diff, style, mode, rival); if (r.win === 0) w++; if (r.why === 'heart' && r.win === 1) heart++; if (s <= (+process.env.EG || 2)) eg.push(r); }
+      console.log(mode, rival.padEnd(8), diff.padEnd(6), style.padEnd(7), 'player wins', w, '/ 8', ' heart lost', heart, ' e.g.', process.env.EG ? eg.map(r => r.why[0] + r.score.join(':') + ' hp' + r.hp.join(':')).join(' ') : JSON.stringify(eg[0]));
+    }
   }
 }
