@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#15101c">
 <title>Michael Chapman</title>
-<meta name="description" content="Four things to play with: TimeCat, Top Banana, The King's Line and Brasshaven.">
+<meta name="description" content="Five things to play with: TimeCat, Top Banana, The King's Line, Brasshaven and Drone Season.">
 <link rel="canonical" href="https://michaelchapman.me/">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English+SC&family=Lilita+One&family=Press+Start+2P&family=Archivo:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English+SC&family=Lilita+One&family=Press+Start+2P&family=Archivo:wght@500;700;800&family=Chakra+Petch:wght@700&display=swap">
 <style>
-/* Layout: a games-shop shelf. Four boxed-game covers stand on one wooden shelf, each a link;
-   the name and a line about it sit underneath. Single deliberate look, dark in any theme. */
+/* Layout: a games-shop shelf. Five boxed-game covers stand on the shelf, each a link; the name and
+   a line about it sit underneath. Rows wrap and centre (5, then 3 + 2, then pairs). Single deliberate look, dark in any theme. */
 :root {
   --wall: #15101c;
   --wall2: #231a2e;
@@ -40,12 +40,13 @@ body {
   list-style: none;
   margin: 0 auto;
   padding: 0;
-  max-width: 1100px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1180px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 56px 32px;
 }
-.shelf li { position: relative; padding-bottom: 6px; }
+.shelf li { position: relative; padding-bottom: 6px; flex: 0 0 calc((100% - 4 * 32px) / 5); min-width: 0; }
 .stage::after {
   /* the plank each box stands on */
   content: "";
@@ -110,11 +111,16 @@ body {
 .cap span { display: block; margin-top: 4px; color: var(--muted); font-size: 14px; line-height: 1.4; }
 .shelf a:hover .cap b, .shelf a:focus-visible .cap b { color: var(--focus); }
 
+@media (max-width: 1100px) {
+  .shelf li { flex-basis: calc((100% - 2 * 32px) / 3); max-width: 240px; }
+}
 @media (max-width: 860px) {
-  .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 28px; }
+  .shelf { gap: 44px 28px; }
+  .shelf li { flex-basis: calc((100% - 28px) / 2); }
 }
 @media (max-width: 380px) {
   .shelf { gap: 40px 20px; }
+  .shelf li { flex-basis: calc((100% - 20px) / 2); }
   .cap span { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -157,6 +163,10 @@ body {
 .bh-gear .gh { fill: #c9714a; opacity: .55; }
 .bh-title { font: 37px "IM Fell English SC", serif; letter-spacing: 1px; }
 .bh-sub { font: italic 700 11px "Archivo", sans-serif; fill: #2a1610; }
+
+/* Drone Season */
+.ds-title { font: 700 50px "Chakra Petch", "Archivo", sans-serif; letter-spacing: .02em; }
+.ds-sub { font: italic 700 11px "Archivo", sans-serif; fill: #ffc867; letter-spacing: .02em; }
 </style>
 </head>
 <body>
@@ -416,6 +426,79 @@ body {
     <div class="shadow"></div>
   </div></div>
   <div class="cap"><b>Brasshaven</b><span>Build a steampunk harbour town</span></div>
+</a></li>
+
+<!-- ================= Drone Season ================= -->
+<li><a href="/drone-season/" aria-label="Drone Season: a real-time strategy game of drone war">
+  <div class="stage"><div class="box" style="--spine:#f5a524;--spine-ink:#06090c">
+    <div class="spine" aria-hidden="true">Drone Season</div>
+    <div class="face">
+<svg viewBox="0 0 300 400" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="ds-bg" cx="40%" cy="62%" r="78%"><stop offset="0" stop-color="#173540"/><stop offset=".55" stop-color="#0b1a22"/><stop offset="1" stop-color="#04070a"/></radialGradient>
+    <linearGradient id="ds-top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#04070a" stop-opacity=".95"/><stop offset=".8" stop-color="#04070a" stop-opacity="0"/></linearGradient>
+    <radialGradient id="ds-bloom"><stop offset="0" stop-color="#f1dcff" stop-opacity=".95"/><stop offset=".3" stop-color="#d7a6ff" stop-opacity=".5"/><stop offset="1" stop-color="#d7a6ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ds-amber"><stop offset="0" stop-color="#ffb43a" stop-opacity=".85"/><stop offset="1" stop-color="#f5a524" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ds-cobalt"><stop offset="0" stop-color="#6f9bff" stop-opacity=".85"/><stop offset="1" stop-color="#5b8cff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ds-blast"><stop offset="0" stop-color="#fff6e0"/><stop offset=".35" stop-color="#ffc867" stop-opacity=".8"/><stop offset="1" stop-color="#ff5e4d" stop-opacity="0"/></radialGradient>
+    <linearGradient id="ds-sweep" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#f5a524" stop-opacity=".3"/><stop offset="1" stop-color="#f5a524" stop-opacity="0"/></linearGradient>
+    <linearGradient id="ds-title" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c8"/><stop offset=".42" stop-color="#ffc867"/><stop offset=".58" stop-color="#f5a524"/><stop offset="1" stop-color="#b8620a"/></linearGradient>
+    <clipPath id="ds-clip"><rect width="300" height="400"/></clipPath>
+  </defs>
+  <g clip-path="url(#ds-clip)">
+    <rect width="300" height="400" fill="url(#ds-bg)"/>
+    <!-- ridges as contour lines -->
+    <g fill="none" stroke="#8fc4c0" stroke-width="1.1">
+      <g transform="rotate(-32 112 168)" stroke-opacity=".32"><ellipse cx="112" cy="168" rx="84" ry="27"/><ellipse cx="114" cy="168" rx="62" ry="18"/><ellipse cx="116" cy="168" rx="40" ry="10"/></g>
+      <g transform="rotate(64 236 286)" stroke-opacity=".28"><ellipse cx="236" cy="286" rx="70" ry="22"/><ellipse cx="238" cy="286" rx="50" ry="14"/><ellipse cx="240" cy="286" rx="28" ry="7"/></g>
+    </g>
+    <text x="118" y="171" font-family="'IBM Plex Mono', monospace" font-size="7" fill="#9fd0cc" fill-opacity=".55" text-anchor="middle">&#9650;430</text>
+    <!-- canopy -->
+    <g fill="#2e6e52" fill-opacity=".8"><circle cx="40" cy="214" r="15"/><circle cx="54" cy="204" r="13"/><circle cx="58" cy="222" r="12"/><circle cx="30" cy="230" r="10"/></g>
+    <path d="M18 222c2-16 18-28 34-27 14 1 22 12 20 26-2 13-14 22-29 20-14-1-26-8-25-19z" fill="none" stroke="#7fd1a4" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <!-- radar sweep and range rings from the amber hive -->
+    <path d="M58 316L212.9 24.6A330 330 0 0 1 343.8 151.0Z" fill="url(#ds-sweep)"/>
+    <g fill="none" stroke="#f5a524" stroke-opacity=".3" stroke-dasharray="3 5"><circle cx="58" cy="316" r="62"/><circle cx="58" cy="316" r="128"/></g>
+    <!-- the Crown bloom -->
+    <circle cx="168" cy="262" r="52" fill="url(#ds-bloom)"/>
+    <circle cx="168" cy="262" r="17" fill="none" stroke="#e2c2ff" stroke-width="1.6"/>
+    <circle cx="168" cy="262" r="40" fill="none" stroke="#d7a6ff" stroke-opacity=".6" stroke-width="1.2" stroke-dasharray="6 5"/>
+    <g fill="#f4e4ff"><circle cx="162" cy="257" r="2"/><circle cx="173" cy="254" r="1.6"/><circle cx="175" cy="266" r="2.2"/><circle cx="165" cy="269" r="1.5"/><circle cx="169" cy="262" r="1.3"/></g>
+    <!-- cobalt hive and its contacts, locked -->
+    <circle cx="250" cy="176" r="40" fill="url(#ds-cobalt)"/>
+    <polygon points="250.0,159.0 264.7,167.5 264.7,184.5 250.0,193.0 235.3,184.5 235.3,167.5" fill="#08111e" stroke="#7aa3ff" stroke-width="3" stroke-linejoin="round"/>
+    <polygon points="250.0,167.0 257.8,171.5 257.8,180.5 250.0,185.0 242.2,180.5 242.2,171.5" fill="#5b8cff" fill-opacity=".45" stroke="#7aa3ff" stroke-width="1.2"/>
+    <circle cx="250" cy="176" r="3.2" fill="#a3bdff"/>
+    <path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#6f9bff" transform="translate(214.0 214.0) rotate(150.0) scale(1.50)"/><path d="M202.0 207.4V202.0H207.4M220.6 202.0H226.0V207.4M226.0 220.6V226.0H220.6M207.4 226.0H202.0V220.6" fill="none" stroke="#ff5e4d" stroke-width="1.8"/>
+    <path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#6f9bff" transform="translate(232.0 236.0) rotate(170.0) scale(1.40)"/><path d="M221.0 229.9V225.0H225.9M238.1 225.0H243.0V229.9M243.0 242.1V247.0H238.1M225.9 247.0H221.0V242.1" fill="none" stroke="#a3bdff" stroke-width="1.3"/>
+    <circle cx="200" cy="190" r="22" fill="url(#ds-blast)"/>
+    <g stroke="#ffd89a" stroke-width="1.6" stroke-linecap="round"><line x1="200" y1="174" x2="200" y2="168"/><line x1="214" y1="182" x2="219" y2="178"/><line x1="216" y1="196" x2="222" y2="198"/><line x1="186" y1="198" x2="180" y2="202"/><line x1="185" y1="182" x2="180" y2="178"/></g>
+    <!-- the amber hive and its swarm -->
+    <circle cx="58" cy="316" r="44" fill="url(#ds-amber)"/>
+    <g stroke="#f5a524" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round"><line x1="74.4" y1="262.1" x2="81.2" y2="249.3"/><line x1="141.9" y1="209.0" x2="158.4" y2="204.0"/><line x1="87.7" y1="246.6" x2="96.8" y2="234.6"/><line x1="112.7" y1="238.2" x2="125.0" y2="228.2"/><line x1="110.4" y1="202.1" x2="124.8" y2="194.0"/><line x1="83.5" y1="281.5" x2="88.9" y2="268.4"/><line x1="103.3" y1="244.1" x2="114.0" y2="232.9"/><line x1="123.9" y1="197.9" x2="139.4" y2="191.3"/><line x1="98.8" y1="268.6" x2="106.4" y2="256.0"/><line x1="108.5" y1="219.1" x2="121.7" y2="209.9"/><line x1="126.2" y1="215.5" x2="141.2" y2="208.4"/><line x1="92.2" y1="223.9" x2="103.8" y2="213.3"/><line x1="137.2" y1="202.7" x2="153.5" y2="197.3"/></g>
+    <path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(84.3 243.5) rotate(-62.1) scale(1.32)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(165.8 201.6) rotate(-17.2) scale(1.56)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(101.0 229.1) rotate(-52.7) scale(1.37)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(130.6 223.6) rotate(-39.3) scale(1.44)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(131.3 190.4) rotate(-29.3) scale(1.49)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(91.3 262.4) rotate(-67.8) scale(1.28)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(118.9 227.9) rotate(-46.0) scale(1.41)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(146.4 188.3) rotate(-23.0) scale(1.53)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(109.8 250.3) rotate(-59.0) scale(1.34)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(127.8 205.7) rotate(-34.5) scale(1.47)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(148.1 205.1) rotate(-25.5) scale(1.52)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(109.0 208.5) rotate(-42.6) scale(1.43)"/><path d="M7 0L-5 -4.6 -2.2 0 -5 4.6Z" fill="#f5a524" transform="translate(160.9 194.8) rotate(-18.3) scale(1.56)"/>
+    <g transform="translate(128 296) rotate(-38) scale(1.9)"><path d="M8 0L-4 -7.5-1.5 -2.2-6.5 0-1.5 2.2-4 7.5Z" fill="#f5a524"/><circle cx=".6" cy="0" r="1.6" fill="#0b1115"/><g fill="#ffc867"><circle cx="-8.6" cy="0" r="1"/><circle cx="-11.5" cy="0" r="1"/></g></g>
+    <polygon points="58.0,298.0 73.6,307.0 73.6,325.0 58.0,334.0 42.4,325.0 42.4,307.0" fill="#120c04" stroke="#ffb43a" stroke-width="3" stroke-linejoin="round"/>
+    <polygon points="58.0,306.0 66.7,311.0 66.7,321.0 58.0,326.0 49.3,321.0 49.3,311.0" fill="#f5a524" fill-opacity=".5" stroke="#ffc867" stroke-width="1.2"/>
+    <circle cx="58" cy="316" r="3.4" fill="#fff0c8"/>
+    <rect width="300" height="150" fill="url(#ds-top)"/>
+  </g>
+  <text x="150" y="62" text-anchor="middle" class="ds-title" fill="#020305" transform="translate(2 3)">DRONE</text>
+  <text x="150" y="62" text-anchor="middle" class="ds-title" fill="url(#ds-title)" stroke="#2a1504" stroke-width="1">DRONE</text>
+  <text x="150" y="110" text-anchor="middle" class="ds-title" fill="#020305" transform="translate(2 3)">SEASON</text>
+  <text x="150" y="110" text-anchor="middle" class="ds-title" fill="url(#ds-title)" stroke="#2a1504" stroke-width="1">SEASON</text>
+  <rect x="58" y="120" width="184" height="18" rx="2" fill="#0b1115" stroke="#f5a524" stroke-width="1.2"/>
+  <text x="150" y="133" text-anchor="middle" class="ds-sub">Whatever is seen is killed</text>
+  <rect y="350" width="300" height="50" class="cd-strip"/>
+  <use href="#cd-badge" x="28" y="375"/>
+  <text x="54" y="373" class="cd-text">PC CD-ROM</text>
+  <text x="54" y="388" class="cd-small">SEE FIRST. STRIKE FIRST.</text>
+  <g transform="translate(260 358)"><rect width="30" height="34" rx="3" class="age"/><text x="15" y="18" text-anchor="middle" class="age-t">12+</text><text x="15" y="28" text-anchor="middle" class="age-s">AGES</text></g>
+</svg>
+    </div>
+    <div class="shadow"></div>
+  </div></div>
+  <div class="cap"><b>Drone Season</b><span>Command a hive of drones</span></div>
 </a></li>
 
 </ul>
