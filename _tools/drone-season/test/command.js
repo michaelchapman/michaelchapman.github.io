@@ -47,7 +47,7 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     ok(label + ' the Plan sheet pauses the round', st.sheet && st.sheet.kind === 'plan' && Math.abs(st.t - t0) < 1e-6, `t ${t0} -> ${st.t}`);
     await page.waitForTimeout(400);
     await tap('#sheet-body [data-act="preset"][data-k="Swarm"]'); st = await S();
-    ok(label + ' a preset replaces the plan', st.plan === 'forager5,glint1,sting12,decoy4,sting24,glint2,sting36', st.plan);
+    ok(label + ' a preset replaces the plan', st.plan === 'forager5,glint1,sting12,decoy4,sting24,harrier1,glint2,sting36', st.plan);
     await tap('#sheet-body [data-act="down"][data-r="0"]'); st = await S();
     ok(label + ' rows reorder', st.plan.startsWith('glint1,forager5'), st.plan);
     await tap('#sheet-body [data-act="w+"][data-r="2"]'); st = await S();
@@ -57,7 +57,7 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     ok(label + ' closing the sheet resumes the round', !st.sheet && st.t > t0, `t ${t0} -> ${st.t}`);
     await page.screenshot({ path: SP + label + '-cmd-auto.png' });
     // ---- a post from the hold menu ----
-    const gp = await scr(600, 300);
+    const gp = await scr(520, 320);   // inside the Heart's link
     await hold(gp);
     st = await S();
     ok(label + ' press and hold opens quick orders', st.menu, JSON.stringify(st.sel));
@@ -83,11 +83,11 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-');
     ok(label + ' Remove takes the post away and releases its units', !st.posts.length && !st.sorties.some(o => o.post), JSON.stringify(st.sorties));
     // ---- tap a contact for quick orders ----
     // the released Glint still loiters at the old post; send a rival Glint close by so it is tracked
-    await page.evaluate(() => { const { G, DS } = window.__ds; DS.launch(G.sim, 1, 'glint', 1, [{ x: 640, y: 320 }], {}); });
+    await page.evaluate(() => { const { G, DS } = window.__ds; DS.launch(G.sim, 1, 'glint', 1, [{ x: 565, y: 330 }], {}); });
     await run(12);
     await page.waitForTimeout(200);
     const cp = await page.evaluate(() => { const { G, S2, computeM } = window.__ds; computeM(false); for (const c of G.sim.sides[0].pic.values()) if (c.type === 'glint' && c.grade >= 2) { const e = G.sim.byId.get(c.id); return S2(e.x, e.y); } return null; });
-    ok(label + ' an enemy Glint is tracked', !!cp);
+    ok(label + ' an enemy Glint is tracked', !!cp, cp ? '' : await page.evaluate(() => { const { G } = window.__ds; return JSON.stringify(G.sim.units.filter(u => u.type === 'glint' && !u.parked).map(u => [u.side, Math.round(u.x), Math.round(u.y), u.jam, u.link])); }));
     if (cp) {
       await tapXY(cp); await page.waitForTimeout(200); st = await S();
       ok(label + ' tapping a contact opens Strike, Bomb, Intercept', st.menu && /Strike/.test(await page.textContent('#qmenu')) && /Intercept/.test(await page.textContent('#qmenu')));

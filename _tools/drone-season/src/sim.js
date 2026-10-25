@@ -1,4 +1,4 @@
-/* Drone Season · simulation core (milestone 2.6). Pure logic, no DOM, deterministic per seed and across browsers. */
+/* Drone Season · simulation core (milestone 3, Links). Pure logic, no DOM, deterministic per seed and across browsers. */
 (function (root) {
   'use strict';
 
@@ -12,9 +12,12 @@
   const QUEUE_MAX = 8, NEST_MAX = 2, NEST_FROM_HEART = 560, NEST_FROM_NEST = 300, NEST_ENEMY_CLEAR = 520;
   const BLAST_R = 30, WARDEN_ENGAGE = 210, WARDEN_LEASH = 320;
   const NEST_GUARD_R = 120, AUTO_QUEUE = 2, POST_MAX = 5, PLAN_MAX_ROWS = 12;
-  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider'];
-  const POST_TYPES = ['glint', 'warden', 'decoy'];
-  const POST_CAP = { glint: 2, warden: 3, decoy: 4 };
+  const PLAN_TYPES = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier'];
+  const POST_TYPES = ['glint', 'warden', 'decoy', 'harrier'];
+  const POST_CAP = { glint: 2, warden: 3, decoy: 4, harrier: 1 };
+  const BRIDGE_MAX = 3;   // Relays a post beyond link may take with it
+  // Links: your Heart, Nests and Relays carry orders. A Relay passes the link on only while it is linked itself.
+  const LINK_R = { heart: 520, nest: 320, relay: 300 }, JAM_R = 200;
 
   const MODES = {
     short: { key: 'short', name: 'Short game', minutes: 12, round: 720, bloomOpen: 300, bloomScore: 540, nectar: 250, phases: [0, 120, 300, 540, 720] },
@@ -39,6 +42,8 @@
     decoy:   { name: 'Decoy',   cost: 5,  sig: 2, fake: 6, reach: 0, hp: 1, speed: 80, dash: 120, turn: 4.5, battery: 60 },
     warden:  { name: 'Warden',  cost: 35, sig: 4, reach: 160, hp: 2, speed: 115, dash: 165, turn: 6, battery: 150, nets: 3, rearm: 4, rearmT: 5, reuse: true },
     raider:  { name: 'Raider',  cost: 40, sig: 4, reach: 110, hp: 3, speed: 70, dash: 100, turn: 3.2, battery: 150, charges: 3, rearm: 6, rearmT: 7, reuse: true },
+    relay:   { name: 'Relay',   cost: 30, sig: 4, reach: 80,  hp: 2, speed: 75, dash: 110, turn: 3.5, battery: 240, rearm: 3, rearmT: 4, reuse: true, support: true },
+    harrier: { name: 'Harrier', cost: 45, sig: 5, reach: 100, hp: 2, speed: 80, dash: 120, turn: 3.5, battery: 150, rearm: 5, rearmT: 5, reuse: true, support: true },
   };
   const BUILD = {
     forager: { cost: 25, time: 5, n: 1 },
@@ -47,13 +52,15 @@
     decoy:   { cost: 10, time: 3, n: 2 },
     warden:  { cost: 35, time: 8, n: 1 },
     raider:  { cost: 40, time: 10, n: 1 },
+    relay:   { cost: 30, time: 6, n: 1 },
+    harrier: { cost: 45, time: 9, n: 1 },
     nest:    { cost: 80, time: 12, n: 1, site: true },
   };
-  const BUILD_ORDER = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'nest'];
+  const BUILD_ORDER = ['forager', 'glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier', 'nest'];
   const DIFF = {
-    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7 },
-    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1 },
-    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2 },
+    easy:   { react: 4.5, guard: 2, raid: 12, scout: 45, income: 0.72, hold: 2, nests: 1, force: 0.7, jam: false },
+    normal: { react: 1.8, guard: 3, raid: 12, scout: 30, income: 1.0,  hold: 4, nests: 1, jam: true },
+    hard:   { react: 0.8, guard: 4, raid: 14, scout: 22, income: 1.12, hold: 5, nests: 2, jam: true },
   };
 
   // ---------- helpers ----------
@@ -301,7 +308,7 @@
       moving: false, dash: false, diving: false, diveT: 0, battery: T.battery || 0,
       charges: T.charges || 0, nets: T.nets || 0, rearmT: 0, rearmPaid: false, homing: false,
       cargo: 0, field: -1, slot: 0, manual: false, wp: 0, off: sim.rnd() * 2 - 1,
-      target: 0, spot: 0, retry: 0, scanPhase: (sim.nextId % 3), cool: 0, loiter: 0, orb: sim.rnd() * 6.28,
+      target: 0, spot: 0, retry: 0, scanPhase: (sim.nextId % 3), cool: 0, loiter: 0, orb: sim.rnd() * 6.28, link: true, jam: false,
     };
     if (extra) Object.assign(u, extra);
     sim.units.push(u); sim.byId.set(u.id, u);
@@ -330,7 +337,7 @@
       seed, diff, mode, cfg, phases: phasesFor(mode), map, t: 0, tick: 0, over: false, winner: -1, reason: '',
       units: [], byId: new Map(), nextId: 1, sorties: new Map(), nextSortie: 1,
       events: [], rnd: mulberry32((seed ^ 0x5bd1e995) >>> 0), holder: -1, presence: [0, 0],
-      phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false,
+      phase: 0, bloomOpen: false, hearts: [], ai: [null, null], frost: false, links: [[], []],
     };
     sim.sides = [0, 1].map(s => ({
       side: s, nectar: cfg.nectar, harvested: 0, queue: [], qid: 1, guard: true,
@@ -379,8 +386,11 @@
     const T = TYPES[u.type];
     return T.reach * (!T.structure && ridgeAt(sim.map, u.x, u.y) ? 1.3 : 1);
   }
-  function perceivedType(sim, side, e) {
+  // What a drone takes a contact to be. A Decoy passes for a Raider until the hive has seen through it,
+  // and a jammed drone never hears that it has.
+  function perceivedType(sim, side, e, jammed) {
     if (e.type !== 'decoy') return e.type;
+    if (jammed) return 'raider';
     const c = sim.sides[side].pic.get(e.id);
     return c && c.revealed ? 'decoy' : 'raider';
   }
@@ -473,7 +483,7 @@
       u.parked = false; u.state = 'fly'; u.sortie = so.id; u.wp = 0; u.diving = false; u.homing = false;
       u.x = base.x + (sim.rnd() - 0.5) * 18; u.y = base.y + (sim.rnd() - 0.5) * 18; u.px = u.x; u.py = u.y;
       u.hdg = datan2(anchor.y - u.y, anchor.x - u.x);
-      u.dash = so.stance === 'dash'; u.loiter = 0; u.cool = 0;
+      u.dash = so.stance === 'dash'; u.loiter = 0; u.cool = 0; u.link = true; u.jam = false;
       u.target = type === 'raider' && so.mode === 'raid' ? 0 : so.target;   // a Raider flies its route before it bombs
       if (!T.reuse) u.battery = T.battery;
       so.units.push(u.id); so.cost += T.cost;
@@ -481,10 +491,21 @@
     sim.sorties.set(so.id, so);
     return so;
   }
+  // New orders reach only drones in link. Drones out of link or jammed carry on as they were, on a sortie of their own.
+  function splitUnlinked(sim, so) {
+    const off = so.units.filter(id => { const u = sim.byId.get(id); return u && u.hp > 0 && !u.link; });
+    if (!off.length || off.length === so.units.length) return;
+    const rest = Object.assign({}, so, { id: sim.nextSortie++, units: off, route: so.route.slice(), killed: {}, destroyed: 0, cost: 0, n: off.length });
+    sim.sorties.set(rest.id, rest);
+    for (const id of off) sim.byId.get(id).sortie = rest.id;
+    so.units = so.units.filter(id => !off.includes(id));
+  }
+  const linkedIn = (sim, so) => so.units.some(id => { const u = sim.byId.get(id); return u && u.hp > 0 && u.link; });
   function retask(sim, sortieId, route, opts) {
     opts = opts || {};
     const so = sim.sorties.get(sortieId);
-    if (!so || sim.over) return false;
+    if (!so || sim.over || !linkedIn(sim, so)) return false;
+    splitUnlinked(sim, so);
     so.route = cleanRoute(route); so.mode = opts.mode || 'route'; so.target = opts.target || 0; so.post = 0;
     if (opts.stance) so.stance = opts.stance;
     for (const id of so.units) {
@@ -497,7 +518,8 @@
   }
   function recall(sim, sortieId) {
     const so = sim.sorties.get(sortieId);
-    if (!so || sim.over) return false;
+    if (!so || sim.over || !linkedIn(sim, so)) return false;
+    splitUnlinked(sim, so);
     so.post = 0;
     if (TYPES[so.type].reuse) { for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.homing = true; u.target = 0; } } }
     else if (so.type === 'sting') { so.mode = 'home'; for (const id of so.units) { const u = sim.byId.get(id); if (u) { u.target = 0; u.diving = false; } } }
@@ -506,7 +528,8 @@
   }
   function setStance(sim, sortieId, stance) {
     const so = sim.sorties.get(sortieId);
-    if (!so) return;
+    if (!so || !linkedIn(sim, so)) return;
+    splitUnlinked(sim, so);
     so.stance = stance;
     for (const id of so.units) { const u = sim.byId.get(id); if (u) u.dash = stance === 'dash'; }
   }
@@ -632,7 +655,7 @@
       const S = sim.sides[s], pic = S.pic;
       const sensors = [];
       for (const u of sim.units) {
-        if (u.side !== s || u.parked || u.hp <= 0) continue;
+        if (u.side !== s || u.parked || u.hp <= 0 || u.jam) continue;   // a jammed drone cannot send back what it sees
         const R = reachOf(sim, u);
         if (R > 0) sensors.push({ x: u.x, y: u.y, R });
       }
@@ -659,6 +682,7 @@
           if (revealHere) reveal = true;
           if (best >= 1.5 && (!isDecoy || reveal)) break;
         }
+        if (e.type === 'harrier' && e.jams > 0 && best < 1) best = 1;   // jamming gives a Harrier away: tracked while it jams you
         const grade = best >= 1.5 ? 3 : best >= 1 ? 2 : best >= 0.55 ? 1 : 0;
         e.spot = grade;
         if (!c) {
@@ -708,6 +732,39 @@
       if (u.spot < 2) S.unseen += dtd;
     }
   }
+
+  // ---------- links and jamming ----------
+  // A drone is in link when it is within reach of your Heart, a Nest, or a Relay that is itself in link, and not inside
+  // a rival Harrier's jamming. Out of link it keeps its orders; jammed, it also cannot report or use the hive's picture.
+  const jammedAt = (sim, side, x, y) => sim.units.some(h => h.side !== side && h.type === 'harrier' && !h.parked && h.hp > 0 && (h.x - x) * (h.x - x) + (h.y - y) * (h.y - y) <= JAM_R * JAM_R);
+  function linkPass(sim) {
+    const harriers = [[], []];
+    for (const u of sim.units) if (u.type === 'harrier' && !u.parked && u.hp > 0) { harriers[u.side].push(u); u.jams = 0; }
+    for (const u of sim.units) {
+      if (u.parked || u.hp <= 0 || isStructure(u)) continue;
+      u.jam = false;
+      for (const h of harriers[1 - u.side]) if ((h.x - u.x) * (h.x - u.x) + (h.y - u.y) * (h.y - u.y) <= JAM_R * JAM_R) { u.jam = true; h.jams++; }
+    }
+    for (let s = 0; s < 2; s++) {
+      const nodes = basesOf(sim, s).map(b => ({ x: b.x, y: b.y, r: LINK_R[b.type], id: b.id }));
+      const relays = sim.units.filter(u => u.side === s && u.type === 'relay' && !u.parked && u.hp > 0 && !u.jam && !u.homing);
+      const used = new Set();
+      for (let grew = true; grew;) {
+        grew = false;
+        for (const r of relays) {
+          if (used.has(r.id)) continue;
+          const from = nodes.find(n => (n.x - r.x) * (n.x - r.x) + (n.y - r.y) * (n.y - r.y) <= n.r * n.r);
+          if (from) { nodes.push({ x: r.x, y: r.y, r: LINK_R.relay, id: r.id, relay: true, from: from.id }); used.add(r.id); grew = true; }
+        }
+      }
+      sim.links[s] = nodes;
+      for (const u of sim.units) {
+        if (u.side !== s || u.parked || u.hp <= 0 || isStructure(u)) continue;
+        u.link = !u.jam && nodes.some(n => (n.x - u.x) * (n.x - u.x) + (n.y - u.y) * (n.y - u.y) <= n.r * n.r);
+      }
+    }
+  }
+  const inLink = (sim, side, x, y) => sim.links[side].some(n => (n.x - x) * (n.x - x) + (n.y - y) * (n.y - y) <= n.r * n.r);
 
   // ---------- combat ----------
   function killUnit(sim, u, src, how) {
@@ -799,8 +856,13 @@
       }
     }
     const spd = u.dash ? T.dash : T.speed;
-    const mode = so.mode;
+    let mode = so.mode;
     if (mode === 'home') { flyHome(sim, u, dt); return; }
+    if (u.jam && (mode === 'strike' || mode === 'guard')) {   // cut off from the hive's track: hunt with its own seeker
+      const tgt = sim.byId.get(u.target);
+      if (tgt && tgt.hp > 0 && !tgt.parked && (sim.tick + u.scanPhase) % 3 === 0 && seekerSees(sim, u, tgt)) { u.diving = true; u.diveT = 3; return; }
+      mode = 'hunt';
+    }
     if (mode === 'raid') {
       const tgt = sim.byId.get(so.target);
       if (tgt && tgt.hp > 0) {
@@ -813,7 +875,7 @@
     }
     if (mode === 'strike' || mode === 'guard') {
       const tgt = sim.byId.get(u.target);
-      const est = u.target ? estimate(sim, u.side, u.target) : null;
+      const est = u.target ? estimate(sim, u.side, u.target) : null;   // (not reached when jammed)
       if (!tgt || tgt.hp <= 0 || tgt.parked || !est || (est.stale && dhypot(est.x - u.x, est.y - u.y) < 24)) {
         u.target = 0;
         if (mode === 'guard') so.mode = 'home';
@@ -835,7 +897,7 @@
         const q = (T.reach * sigOf(sim, e)) / 5 / d;
         if (q < 1) continue;
         const taken = targetedBy(sim, u.side, e.id);
-        const score = q * (TYPES[perceivedType(sim, u.side, e)].cost / 10 + 1) / (1 + taken * 2);
+        const score = q * (TYPES[perceivedType(sim, u.side, e, u.jam)].cost / 10 + 1) / (1 + taken * 2);
         if (score > bq && los(sim.map, u.x, u.y, e.x, e.y)) { bq = score; best = e; }
       }
       if (best) { u.target = best.id; u.diving = true; u.diveT = 3; return; }
@@ -850,9 +912,19 @@
     followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);
   }
 
-  const WARDEN_PRI = { sting: 5, raider: 4, decoy: 4, glint: 3, warden: 3, forager: 2 };
+  function updateSupport(sim, u, dt) {   // Relays and Harriers: fly the route, hold station, home to recharge
+    const T = TYPES[u.type];
+    u.battery -= dt;
+    if (u.battery <= 0) { killUnit(sim, u, null, 'expired'); return; }
+    const so = sim.sorties.get(u.sortie);
+    if (!so || u.battery < 30 || u.hp < T.hp) u.homing = true;
+    if (u.homing) { flyHome(sim, u, dt); return; }
+    followRoute(sim, u, so, u.dash ? T.dash : T.speed, dt);   // then holds station at the end until its battery runs low
+  }
+
+  const WARDEN_PRI = { harrier: 6, sting: 5, raider: 4, decoy: 4, relay: 4, glint: 3, warden: 3, forager: 2 };
   function wardenSees(sim, u, e) {
-    const c = sim.sides[u.side].pic.get(e.id);
+    const c = u.jam ? null : sim.sides[u.side].pic.get(e.id);   // jammed: only what its own sensor sees
     if (c && (c.grade >= 2 || c.lockUntil > sim.t)) return true;
     const d = Math.max(1, dist(u.x, u.y, e.x, e.y));
     return (reachOf(sim, u) * sigOf(sim, e)) / 5 / d >= 0.7 && los(sim.map, u.x, u.y, e.x, e.y);
@@ -864,7 +936,7 @@
       if (dist(e.x, e.y, cx, cy) > WARDEN_ENGAGE) continue;
       const du = dist(e.x, e.y, u.x, u.y);
       if (du > 320 || !wardenSees(sim, u, e)) continue;
-      let sc = (WARDEN_PRI[perceivedType(sim, u.side, e)] || 1) + (e.diving ? 2 : 0) - du / 200;
+      let sc = (WARDEN_PRI[perceivedType(sim, u.side, e, u.jam)] || 1) + (e.diving ? 2 : 0) - du / 200;
       if (targetedBy(sim, u.side, e.id, 'warden') > 0) sc -= 3;
       if (sc > bs) { bs = sc; best = e; }
     }
@@ -901,7 +973,8 @@
 
   function raiderSees(sim, u, e) {
     const c = sim.sides[u.side].pic.get(e.id);
-    if (c && ((c.static && c.known) || c.grade >= 2 || c.lockUntil > sim.t)) return true;
+    if (c && c.static && c.known) return true;                      // fixed targets: it was briefed before launch
+    if (c && !u.jam && (c.grade >= 2 || c.lockUntil > sim.t)) return true;   // moving ones need the hive's picture
     const d = Math.max(1, dist(u.x, u.y, e.x, e.y));
     return (reachOf(sim, u) * sigOf(sim, e)) / 5 / d >= 1 && los(sim.map, u.x, u.y, e.x, e.y);
   }
@@ -947,7 +1020,8 @@
     const spd = u.dash ? T.dash : T.speed;
     if ((so.mode === 'strike' || so.mode === 'raid') && so.target) {
       const tgt = sim.byId.get(so.target), est = estimate(sim, u.side, so.target);
-      if (!tgt || tgt.hp <= 0 || !est || (est.stale && dist(est.x, est.y, u.x, u.y) < 30)) { so.mode = 'route'; so.target = 0; so.route = []; u.homing = true; return; }
+      const lost = u.jam && tgt && !isStructure(tgt) && !raiderSees(sim, u, tgt);   // jammed: a moving target it cannot see itself is lost
+      if (!tgt || tgt.hp <= 0 || !est || lost || (est.stale && dist(est.x, est.y, u.x, u.y) < 30)) { so.mode = 'route'; so.target = 0; so.route = []; u.homing = true; return; }
       if (so.mode === 'strike' || u.wp >= so.route.length) {
         if (dist(est.x, est.y, u.x, u.y) < 150 && u.cool <= 0 && raiderSees(sim, u, tgt) && (isStructure(tgt) || tgt.type === 'forager' || !tgt.moving)) { u.target = tgt.id; return; }
         moveTo(u, est.x, est.y, spd, T.turn, dt);
@@ -1107,6 +1181,7 @@
         case 'sting': updateSting(sim, u, dt); break;
         case 'warden': updateWarden(sim, u, dt); break;
         case 'raider': updateRaider(sim, u, dt); break;
+        case 'relay': case 'harrier': updateSupport(sim, u, dt); break;
       }
       if (sim.over) return;
     }
@@ -1126,7 +1201,7 @@
     }
     for (const u of sim.units) { if (!u.parked) { u.vx = (u.x - u.px) / dt; u.vy = (u.y - u.py) / dt; } }
 
-    if (sim.tick % 3 === 0) detect(sim, dt * 3);
+    if (sim.tick % 3 === 0) { linkPass(sim); detect(sim, dt * 3); }
 
     // tidy the dead
     if (sim.units.some(u => u.hp <= 0 && u.type !== 'heart')) {
@@ -1228,14 +1303,48 @@
     }
     return out;
   }
+  // Whether the hive can staff a post: its spot must be in link ('ok'), not out of reach ('cut') or jammed ('jammed').
+  // Drones already there carry on; the hive just cannot send more or relieve them.
+  function postReach(sim, side, p) {
+    if (jammedAt(sim, side, p.x, p.y)) return 'jammed';
+    return inLink(sim, side, p.x, p.y) ? 'ok' : 'cut';
+  }
+  // Relays a post has taken to carry the link out to it ('bridges'), each holding a spot of its own.
+  const bridgesOf = (sim, side, p) => [...sim.sorties.values()].filter(so => so.side === side && so.post === p.id && so.bridge && so.units.length);
+  // A post beyond link takes a Relay, if one is ready, to the edge of the link towards it, and keeps one there.
+  // Further out it chains them. A jammed spot is no use, so jamming cannot be bridged.
+  function bridgeTick(sim, side, p, reach) {
+    const list = bridgesOf(sim, side, p);
+    const flying = so => so.units.some(id => { const u = sim.byId.get(id); return u && !u.homing && u.wp < so.route.length; });
+    if (list.some(flying)) return;                              // one is on its way: wait for it
+    for (const so of list) {                                    // relieve a Relay that is fading, at the same spot
+      const u = sim.byId.get(so.units[0]), spot = so.route[0];
+      if (!u || onStation(sim, side, spot, u)) continue;
+      if (list.some(o => o !== so && dist(o.route[0].x, o.route[0].y, spot.x, spot.y) < 25 && o.units.some(id => onStation(sim, side, spot, sim.byId.get(id))))) continue;
+      const r = launch(sim, side, 'relay', 1, [spot], { post: p.id, label: 'Relay', stance: 'quiet' });
+      if (r) { r.bridge = true; return; }
+    }
+    if (reach !== 'cut' || list.length >= BRIDGE_MAX) return;
+    let n = null, best = Infinity;
+    for (const q of sim.links[side]) { const g = dist(q.x, q.y, p.x, p.y) - q.r; if (g < best) { best = g; n = q; } }
+    if (!n) return;
+    const d = dist(n.x, n.y, p.x, p.y), k = Math.min(n.r * 0.85, Math.max(0, d - LINK_R.relay * 0.6)) / d;
+    const spot = { x: n.x + (p.x - n.x) * k, y: n.y + (p.y - n.y) * k };
+    if (jammedAt(sim, side, spot.x, spot.y)) return;
+    const r = launch(sim, side, 'relay', 1, [spot], { post: p.id, label: 'Relay', stance: 'quiet' });
+    if (r) r.bridge = true;
+  }
   // Send ready units to any post that is short, highest priority first.
   function postTick(sim, side) {
     const S = sim.sides[side];
     if (!S.posts.length || sim.over) return;
     for (const p of byPri(S.posts)) {
+      const reach = postReach(sim, side, p);
+      if (reach !== p.reach) { if (p.reach) sim.events.push({ k: 'postReach', side, post: p.id, reach }); p.reach = reach; }
+      bridgeTick(sim, side, p, reach);
       for (const type of POST_TYPES) {
         const need = p.need[type] | 0;
-        if (!need) continue;
+        if (!need || reach !== 'ok') continue;
         let on = 0;
         for (const u of postUnits(sim, side, p, type)) if (onStation(sim, side, p, u)) on++;
         if (on >= need) continue;
@@ -1251,8 +1360,14 @@
     for (const p of byPri(S.posts)) for (const type of POST_TYPES) {
       const n = p.need[type] | 0;
       if (!n) continue;
-      want[type] = (want[type] || 0) + n + (type === 'warden' ? 0 : 1);
+      want[type] = (want[type] || 0) + n + (type === 'warden' || type === 'harrier' ? 0 : 1);
       if (!order.includes(type)) order.push(type);
+    }
+    for (const p of byPri(S.posts)) {
+      const k = bridgesOf(sim, side, p).length + (p.reach === 'cut' ? 1 : 0);
+      if (!k) continue;
+      want.relay = (want.relay || 0) + k + 1;
+      if (!order.includes('relay')) order.unshift('relay');
     }
     const out = [];
     for (const type of order) {
@@ -1263,7 +1378,7 @@
         const so = sim.sorties.get(u.sortie);
         if (!so || !so.post) continue;                       // busy on your own orders
         const p = S.posts.find(q => q.id === so.post);
-        if (p && onStation(sim, side, p, u)) have++;
+        if (p && onStation(sim, side, so.bridge ? so.route[0] : p, u)) have++;
       }
       for (const q of S.queue) if (q.type === type) have += BUILD[type].n;
       if (have < want[type]) out.push([type, want[type] - have]);
@@ -1316,14 +1431,27 @@
     if (patch.name != null) p.name = patch.name;
     if (patch.x != null && patch.y != null) {
       p.x = clamp(patch.x, 10, W - 10); p.y = clamp(patch.y, 10, H - 10);
-      for (const so of sim.sorties.values()) if (so.side === side && so.post === id) { so.route = [{ x: p.x, y: p.y }]; for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } } }
+      for (const so of [...sim.sorties.values()]) {
+        if (so.side !== side || so.post !== id) continue;
+        if (!linkedIn(sim, so)) { so.post = 0; continue; }          // out of link: they stay where they were sent
+        if (so.bridge) { so.post = 0; for (const uid of so.units) { const u = sim.byId.get(uid); if (u && u.link) u.homing = true; } continue; }
+        const before = sim.nextSortie;
+        splitUnlinked(sim, so);
+        if (sim.nextSortie > before) sim.sorties.get(before).post = 0;
+        so.route = [{ x: p.x, y: p.y }];
+        for (const uid of so.units) { const u = sim.byId.get(uid); if (u) { u.wp = 0; u.loiter = 0; } }
+      }
     }
-    // drop units the post no longer needs: Wardens go home, Glints and Decoys stay where they are until their batteries fade
+    // drop units the post no longer needs (only those in link hear it): reusable ones go home, Glints and Decoys stay until they fade
     for (const type of POST_TYPES) {
-      const list = postUnits(sim, side, p, type), extra = list.length - p.need[type];
-      for (let i = 0; i < extra; i++) {
+      const list = postUnits(sim, side, p, type).filter(u => u.link);
+      let extra = postUnits(sim, side, p, type).length - p.need[type];
+      for (let i = 0; i < list.length && extra > 0; i++) {
         const so = sim.sorties.get(list[i].sortie);
-        if (so && so.post === id) { so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; } }
+        if (!so || so.post !== id) continue;
+        splitUnlinked(sim, so);
+        extra -= so.units.length;
+        so.post = 0; if (TYPES[type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
       }
     }
     return p;
@@ -1332,9 +1460,11 @@
     const S = sim.sides[side], i = S.posts.findIndex(q => q.id === id);
     if (i < 0) return false;
     S.posts.splice(i, 1);
-    for (const so of sim.sorties.values()) {
+    for (const so of [...sim.sorties.values()]) {
       if (so.side !== side || so.post !== id) continue;
       so.post = 0;
+      if (!linkedIn(sim, so)) continue;                          // out of link: they hold until their batteries say otherwise
+      splitUnlinked(sim, so);
       if (TYPES[so.type].reuse) for (const uid of so.units) { const u = sim.byId.get(uid); if (u) u.homing = true; }
     }
     return true;
@@ -1422,7 +1552,7 @@
   function aiTick(sim, ai) {
     const s = ai.side, o = 1 - s, S = sim.sides[s], cfg = ai.cfg, t = sim.t, m = sim.map, C = sim.cfg;
     const h = sim.hearts[s], eh = sim.hearts[o], ci = m.fields.length - 1, cf = m.fields[ci];
-    const parked = { sting: [], glint: [], decoy: [], warden: [], raider: [] };
+    const parked = { sting: [], glint: [], decoy: [], warden: [], raider: [], relay: [], harrier: [] };
     let glOut = 0;
     for (const u of sim.units) {
       if (u.side !== s || u.hp <= 0) continue;
@@ -1444,7 +1574,9 @@
       const site = aiNestSite(sim, ai);
       if (site) build(sim, s, 'nest', site);
     }
-    maintain(sim, s, cfg.force ? AI_FORCE[sim.phase].map(([t, n]) => [t, t === 'forager' || t === 'glint' ? n : Math.max(1, Math.round(n * cfg.force))]) : AI_FORCE[sim.phase], 2);
+    let force = cfg.force ? AI_FORCE[sim.phase].map(([t, n]) => [t, t === 'forager' || t === 'glint' ? n : Math.max(1, Math.round(n * cfg.force))]) : AI_FORCE[sim.phase];
+    if (cfg.jam && sim.phase >= 2) { force = force.slice(); force.splice(force.length - 1, 0, ['harrier', 1]); }
+    maintain(sim, s, force, 2);
 
     // scout
     ai.scoutT -= 0.5;
@@ -1519,6 +1651,13 @@
       }
     }
 
+    // a Harrier jams the Crown at Last Light, so the rival's drones there fight half blind
+    const harrierOut = sim.units.some(u => u.side === s && u.type === 'harrier' && !u.parked && u.hp > 0);
+    if (parked.harrier.length && !harrierOut && t >= C.bloomScore - 20) {
+      const p = { x: cf.x + (s ? 70 : -70), y: cf.y + (ai.rnd() - 0.5) * 80 };
+      if (launch(sim, s, 'harrier', 1, aiRoute(ai, h, p, 0.4), { label: 'Jam' })) take('harrier', 1);
+    }
+
     // raids: on a harvest, or on the Heart with decoys running ahead
     if (t >= ai.raidT && spare() >= cfg.raid && t < C.round - 25) {
       ai.raidT = t + C.round * (0.085 + ai.rnd() * 0.05);
@@ -1536,6 +1675,10 @@
           parked.decoy.length = 0;
         }
         if (launch(sim, s, 'sting', k, [fp, mid, { x: eh.x, y: eh.y }], { stance: 'quiet', mode: 'raid', target: eh.id, label: 'Raid' })) take('sting', k);
+        if (parked.harrier.length) {   // a Harrier rides in behind and jams the defenders near the Heart
+          const jp = { x: eh.x + (fp.x - eh.x) * 0.45, y: eh.y + (fp.y - eh.y) * 0.45 };
+          if (launch(sim, s, 'harrier', 1, [fp, jp], { label: 'Jam' })) take('harrier', 1);
+        }
         if (sim.phase >= 2 && parked.raider.length) {
           if (launch(sim, s, 'raider', 1, [fp, mid, { x: eh.x, y: eh.y }], { mode: 'raid', target: eh.id, label: 'Raid' })) take('raider', 1);
         }
@@ -1545,12 +1688,12 @@
 
   root.DS = {
     W, H, HC, HW, HH, HOLD_R, GUARD_R, FLAK_RANGE, RIDGE_H, BLAST_R, QUEUE_MAX, NEST_MAX, NEST_FROM_HEART, NEST_FROM_NEST, NEST_ENEMY_CLEAR, WARDEN_ENGAGE,
-    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP,
+    NEST_GUARD_R, AUTO_QUEUE, POST_MAX, PLAN_MAX_ROWS, PLAN_TYPES, POST_TYPES, POST_CAP, LINK_R, JAM_R,
     MODES, TYPES, BUILD, BUILD_ORDER, DIFF, DT,
     createSim, step, build, cancelBuild, launch, retask, recall, setStance, assignForager, setGuard, visPoly, sigOf, reachOf,
     ridgeAt, canopyAt, parkedCount, rearmingCount, outCount, phaseAt, estimate, mulberry32, los, fieldOpen, targetedBy, yieldFactor,
     nestSiteError, nestCount, nearestBase, basesOf, forceCount, maintain, perceivedType,
-    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits,
+    setPlan, setAuto, autoNext, autoTick, planList, addPost, editPost, removePost, postStaff, postUnits, postReach, inLink, jammedAt, linkPass,
     spawnUnit: addUnit, setAI, dsin, dcos, datan2, dhypot,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

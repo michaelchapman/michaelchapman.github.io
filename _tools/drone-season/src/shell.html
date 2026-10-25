@@ -15,6 +15,9 @@
     <symbol id="g-raider" viewBox="0 0 24 24"><path d="M23 12L7.6 2.4l2.8 6.6L2.6 12l7.8 3-2.8 6.6z" fill="currentColor"/><circle cx="12.6" cy="12" r="2.3" fill="#0b1115"/></symbol>
     <symbol id="g-warden" viewBox="0 0 24 24"><path d="M21 12L9 4.5v15z" fill="currentColor"/><rect x="3.5" y="4" width="2.8" height="16" fill="currentColor"/></symbol>
     <symbol id="g-decoy" viewBox="0 0 24 24"><path d="M20 12L9.5 5.6l2 4.4L6 12l5.5 2-2 4.4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.6"/></symbol>
+    <symbol id="g-relay" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4" fill="currentColor"/><path d="M7.4 7.4a6.5 6.5 0 000 9.2M16.6 7.4a6.5 6.5 0 010 9.2M4.6 4.6a10.4 10.4 0 000 14.8M19.4 4.6a10.4 10.4 0 010 14.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="g-harrier" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 1.8v4M12 18.2v4M1.8 12h4M18.2 12h4M4.8 4.8l2.8 2.8M16.4 16.4l2.8 2.8M4.8 19.2l2.8-2.8M16.4 7.6l2.8-2.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="g-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 010-5.7l3-3a4 4 0 015.7 5.7l-1.5 1.5M14 10a4 4 0 010 5.7l-3 3a4 4 0 01-5.7-5.7l1.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="g-nest" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4l-8.1-4.7V7.3z" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="8.4" r="1.9" fill="currentColor"/><circle cx="8.7" cy="14" r="1.9" fill="currentColor"/><circle cx="15.3" cy="14" r="1.9" fill="currentColor"/></symbol>
     <symbol id="g-post" viewBox="0 0 24 24"><path d="M12 2.5l7 9.5-7 9.5-7-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
     <symbol id="g-canopy" viewBox="0 0 24 24"><g fill="#4f9a76"><circle cx="8" cy="9" r="3.4"/><circle cx="12.5" cy="7" r="3.4"/><circle cx="15.5" cy="11.5" r="3.4"/><circle cx="10" cy="14" r="3.4"/><circle cx="15" cy="16.5" r="3"/></g><path d="M3 12c1-6 6-9.5 11-9 5 .6 8 5 7.5 10-.6 5.5-6 9-11.5 8.4C5 20.8 2.4 16.5 3 12z" fill="none" stroke="#7fd1a4" stroke-width="1.4" stroke-dasharray="2.2 2"/></symbol>
@@ -60,6 +63,7 @@
         <button class="ltile sq" id="sq-2" data-sq="2"></button>
         <button class="ltile sq" id="sq-3" data-sq="3"></button>
         <button class="ltile sq" id="sq-4" data-sq="4"></button>
+        <button class="ltile sq" id="sq-5" data-sq="5"></button>
       </div>
       <div class="panel">
         <div class="tabs">
@@ -82,10 +86,12 @@
           <div class="bbtns" role="group" aria-label="Build">
             <button class="bbtn" id="buy-forager" aria-label="Build a Forager for 25 nectar"><svg class="i"><use href="#g-forager"/></svg><span class="bn">Forager</span><span class="bc">&#9670;25</span><span class="bk" id="bk-forager">2</span></button>
             <button class="bbtn" id="buy-glint" aria-label="Build a Glint for 10 nectar"><svg class="i"><use href="#g-glint"/></svg><span class="bn">Glint</span><span class="bc">&#9670;10</span></button>
-            <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings &times;4</span><span class="bc">&#9670;24</span></button>
-            <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys &times;2</span><span class="bc">&#9670;10</span></button>
+            <button class="bbtn" id="buy-sting" aria-label="Build four Stings for 24 nectar"><svg class="i"><use href="#g-sting"/></svg><span class="bn">Stings</span><span class="bc">&#9670;24 <small>&times;4</small></span></button>
+            <button class="bbtn" id="buy-decoy" aria-label="Build two Decoys for 10 nectar"><svg class="i"><use href="#g-decoy"/></svg><span class="bn">Decoys</span><span class="bc">&#9670;10 <small>&times;2</small></span></button>
             <button class="bbtn" id="buy-warden" aria-label="Build a Warden for 35 nectar"><svg class="i"><use href="#g-warden"/></svg><span class="bn">Warden</span><span class="bc">&#9670;35</span></button>
             <button class="bbtn" id="buy-raider" aria-label="Build a Raider for 40 nectar"><svg class="i"><use href="#g-raider"/></svg><span class="bn">Raider</span><span class="bc">&#9670;40</span></button>
+            <button class="bbtn" id="buy-relay" aria-label="Build a Relay for 30 nectar"><svg class="i"><use href="#g-relay"/></svg><span class="bn">Relay</span><span class="bc">&#9670;30</span></button>
+            <button class="bbtn" id="buy-harrier" aria-label="Build a Harrier for 45 nectar"><svg class="i"><use href="#g-harrier"/></svg><span class="bn">Harrier</span><span class="bc">&#9670;45</span></button>
             <button class="bbtn" id="buy-nest" aria-label="Place a Nest for 80 nectar"><svg class="i"><use href="#g-nest"/></svg><span class="bn">Nest</span><span class="bc">&#9670;80</span><span class="bk" id="bk-nest">0/2</span></button>
           </div>
         </div>
@@ -117,7 +123,7 @@
 
   <section class="overlay" id="ov-title" aria-labelledby="ttl">
     <div class="title-panel">
-      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 2.6</div>
+      <div class="kicker">Skirmish <span class="dot">&#9670;</span> <span id="kick-mode">short game, 12 minutes</span> <span class="dot">&#9670;</span> milestone 3</div>
       <h1 class="wordmark" id="ttl"><span>Drone</span><span>Season</span></h1>
       <div class="scale" aria-hidden="true"></div>
       <p class="lede">Two machine hives, one valley. Whatever is seen is killed, so the fight is over who sees first.</p>
@@ -125,6 +131,7 @@
         <li><svg style="color:var(--amber)"><use href="#g-glint"/></svg><span><b>Scout</b>Glints see far and quietly. Perch one on a ridge to see further. Canopy hides what sits under it.</span></li>
         <li><svg style="color:var(--amber)"><use href="#g-raider"/></svg><span><b>Strike</b>Stings are cheap and spent on impact. Raiders bomb what they find, then fly home to rearm.</span></li>
         <li><svg style="color:var(--amber)"><use href="#g-warden"/></svg><span><b>Protect</b>Wardens patrol and net drones. Decoys look like Raiders to the rival and draw its fire.</span></li>
+        <li><svg style="color:var(--amber)"><use href="#g-relay"/></svg><span><b>Link</b>Orders reach drones near your Heart, Nests and Relays. Beyond that they carry on with what they were told. Harriers jam: drones near one fly blind.</span></li>
         <li><svg style="color:var(--bloom)"><use href="#g-crown"/></svg><span><b>Hold</b>In Last Light, the Crown bloom at the centre scores for whichever hive has more drones on it.</span></li>
       </ul>
       <p class="win">Win at frost on <b>Crown score</b>, or end it early by <b>destroying the Cobalt Heart</b>.</p>
@@ -149,7 +156,7 @@
         </div>
         <div class="btn-row"><button class="btn" id="btn-lobby-alt" hidden>Play against the computer</button><button class="btn" id="btn-lobby-cancel">Cancel</button></div>
       </div>
-      <p class="keys">Keys: Q W E R T arm squads &middot; A again &middot; 1&ndash;7 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
+      <p class="keys">Keys: Q W E R T Y arm squads &middot; A again &middot; 1&ndash;9 build &middot; B auto build &middot; D dash &middot; X recall &middot; F forager &middot; G guard &middot; Esc cancel &middot; P pause &middot; hold on the map for quick orders &middot; scroll to zoom</p>
     </div>
   </section>
 
@@ -182,7 +189,9 @@
           <tr><td><svg class="i"><use href="#g-decoy"/></svg></td><th>Decoy</th><td class="c">&#9670;5</td><td>Reads as a Raider to the rival and draws its fire.</td></tr>
           <tr><td><svg class="i"><use href="#g-warden"/></svg></td><th>Warden</th><td class="c">&#9670;35</td><td>Patrols where you tap and nets drones. Three nets, then home.</td></tr>
           <tr><td><svg class="i"><use href="#g-raider"/></svg></td><th>Raider</th><td class="c">&#9670;40</td><td>Three bombs for clustered or still targets. Rearms at home.</td></tr>
-          <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base.</td></tr>
+          <tr><td><svg class="i"><use href="#g-relay"/></svg></td><th>Relay</th><td class="c">&#9670;30</td><td>Hovers where you send it and carries your link 300 further. Chains through other Relays in link.</td></tr>
+          <tr><td><svg class="i"><use href="#g-harrier"/></svg></td><th>Harrier</th><td class="c">&#9670;45</td><td>Jams rival drones within 200: they cannot report, take orders or use the hive's picture. Its noise gives it away: you can see one while it jams you.</td></tr>
+          <tr><td><svg class="i"><use href="#g-nest"/></svg></td><th>Nest</th><td class="c">&#9670;80</td><td>Forward base and sensor. Drones launch from the nearest base. Carries your link too.</td></tr>
         </tbody>
       </table>
       <h3 class="sub-h">Commanding the hive</h3>
@@ -191,7 +200,9 @@
           <tr><th>Squads</th><td>Tap a squad, then tap the map or drag a route. Tap two to send them together. Long-press or right-click a squad to change its mix. <b>Again</b> resends your last squad the same way.</td></tr>
           <tr><th>Auto</th><td>Keeps two items in the queue from your plan: the first row below its target, saving up for it rather than skipping ahead. Losses are rebuilt. What you build yourself goes first.</td></tr>
           <tr><th>Posts</th><td>A spot the hive keeps staffed with Glints, Wardens or Decoys. It relieves a Glint before its battery fades and replaces Wardens that go home to rearm. Higher priority posts are filled first.</td></tr>
-          <tr><th>Quick</th><td>Tap a blue contact for Strike, Bomb or Intercept. Press and hold open ground to scout, hunt, patrol, set a post or grow a Nest there.</td></tr>
+          <tr><th>Link</th><td>New orders reach only drones in link: near your Heart, a Nest, or a Relay in link. Out of link, a drone keeps its last orders until its battery says home. A post out of link takes a Relay out with it if one is ready.</td></tr>
+          <tr><th>Jamming</th><td>Drones near a rival Harrier are jammed. They cannot report what they see, take new orders or use the hive's picture, so Stings hunt on their own and Decoys fool them. A jammed post gets no relief. Kill the Harrier.</td></tr>
+          <tr><th>Quick</th><td>Tap a blue contact for Strike, Bomb or Intercept. Press and hold open ground to scout, hunt, patrol, jam, place a Relay, set a post or grow a Nest there.</td></tr>
         </tbody>
       </table>
       <div class="btn-row">

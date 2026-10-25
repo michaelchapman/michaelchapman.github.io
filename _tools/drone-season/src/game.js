@@ -1,4 +1,4 @@
-/* Drone Season · rendering, input, sound and overlays (milestone 2.6: command tools, training, two players). */
+/* Drone Season · rendering, input, sound and overlays (milestone 3: links, Relays and Harriers). */
 (function () {
   'use strict';
   const DS = window.DS, W = DS.W, H = DS.H, TAU = Math.PI * 2, T = DS.TYPES;
@@ -11,8 +11,8 @@
   const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const FONT_D = '"Chakra Petch", "Bahnschrift", "Segoe UI", sans-serif';
   const FONT_M = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
-  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider'];
-  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3 };
+  const SQUAD_TYPES = ['glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier'];
+  const SQUAD_MAX = { glint: 3, sting: 24, decoy: 8, warden: 3, raider: 3, relay: 2, harrier: 2 };
   const SQUAD_STEP = { sting: 2 };
   const DEFAULT_SQUADS = [
     { name: 'Scout', mix: { glint: 1 } },
@@ -20,20 +20,21 @@
     { name: 'Swarm', mix: { sting: 8, decoy: 2 } },
     { name: 'Bomb run', mix: { raider: 1, decoy: 2 } },
     { name: 'Patrol', mix: { warden: 1 } },
+    { name: 'Jam', mix: { harrier: 1 } },
   ];
   const PRESETS = {
-    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['sting', 28]],
-    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['glint', 2], ['sting', 36]],
-    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
-    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['sting', 16], ['warden', 3], ['glint', 2], ['sting', 28]],
+    Balanced: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 1], ['relay', 1], ['raider', 1], ['decoy', 2], ['sting', 16], ['warden', 2], ['harrier', 1], ['sting', 28]],
+    Swarm: [['forager', 5], ['glint', 1], ['sting', 12], ['decoy', 4], ['sting', 24], ['harrier', 1], ['glint', 2], ['sting', 36]],
+    Bombers: [['forager', 5], ['glint', 1], ['sting', 8], ['raider', 2], ['decoy', 4], ['harrier', 1], ['raider', 3], ['sting', 12], ['decoy', 6], ['sting', 24]],
+    Fortress: [['forager', 5], ['glint', 1], ['sting', 8], ['warden', 2], ['relay', 1], ['sting', 16], ['warden', 3], ['relay', 2], ['glint', 2], ['sting', 28]],
   };
-  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6 };
+  const PLAN_MAX = { forager: 12, glint: 6, sting: 40, decoy: 12, warden: 6, raider: 6, relay: 4, harrier: 3 };
   const PRI = ['Low', 'Normal', 'High'];
-  const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
+  const PLURAL = { glint: 'Glints', sting: 'Stings', decoy: 'Decoys', warden: 'Wardens', raider: 'Raiders', relay: 'Relays', harrier: 'Harriers', forager: 'Foragers', nest: 'Nests', heart: 'Heart flak', other: 'other fire' };
   const nameN = (type, n) => (n === 1 ? T[type].name : PLURAL[type]);
   const units = (n, type) => `${n} ${nameN(type, n)}`;
   const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-  const DRONES = new Set(['glint', 'sting', 'decoy', 'warden', 'raider']);
+  const DRONES = new Set(['glint', 'sting', 'decoy', 'warden', 'raider', 'relay', 'harrier']);
 
   // ---------- settings ----------
   const store = {
@@ -43,6 +44,7 @@
   const randSeed = () => 1000 + Math.floor(Math.random() * 9000);
   const copySquads = list => list.map(q => ({ name: q.name, mix: Object.assign({}, q.mix) }));
   function cleanSquads(v) {
+    if (Array.isArray(v) && v.length === 5) v = v.concat(copySquads(DEFAULT_SQUADS.slice(5)));   // saved before the sixth slot
     if (!Array.isArray(v) || v.length !== DEFAULT_SQUADS.length) return copySquads(DEFAULT_SQUADS);
     return v.map((q, i) => {
       const mix = {};
@@ -473,6 +475,22 @@
       ctx.beginPath(); ctx.moveTo(7.5, 0); ctx.lineTo(-3, -5.6); ctx.lineTo(-3, 5.6); ctx.closePath();
       ctx.fillStyle = col; ctx.fill();
       ctx.fillRect(-7, -6.4, 2.3, 12.8);
+    } else if (type === 'relay') {
+      ctx.scale(k, k);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 2.7, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineCap = 'round';
+      for (const [r, w] of [[5.6, 1.5], [8.8, 1.2]]) {
+        ctx.lineWidth = w;
+        ctx.beginPath(); ctx.arc(0, 0, r, -0.72, 0.72); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, r, Math.PI - 0.72, Math.PI + 0.72); ctx.stroke();
+      }
+    } else if (type === 'harrier') {
+      ctx.scale(k, k);
+      if (u && !REDUCED) ctx.rotate(G.now * 0.9 + u.id);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i < 8; i++) { const a = (i * TAU) / 8, r1 = i % 2 ? 7.2 : 9; ctx.moveTo(Math.cos(a) * 5, Math.sin(a) * 5); ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); }
+      ctx.stroke();
     } else if (type === 'decoy') {
       ctx.rotate(ang); ctx.scale(k * 1.15, k * 1.15);
       raiderPath(); ctx.lineWidth = 1.2; ctx.strokeStyle = col; ctx.stroke();
@@ -551,7 +569,7 @@
   function computeVis() {
     const sim = G.sim, out = [];
     for (const u of sim.units) {
-      if (u.side !== ME || u.parked || u.hp <= 0) continue;
+      if (u.side !== ME || u.parked || u.hp <= 0 || u.jam) continue;   // a jammed drone sends nothing back
       const R = DS.reachOf(sim, u);
       if (R <= 0) continue;
       out.push(DS.visPoly(sim.map, u.x, u.y, R, RAYS[u.type] || 26));
@@ -636,6 +654,24 @@
         ctx.setLineDash([2 / s, 6 / s]); ring(p.x, p.y, p.need.warden ? DS.WARDEN_ENGAGE : 90); ctx.stroke(); ctx.setLineDash([]);
       }
     }
+    // link: where your orders reach (shown while you give them), the Relay mesh, and jamming
+    if (G.mode === 'play') {
+      const nodes = sim.links[ME] || [];
+      if (showLink()) drawLinkArea(nodes, s);
+      ctx.lineWidth = 1 / s; ctx.strokeStyle = 'rgba(245,165,36,0.32)'; ctx.setLineDash([1.5 / s, 4 / s]);
+      for (const n of nodes) {
+        if (!n.relay) continue;
+        const f = nodes.find(q => q.id === n.from);
+        if (f) { ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(n.x, n.y); ctx.stroke(); }
+      }
+      ctx.setLineDash([]);
+      const pic = sim.sides[ME].pic;
+      for (const u of sim.units) {
+        if (u.type !== 'harrier' || u.parked || u.hp <= 0) continue;
+        if (u.side === ME) jamRing(u.x, u.y, '245,165,36', 0.3, s);
+        else { const c = pic.get(u.id); if (c && (c.grade >= 2 || c.lockUntil > sim.t)) jamRing(c.grade >= 2 ? u.x : c.x, c.grade >= 2 ? u.y : c.y, '120,150,255', 0.5, s); }
+      }
+    }
     // where a Nest may grow
     if (G.placing) {
       ctx.setLineDash([6 / s, 6 / s]); ctx.lineWidth = 1.4 / s;
@@ -687,6 +723,57 @@
         ctx.strokeStyle = sel ? 'rgba(255,200,103,0.55)' : 'rgba(245,165,36,0.16)'; ctx.lineWidth = 1 / s;
         ctx.setLineDash([2 / s, 6 / s]); ring(end.x, end.y, DS.WARDEN_ENGAGE); ctx.stroke(); ctx.setLineDash([]);
       }
+    }
+  }
+  // Link coverage: the union of your Heart's, Nests' and linked Relays' reach, with only its outer edge drawn.
+  const showLink = () => G.mode === 'play' && (G.armed || G.placingPost || G.movingPost || (G.sel && G.sel.kind === 'post') || selSorties().length > 0 || (G.training && TR.d.showLink));
+  function drawLinkArea(nodes, s) {
+    if (!nodes.length) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();   // the valley only
+    ctx.beginPath();
+    for (const n of nodes) { ctx.moveTo(n.x + n.r, n.y); ctx.arc(n.x, n.y, n.r, 0, TAU); }
+    ctx.fillStyle = 'rgba(245,165,36,0.045)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,103,0.5)'; ctx.lineWidth = 1.3 / s; ctx.setLineDash([7 / s, 5 / s]);
+    ctx.beginPath();
+    for (const n of nodes) {
+      const steps = Math.max(48, Math.round(n.r / 6));
+      let pen = false;
+      for (let i = 0; i <= steps; i++) {
+        const a = (i / steps) * TAU, x = n.x + Math.cos(a) * n.r, y = n.y + Math.sin(a) * n.r;
+        const inside = nodes.some(q => q !== n && (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y) < (q.r - 0.5) * (q.r - 0.5));
+        if (inside) { pen = false; continue; }
+        if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true; }
+      }
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+  // A Harrier's jamming: a ragged ring that crackles (still, for reduced motion).
+  function jamRing(x, y, rgb, a, s) {
+    const R = DS.JAM_R, n = 90, t = REDUCED ? 0 : Math.floor(G.now * 10);
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const an = (i / n) * TAU, j = (((i % n) * 7919 + t * 104729) % 17) / 17, r = R + (i % 2 ? -1 : 1) * (2 + j * 5);
+      if (i) ctx.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); else ctx.moveTo(x + Math.cos(an) * r, y + Math.sin(an) * r);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${rgb},${a * 0.12})`; ctx.fill();
+    ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 1 / s; ctx.stroke();
+  }
+  // Your drone's link state, drawn beside it: a crackle when jammed, a broken ring when out of link.
+  function linkMark(u, p, k) {
+    if (u.jam) {
+      const t = REDUCED ? 0 : G.now * 14 + u.id;
+      ctx.strokeStyle = `rgba(228,236,232,${0.55 + 0.3 * Math.sin(t)})`; ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) { const a = (i / 14) * TAU, r = (i % 2 ? 9 : 12.5) * k; if (i) ctx.lineTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); else ctx.moveTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); }
+      ctx.stroke();
+    } else if (!u.link) {
+      ctx.strokeStyle = 'rgba(154,170,165,0.75)'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, -0.35, 1.2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, 1.9, 3.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 10.5 * k, 4.2, 5.6); ctx.stroke();
     }
   }
   function drawUnits() {
@@ -748,7 +835,8 @@
     for (const u of sim.units) {
       if (u.side !== ME || u.parked || u.hp <= 0 || u.type === 'heart' || u.type === 'nest') continue;
       const p = S2(u.x, u.y), hid = DS.canopyAt(sim.map, u.x, u.y);
-      drawGlyph(u.type, p.x, p.y, sAng(u.hdg), u.diving ? COL.amberHi : COL.amber, k, u, hid ? 0.72 : 1);
+      drawGlyph(u.type, p.x, p.y, sAng(u.hdg), u.diving ? COL.amberHi : COL.amber, k, u, hid ? 0.72 : u.link ? 1 : 0.78);
+      if (u.type !== 'forager') linkMark(u, p, k);
       if (hid) {   // under canopy: a leaf ring says "hidden"
         ctx.strokeStyle = 'rgba(127,209,164,0.85)'; ctx.lineWidth = 1.1; ctx.setLineDash([2, 2.5]);
         ctx.beginPath(); ctx.arc(p.x, p.y, 9 * k, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
@@ -834,7 +922,7 @@
     if (G.mode !== 'play' || !S0.posts.length) return;
     const selP = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
     for (const p of S0.posts) {
-      const q = S2(p.x, p.y), st = staffOf(p), short = isShort(st), moving = G.movingPost === p.id;
+      const q = S2(p.x, p.y), st = staffOf(p), moving = G.movingPost === p.id, rs = reachOf(p), short = isShort(st) || rs !== 'ok';
       if (p.id === selP) { ctx.strokeStyle = COL.amberHi; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.x, q.y, 15 * k, 0, TAU); ctx.stroke(); }
       postMark(q.x, q.y, k, short ? COL.lock : COL.amberHi, moving ? 0.4 : 1);
       // pips
@@ -851,7 +939,7 @@
       const bloomNamed = sim.map.fields.some(f => (f.centre ? 'Crown' : f.name) === p.name);
       ctx.font = `700 ${8.5 * k}px ${FONT_D}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillStyle = short ? 'rgba(255,94,77,0.9)' : 'rgba(255,200,103,0.9)';
-      ctx.fillText(bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`, q.x, q.y - 11 * k);
+      ctx.fillText((bloomNamed ? 'POST' : `POST · ${p.name.toUpperCase()}`) + (rs === 'jammed' ? ' · JAMMED' : rs === 'cut' ? ' · OUT OF LINK' : ''), q.x, q.y - 11 * k);
       ctx.textBaseline = 'alphabetic';
     }
   }
@@ -889,6 +977,15 @@
           ctx.beginPath(); ctx.arc(q.x, q.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
           notes.push(['PATROL HERE', COL.amberHi]);
         }
+        if (has('relay') || has('harrier')) {
+          for (const [t, R] of [['relay', DS.LINK_R.relay], ['harrier', DS.JAM_R]]) {
+            if (!has(t)) continue;
+            ctx.strokeStyle = t === 'relay' ? 'rgba(255,200,103,0.45)' : 'rgba(228,236,232,0.45)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+            ctx.beginPath(); ctx.arc(q.x, q.y, R * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          }
+          if (has('relay')) notes.push(DS.inLink(sim, ME, end.x, end.y) ? ['CARRIES YOUR LINK 300 ON', COL.amberHi] : ['OUT OF LINK HERE: PASSES NOTHING ON', COL.lock]);
+          if (has('harrier')) notes.push(['JAMS RIVAL DRONES WITHIN 200', COL.ink]);
+        }
         if (types.some(isStriker) && st) notes.push([st.type === 'heart' ? 'RAID THE HEART' : 'RAID THE NEST', COL.lock]);
         if (has('decoy') && types.some(isStriker)) notes.push(['DECOYS LEAD', COL.amberHi]);
         if (DS.canopyAt(sim.map, end.x, end.y)) notes.push(['UNDER CANOPY: HARD TO SEE', COL.leaf]);
@@ -902,6 +999,7 @@
       ctx.strokeStyle = 'rgba(255,200,103,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.arc(G.hover.x, G.hover.y, DS.WARDEN_ENGAGE * s, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       label(G.hover.x, G.hover.y - 20, `POST: ${postName(w.x, w.y).toUpperCase()}`, COL.amberHi);
+      if (!DS.inLink(sim, ME, w.x, w.y)) label(G.hover.x, G.hover.y - 37, 'OUT OF LINK: TAKES A RELAY', COL.lock);
       return;
     }
     if (G.placing) {
@@ -957,6 +1055,8 @@
         if (u.type !== 'forager') text += ` · ${Math.ceil(u.battery)} s`;
         if (DS.canopyAt(sim.map, u.x, u.y)) text += ' · under canopy';
         if (u.spot >= 2) text += ' · tracked';
+        if (u.type !== 'forager') text += u.jam ? ' · jammed' : !u.link ? ' · out of link' : u.type === 'relay' && (G.sim.links[ME] || []).some(n => n.id === u.id) ? ' · carrying the link' : '';
+        if (u.type === 'harrier') text += ' · jamming';
       }
     }
     if (!text) return;
@@ -1090,7 +1190,8 @@
         fx('ping', e.x, e.y, { life: 0.7 });
         if (live) {
           play('chirp', 0.12);
-          if (e.type !== 'sting') toastOnce('c' + e.type, `Contact: ${e.type === 'nest' ? 'Cobalt Nest' : T[e.type].name} ${placeOf(e.x, e.y)}`, 'cobalt', 5);
+          if (e.type === 'harrier') toastOnce('charrier', `Cobalt Harrier ${placeOf(e.x, e.y)}. It jams your drones near it. Kill it.`, 'cobalt', 8);
+          else if (e.type !== 'sting') toastOnce('c' + e.type, `Contact: ${e.type === 'nest' ? 'Cobalt Nest' : T[e.type].name} ${placeOf(e.x, e.y)}`, 'cobalt', 5);
         }
         break;
       case 'lock':
@@ -1117,6 +1218,12 @@
         break;
       case 'guard':
         if (live && e.side === ME) toastOnce('guard', `Guard: parked Stings intercepting a ${T[e.type].name} near your ${e.at === 'nest' ? 'Nest' : 'Heart'}.`, 'amber', 8);
+        break;
+      case 'postReach':
+        if (live && e.side === ME) {
+          const p = postById(e.post);
+          if (p) toastOnce('pr' + e.post + e.reach, e.reach === 'jammed' ? `${p.name} post jammed. No relief until the Harrier is gone.` : e.reach === 'cut' ? `${p.name} post out of link. ${DS.parkedCount(sim, ME, 'relay') ? 'Sending a Relay.' : 'It needs a Relay.'}` : `${p.name} post back in link.`, e.reach === 'ok' ? 'amber' : 'lock', 8);
+        }
         break;
       case 'postSent':
         if (live && e.side === ME) {
@@ -1461,7 +1568,7 @@
   const readyOf = type => DS.parkedCount(G.sim, ME, type);
   const mixTypes = mix => SQUAD_TYPES.filter(t => mix[t] > 0);
   const mixSize = mix => mixTypes(mix).reduce((n, t) => n + mix[t], 0);
-  const MIX_ORDER = ['sting', 'raider', 'warden', 'glint', 'decoy'];
+  const MIX_ORDER = ['sting', 'raider', 'warden', 'harrier', 'relay', 'glint', 'decoy'];
   const mixText = (mix, sep) => MIX_ORDER.filter(t => mix[t] > 0).map(t => units(mix[t], t)).join(sep || ' + ');
   function mixReady(mix) {
     let r = 0;
@@ -1550,7 +1657,8 @@
       return { route: pts.length ? pts : [end], opts: {}, what: `patrolling ${placeOf(end.x, end.y)}` };
     }
     const route = pts.length ? pts : [end];
-    return { route, opts: {}, what: type === 'glint' ? `scouting ${placeOf(end.x, end.y)}` : `drawing fire ${placeOf(end.x, end.y)}` };
+    const what = { glint: 'scouting', relay: 'carrying the link', harrier: 'jamming' }[type] || 'drawing fire';
+    return { route, opts: {}, what: `${what} ${placeOf(end.x, end.y)}` };
   }
   // Launch a mix of units along one gesture as one package, so it can be selected and retasked as one.
   function launchMix(mix, planFor, name) {
@@ -1592,9 +1700,19 @@
     launchMix(a.mix, t => plan(t, pts, c), a.name);
     G.stance = st;
   }
+  // New orders reach only drones in link; the rest carry on with what they were told.
+  const linkedSo = so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.hp > 0 && u.link; });
+  const cutCount = list => list.reduce((n, so) => n + so.units.filter(id => { const u = G.sim.byId.get(id); return u && u.hp > 0 && !u.link; }).length, 0);
+  function linkDeny(all) {
+    const jam = all.some(so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.jam; }));
+    play('deny');
+    toastOnce('nolink', jam ? 'Jammed: they can\u2019t hear you. They carry on with their last orders.' : 'Out of link: they carry on with their last orders. A Relay or Nest nearby would reach them.', 'lock', 2);
+  }
   function retaskSel(planFor) {
-    const list = selSorties();
-    if (!list.length) { G.sel = null; return; }
+    const all = selSorties();
+    if (!all.length) { G.sel = null; return; }
+    const list = all.filter(linkedSo), cut = cutCount(all);
+    if (!list.length) { linkDeny(all); return; }
     let what = '';
     for (const so of list) {
       const p = planFor(so.type);
@@ -1603,7 +1721,7 @@
       if (!what || isStriker(so.type)) what = p.what;
     }
     play('tick');
-    toastOnce('rt' + G.sel.id, `${list.map(so => units(so.units.length, so.type)).join(' + ')}: ${what}`, 'amber', 1);
+    toastOnce('rt' + G.sel.id, `${list.map(so => units(so.units.filter(id => G.sim.byId.get(id) && G.sim.byId.get(id).link).length, so.type)).join(' + ')}: ${what}${cut ? `. ${cut} out of link carry on.` : ''}`, 'amber', 1);
   }
   function commitRoute(pts) {
     const sim = G.sim;
@@ -1740,12 +1858,15 @@
   }
   function setStance(st) {
     G.stance = st;
-    for (const so of selSorties()) act('setStance', so.id, so.type === 'decoy' && selSorties().some(o => isStriker(o.type)) ? 'dash' : st);
+    const all = selSorties(), list = all.filter(linkedSo);
+    if (all.length && !list.length) { linkDeny(all); return; }
+    for (const so of list) act('setStance', so.id, so.type === 'decoy' && list.some(o => isStriker(o.type)) ? 'dash' : st);
     play('tick');
   }
   function recallSel() {
-    const done = [];
-    for (const so of selSorties()) if ((so.type === 'sting' || T[so.type].reuse) && act('recall', so.id)) done.push(so);
+    const done = [], all = selSorties(), list = all.filter(linkedSo);
+    if (all.length && !list.length) { linkDeny(all); return; }
+    for (const so of list) if ((so.type === 'sting' || T[so.type].reuse) && act('recall', so.id)) done.push(so);
     if (!done.length) return;
     toast(`${done.map(so => units(so.units.length, so.type)).join(' + ')} heading home${done.some(so => T[so.type].reuse) ? ' to rearm' : ''}.`, 'amber');
     play('tick'); G.sel = null;
@@ -1768,6 +1889,14 @@
     return best ? `${best.centre ? 'Crown' : best.name} approach` : 'Open ground';
   }
   function staffOf(p) { return DS.postStaff(G.sim, ME, p); }
+  const reachOf = p => DS.postReach(G.sim, ME, p);
+  // a post's link, said plainly: what the hive can and cannot do for it
+  function reachText(p) {
+    const rs = reachOf(p);
+    if (rs === 'jammed') return 'Jammed: a Cobalt Harrier is near. No relief gets through until it is gone.';
+    if (rs === 'cut') return DS.parkedCount(G.sim, ME, 'relay') ? 'Out of link: a Relay is on its way to carry the link out.' : `Out of link: it needs a Relay to carry the link out.${autoOn() ? ' Auto builds one.' : ' Build one.'}`;
+    return '';
+  }
   const isShort = st => Object.values(st).some(v => v.on < v.need);
   function staffText(p, sep) {
     const st = staffOf(p);
@@ -1827,6 +1956,8 @@
       { icon: 'sting', label: 'Hunt here', sub: readyLine(4, 'sting'), off: !readyOf('sting'), run: () => sendMix({ sting: 4 }, g, 'Hunt') },
       { icon: 'warden', label: 'Patrol here', sub: readyLine(1, 'warden'), off: !readyOf('warden'), run: () => sendMix({ warden: 1 }, g, 'Patrol') },
       { icon: 'post', label: 'Post here', sub: S0.posts.length >= DS.POST_MAX ? `${DS.POST_MAX} posts already` : 'the hive keeps it staffed', off: S0.posts.length >= DS.POST_MAX, run: () => openPostSheet(null, w) },
+      { icon: 'harrier', label: 'Jam here', sub: readyLine(1, 'harrier'), off: !readyOf('harrier'), run: () => sendMix({ harrier: 1 }, g, 'Jam') },
+      { icon: 'relay', label: 'Relay here', sub: DS.inLink(sim, ME, w.x, w.y) ? readyLine(1, 'relay') : 'out of link here', off: !readyOf('relay') || !DS.inLink(sim, ME, w.x, w.y), run: () => sendMix({ relay: 1 }, g, 'Relay') },
       { icon: 'nest', label: 'Grow a Nest', sub: nestErr ? nestErr.replace(/\.$/, '') : '◆80, joins the queue', off: !!nestErr, run: () => placeNest(w) },
     ];
     openMenu(X, Y, postName(w.x, w.y), items);
@@ -1901,12 +2032,15 @@
       enter: d => { d.k0 = G.sim.sides[ME].kills; },
       check: d => G.sim.sides[ME].kills > d.k0 || G.now - TR.t > 30 },
     { h: 'Set a post', p: () => 'A <b>post</b> is a spot the hive keeps staffed. <b>Press and hold</b> on the Crown bloom until a menu opens, choose <b>Post here</b>, then <b>Set post</b>.',
-      enter: () => { grant('glint', 1); grant('warden', 2); },
+      enter: () => { grant('glint', 1); grant('warden', 2); grant('relay', 1); },
       mark: () => ({ x: crown().x, y: crown().y, r: crown().r + 14, label: 'CROWN BLOOM' }),
       check: () => G.sim.sides[ME].posts.some(p => Math.hypot(p.x - crown().x, p.y - crown().y) < 140),
       hint: 'Hold your finger or the mouse button still on the Crown for half a second. Or open the Posts tab, tap + Post, then tap the Crown.' },
-    { h: 'Standing orders', p: () => 'The hive sends a Glint and Wardens to the post and keeps them there, relieving the Glint before its battery fades. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
+    { h: 'Standing orders', p: () => 'The hive keeps the post staffed, relieving the Glint before its battery fades. The Crown is just beyond your Heart\u2019s link, so a <b>Relay</b> flies out first to carry it. Open the <b>Posts</b> tab to see who is on station.', hi: '#tab-posts',
       check: () => G.tab === 'posts' },
+    { h: 'Link', p: () => 'New orders reach only drones in <b>link</b>: near your Heart, a Nest, or a Relay that is linked itself. The dashed amber edge shows it whenever you give orders. Beyond it, drones carry on with their last orders. A cobalt <b>Harrier</b> jams drones near it: they can\u2019t report or hear you, and a jammed post gets no relief. Kill Harriers fast.', next: 'Next',
+      enter: d => { d.showLink = true; },
+      mark: () => { const r = own('relay', u => !u.parked)[0]; return r ? { x: r.x, y: r.y, r: 16, label: 'RELAY' } : null; } },
     { h: 'Raid', p: () => 'A cobalt raid is heading for your Heart. With <b>Guard</b> on, parked Stings launch at drones that come close and the Heart fires its flak. Watch, or send a squad yourself.', hi: '#btn-guard',
       enter: d => {
         const sim = G.sim, h = sim.hearts[ME];
@@ -1928,7 +2062,7 @@
       mark: () => ({ x: crown().x, y: crown().y, r: DS.HOLD_R, label: 'HOLD THE CROWN' }),
       check: () => G.sim.sides[ME].score >= 10,
       hint: 'Tap a squad, then tap the Crown. The score is the amber number at the top right.', hintAfter: 20 },
-    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, and leave the routine to Auto and your posts. A real round adds a rival that adapts, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
+    { h: 'Ready', p: () => 'That is the hive: see first, strike cheaply, keep your link, and leave the routine to Auto and your posts. A real round adds a rival that adapts, with its own Harriers, and a clock that ends in Last Light. Press and hold the map any time for quick orders; the pause menu explains the rest.', final: true,
       enter: () => { store.set('trained', true); syncTitle(); } },
   ];
   function trainStart() {
@@ -2112,8 +2246,8 @@
     zoomAt(p.x, p.y, cam.z * (e.deltaY < 0 ? 1.14 : 1 / 1.14));
   }, { passive: false });
 
-  const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'nest' };
-  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4 };
+  const BUILD_KEYS = { 1: 'forager', 2: 'glint', 3: 'sting', 4: 'decoy', 5: 'warden', 6: 'raider', 7: 'relay', 8: 'harrier', 9: 'nest' };
+  const SQUAD_KEYS = { q: 0, w: 1, e: 2, r: 3, t: 4, y: 5 };
   window.addEventListener('keydown', e => {
     const tg = e.target && e.target.tagName;
     if (tg === 'INPUT' || tg === 'TEXTAREA') { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); closeSheet(); } return; }
@@ -2290,7 +2424,7 @@
       h = `Squad ${sh.i + 1}: ${sq.name}`;
       body = `<div class="sh-row"><label class="sh-l" for="sq-name">Name</label><input id="sq-name" maxlength="12" value="${sq.name.replace(/"/g, '&quot;')}" autocomplete="off" spellcheck="false"></div>
         <ul class="mix-rows">${SQUAD_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('m', t, sq.mix[t] || 0, 0, SQUAD_MAX[t])}<span class="pr-now">${readyOf(t)} ready</span></li>`).join('')}</ul>
-        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERT'[sh.i]} arms it from the keyboard.</p>
+        <p class="sh-note">One tap on the squad arms the whole mix. If some are not ready, the rest fly. Key ${'QWERTY'[sh.i]} arms it from the keyboard.</p>
         <div class="btn-row"><button class="btn" data-act="sq-reset">Reset to ${DEFAULT_SQUADS[sh.i].name}</button></div>`;
     } else if (sh.kind === 'post') {
       const p = sh.isNew ? null : postById(sh.id);
@@ -2298,7 +2432,8 @@
       const need = sh.isNew ? sh.need : p.need, pri = sh.isNew ? sh.pri : p.pri, st = p ? staffOf(p) : {};
       h = sh.isNew ? `New post: ${sh.name}` : `Post: ${p.name}`;
       done = sh.isNew ? 'Set post' : 'Done';
-      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint or Decoy before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>
+      const rt = p ? reachText(p) : !DS.inLink(sim, ME, sh.x, sh.y) ? 'This spot is out of link. The hive will send a Relay out first to carry the link there.' : '';
+      body = `<p class="sh-note">The hive keeps these here, sending ready units and relieving a Glint, Decoy or Harrier before its battery fades. Wardens that go home to rearm are replaced. With Auto on, it builds what posts are short of first.</p>${rt ? `<p class="sh-note warn">${rt}</p>` : ''}
         <ul class="mix-rows">${DS.POST_TYPES.map(t => `<li>${glyph(t)}<span class="pr-n">${PLURAL[t]}</span>${stepper('n', t, need[t] || 0, 0, DS.POST_CAP[t])}<span class="pr-now">${st[t] ? `${st[t].on} on station` : `${readyOf(t)} ready`}</span></li>`).join('')}</ul>
         <div class="sh-row"><span class="sh-l">Priority</span><div class="seg" role="group" aria-label="Priority">${[2, 1, 0].map(v => `<button data-act="pri" data-v="${v}" aria-pressed="${pri === v}">${PRI[v]}</button>`).join('')}</div></div>
         <div class="btn-row">${sh.isNew ? '<button class="btn" data-act="post-cancel">Cancel</button>' : '<button class="btn" data-act="post-move">Move</button><button class="btn danger" data-act="post-del">Remove post</button>'}</div>`;
@@ -2361,17 +2496,19 @@
     'Tap a <b>squad</b>, then tap the map or drag a route. Tap two squads to send them together.',
     '<b>Auto</b> keeps the queue full from your plan. Tap <b>Plan</b> to set what it builds.',
     'Tap a blue contact for quick orders: <b>Strike</b>, <b>Bomb</b> or <b>Intercept</b>.',
-    'Press and hold open ground to scout, hunt, patrol, set a <b>post</b> or grow a Nest there.',
+    'Press and hold open ground to scout, hunt, patrol, jam, place a Relay, set a <b>post</b> or grow a Nest there.',
     'A <b>post</b> is a spot the hive keeps staffed. Put one on the Crown before Last Light.',
     'Long-press or right-click a squad to change its mix.',
     'Perch a <b>Glint</b> on a ridge to see further. Canopy hides what sits under it.',
+    'Orders reach only drones in <b>link</b>. A <b>Relay</b> carries it 300 further; the Crown is just beyond your Heart\u2019s.',
+    'A <b>Harrier</b> jams rival drones near it: they can\u2019t report, hear orders or relieve a post. Kill theirs fast.',
     '<b>Decoys</b> look like Raiders to the rival and draw its fire.',
     'A <b>Nest</b> is a forward base. Parked Stings guard it as well as the Heart.',
     'Tap a Forager on the map, then a bloom, to move your harvest.',
   ];
   function ctxKey() {
-    const sel = selSorties().map(so => so.type + so.units.length + so.stance).join(',');
-    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri : '';
+    const sel = selSorties().map(so => so.type + so.units.length + so.stance + linkedSo(so) + cutCount([so])).join(',');
+    const post = G.sel && G.sel.kind === 'post' && postById(G.sel.id) ? staffText(postById(G.sel.id)) + postById(G.sel.id).pri + reachOf(postById(G.sel.id)) : '';
     return [G.armedSq.join(','), G.group.map(t => G.mix[t] + ':' + readyOf(t)).join(','), G.placing, G.placingPost, G.movingPost, G.stance, G.sel ? G.sel.kind + G.sel.id : '', sel, post, G.again ? G.again.name : '', G.tipI].join('|');
   }
   function stanceSeg(st) {
@@ -2384,6 +2521,8 @@
     if (one === 'warden') return 'Tap where to patrol, or a contact to intercept.';
     if (one === 'decoy') return 'They read as Raiders. Drag a route.';
     if (one === 'raider') return 'Drag a bombing route or tap a target.';
+    if (one === 'relay') return 'Tap where it should hover. Your link reaches 300 beyond it.';
+    if (one === 'harrier') return 'Tap where it should jam. Rival drones within 200 fly blind.';
     return types.some(isStriker) ? 'Tap a contact or drag a route.' : 'Tap a point or drag a route.';
   }
   function renderCtx() {
@@ -2402,17 +2541,21 @@
       const list = selSorties();
       if (list.length) {
         const types = list.map(so => so.type), one = list.length === 1 ? list[0] : null;
-        const canRecall = types.some(t => t === 'sting' || T[t].reuse);
-        const hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
+        const linked = list.some(linkedSo), cut = cutCount(list);
+        const jam = list.some(so => so.units.some(id => { const u = G.sim.byId.get(id); return u && u.jam; }));
+        const canRecall = linked && types.some(t => t === 'sting' || T[t].reuse);
+        let hint = one && one.type === 'warden' ? 'Tap a new patrol point.' : one && (one.type === 'glint' || one.type === 'decoy' || one.type === 'relay' || one.type === 'harrier') ? 'Drag a new route.' : 'Drag a new route or tap a target.';
+        if (!linked) hint = jam ? 'Jammed: it can\u2019t hear new orders and carries on with its last ones.' : 'Out of link: it carries on with its last orders until its battery says home.';
+        else if (cut) hint += ` ${cut} out of link carry on.`;
         const name = list.slice().sort((a, b) => MIX_ORDER.indexOf(a.type) - MIX_ORDER.indexOf(b.type)).map(so => units(so.units.length, so.type)).join(' + ');
         const lbl = list[0].post ? `${(postById(list[0].post) || {}).name || 'Post'} post: ` : list[0].label && list[0].label !== 'Guard' ? `${list[0].label}: ` : one ? '' : 'Group: ';
-        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${one && one.type === 'warden' ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
+        html = `<span class="ctx-text"><b>${lbl}${name} selected.</b> ${hint}</span><span class="ctx-ctl">${!linked || (one && one.type === 'warden') ? '' : stanceSeg(list.find(so => so.type !== 'decoy') ? list.find(so => so.type !== 'decoy').stance : list[0].stance)}${canRecall ? '<button class="chip" data-act="recall">Recall</button>' : ''}${cancelBtn('Done')}</span>`;
       } else G.sel = null;
     } else if (G.sel && G.sel.kind === 'forager') {
       html = `<span class="ctx-text"><b>Forager selected.</b> Tap a bloom to send it there.</span><span class="ctx-ctl">${cancelBtn('Cancel')}</span>`;
     } else if (G.sel && G.sel.kind === 'post') {
       const p = postById(G.sel.id);
-      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
+      if (p) html = `<span class="ctx-text"><b>Post ${p.name}, ${PRI[p.pri].toLowerCase()} priority.</b> ${staffText(p)}.${reachText(p) ? ' ' + reachText(p) : ''}</span><span class="ctx-ctl"><button class="chip" data-act="post-edit">Edit</button><button class="chip" data-act="post-move">Move</button><button class="chip" data-act="post-del">Remove</button>${cancelBtn('Done')}</span>`;
       else G.sel = null;
     }
     if (!html) html = `<span class="ctx-text">${TIPS[G.tipI % TIPS.length]}</span>${G.again ? `<span class="ctx-ctl"><button class="chip again" data-act="again" title="Send ${G.again.name} again the same way (A)">Again: ${G.again.name}</button></span>` : ''}`;
@@ -2423,10 +2566,10 @@
     if (key !== G.sqKey) {
       G.sqKey = key;
       G.squads.forEach((q, i) => {
-        const types = mixTypes(q.mix), main = ['raider', 'warden', 'sting', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
+        const types = mixTypes(q.mix), main = ['raider', 'warden', 'harrier', 'sting', 'relay', 'glint', 'decoy'].find(t => q.mix[t]) || 'sting';
         const el = $('sq-' + i);
         el.innerHTML = `<svg class="i gly"><use href="#g-${main}"/></svg><span class="nm">${q.name}</span><span class="sub">${types.length ? mixText(q.mix, ' · ') : 'empty: tap to set'}</span><span class="ct" id="sqr-${i}">0</span><span class="meter"><i id="sqm-${i}"></i></span>`;
-        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERT'[i]}). Long-press or right-click to edit.`;
+        el.title = `${q.name}: ${types.length ? mixText(q.mix) : 'empty'} (key ${'QWERTY'[i]}). Long-press or right-click to edit.`;
         el.setAttribute('aria-label', `${q.name}: ${types.length ? mixText(q.mix) : 'empty'}. Long-press or right-click to edit.`);
       });
     }
@@ -2478,6 +2621,7 @@
     let lead = null;
     for (const id of so.units) { const u = sim.byId.get(id); if (u) { lead = u; break; } }
     if (!lead) return '';
+    if (!linkedSo(so)) return so.units.some(id => { const u = sim.byId.get(id); return u && u.jam; }) ? 'jammed' : 'out of link';
     if (lead.homing || so.mode === 'home') return 'heading home';
     if (lead.diving) return 'diving';
     if (so.mode === 'raid') return 'raiding';
@@ -2494,7 +2638,7 @@
     // posts
     const posts = S0.posts;
     let short = 0;
-    const pinfo = posts.map(p => { const st = staffOf(p), sh = isShort(st); if (sh) short++; return { p, st, sh }; });
+    const pinfo = posts.map(p => { const st = staffOf(p), rs = reachOf(p), sh = isShort(st) || rs !== 'ok'; if (sh) short++; return { p, st, sh, rs }; });
     const tbp = $('tb-posts');
     tbp.textContent = posts.length ? String(posts.length) : '';
     tbp.className = 'tb' + (short ? ' warn' : '');
@@ -2511,19 +2655,19 @@
     setText('tb-flying', fl.length ? String(fl.length) : '');
     if (G.tab === 'posts') {
       const sel = G.sel && G.sel.kind === 'post' ? G.sel.id : 0;
-      const key = pinfo.map(({ p, st, sh }) => p.id + p.name + p.pri + JSON.stringify(st) + sh).join('|') + sel + G.placingPost;
+      const key = pinfo.map(({ p, st, sh, rs }) => p.id + p.name + p.pri + JSON.stringify(st) + sh + rs).join('|') + sel + G.placingPost;
       if (key !== G.listKeys.posts) {
         G.listKeys.posts = key;
         const add = `<button class="dcard add${G.placingPost ? ' on' : ''}" data-act="addpost"${posts.length >= DS.POST_MAX ? ' disabled' : ''}><span class="c-n">+ Post</span><span class="c-s">${posts.length >= DS.POST_MAX ? `${DS.POST_MAX} at most` : 'then tap the map'}</span></button>`;
-        const cards = pinfo.map(({ p, st, sh }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
-        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens or Decoys. Press and hold the map for <b>Post here</b>.</p>');
+        const cards = pinfo.map(({ p, st, sh, rs }) => `<button class="dcard${sh ? ' short' : ''}${p.id === sel ? ' sel' : ''}" data-post="${p.id}"><span class="c-n">${p.name}<em class="pri p${p.pri}">${rs === 'jammed' ? 'Jammed' : rs === 'cut' ? 'Out of link' : PRI[p.pri]}</em></span><span class="c-s">${DS.POST_TYPES.filter(t => st[t]).map(t => `${glyph(t)}${st[t].on}/${st[t].need}`).join(' ')}</span></button>`).join('');
+        $('body-posts').innerHTML = add + cards + (posts.length ? '' : '<p class="cards-note">A post is a spot the hive keeps staffed with Glints, Wardens, Decoys or a Harrier. Press and hold the map for <b>Post here</b>.</p>');
       }
     } else if (G.tab === 'flying') {
       const sel = selSet();
-      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + e.list.some(so => sel.has(so.id))).join('|');
+      const key = fl.map(e => e.id + JSON.stringify(e.mix) + SO_STATE(e.list[0]) + SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0]) + e.list.some(so => sel.has(so.id)) + e.list.some(linkedSo)).join('|');
       if (key !== G.listKeys.flying) {
         G.listKeys.flying = key;
-        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
+        $('body-flying').innerHTML = fl.length ? fl.map(e => `<button class="dcard${e.list.some(so => sel.has(so.id)) ? ' sel' : ''}${e.list.some(linkedSo) ? '' : ' cut'}" data-so="${e.id}"><span class="c-n">${e.label || 'Sortie'}<em>${SO_STATE(e.list.find(so => isStriker(so.type)) || e.list[0])}</em></span><span class="c-s">${mixTypes(e.mix).map(t => `${glyph(t)}${e.mix[t]}`).join(' ')}</span></button>`).join('')
           : '<p class="cards-note">Nothing in the air on your orders. Tap a squad, then the map. Guard and post flights are not listed here.</p>';
       }
     }
@@ -2569,6 +2713,11 @@
     if (NET.live && NET.waiting && !G.paused && G.now - NET.waitT > 15) netProblem('slow');
     renderCtx();
     flushAgg();
+    // your drones going blind
+    let jam = null, nj = 0;
+    for (const u of sim.units) if (u.side === ME && u.jam && !u.parked && u.hp > 0) { nj++; jam = jam || u; }
+    if (nj && !G.jamWas && !G.training) toastOnce('jam', `${pl(nj, 'drone')} jammed ${placeOf(jam.x, jam.y)}: blind and deaf to orders until they clear it.`, 'lock', 12);
+    G.jamWas = nj > 0;
     if (!G.warnedLL && sim.t > C.bloomScore - 20 && sim.t < C.bloomScore) {
       G.warnedLL = true;
       const onCrown = S0.posts.some(p => Math.hypot(p.x - W / 2, p.y - H / 2) < DS.HOLD_R);

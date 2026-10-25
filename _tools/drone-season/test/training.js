@@ -81,21 +81,28 @@ const SP = path.join(require('os').tmpdir(), 'drone-season-train-');
     ok(label + ' setting the post passes', (await step()) === 10, await title());
     await tap('#tab-posts'); await page.waitForTimeout(300);
     ok(label + ' opening Posts passes', (await step()) === 11, await title());
-    // 11 raid
-    await until(11, 2);
+    // 11 link: the Crown is beyond the Heart's link, so the post takes a Relay out and is then staffed
+    await page.evaluate(() => { const { G, DS } = window.__ds; for (let i = 0; i < 30 * 25; i++) DS.step(G.sim); });
+    await page.waitForTimeout(300);
+    const pl = await page.evaluate(() => { const { G, DS } = window.__ds, p = G.sim.sides[0].posts[0]; return { reach: DS.postReach(G.sim, 0, p), staff: DS.postStaff(G.sim, 0, p), relay: G.sim.units.some(u => u.side === 0 && u.type === 'relay' && !u.parked && u.link) }; });
+    ok(label + ' a Relay carries the link to the Crown post and the post is staffed', pl.relay && pl.reach === 'ok' && pl.staff.warden.on === 2, JSON.stringify(pl));
+    await page.screenshot({ path: SP + label + '-link.png' });
+    await tap('#coach-btns [data-act="tr-next"]'); await page.waitForTimeout(250);
+    // 12 raid
+    await until(12, 2);
     await page.screenshot({ path: SP + label + '-11.png' });
-    ok(label + ' the raid is beaten off', await until(11, 40), await title());
+    ok(label + ' the raid is beaten off', await until(12, 40), await title());
     const hp = await page.evaluate(() => window.__ds.G.sim.hearts[0].hp);
-    // 12 hold the Crown: the coach card must stay put while the step is showing (it used to flip top and bottom)
+    // 13 hold the Crown: the coach card must stay put while the step is showing (it used to flip top and bottom)
     const spots = [];
     for (let i = 0; i < 12; i++) { spots.push(await page.evaluate(() => Math.round(document.getElementById('coach').getBoundingClientRect().top))); await page.waitForTimeout(110); }
     ok(label + ' the coach card holds still on the Crown step', new Set(spots).size === 1, spots.join(','));
     await tap('#sq-2'); await tapXY(await markXY()); await page.waitForTimeout(200);
     await page.screenshot({ path: SP + label + '-12.png' });
-    ok(label + ' holding the Crown passes', await until(12, 40), await title());
+    ok(label + ' holding the Crown passes', await until(13, 40), await title());
     await page.waitForTimeout(300);
     await page.screenshot({ path: SP + label + '-13.png' });
-    ok(label + ' training ends and is remembered', (await step()) === 13 && await page.evaluate(() => JSON.parse(localStorage.getItem('ds1.trained'))), `heart ${hp}`);
+    ok(label + ' training ends and is remembered', (await step()) === 14 && await page.evaluate(() => JSON.parse(localStorage.getItem('ds1.trained'))), `heart ${hp}`);
     await tap('#coach-btns [data-act="tr-play"]'); await page.waitForTimeout(400);
     ok(label + ' Play a short game starts a real round without the coach', await page.evaluate(() => { const { G } = window.__ds; return !G.training && G.sim.mode !== 'training' && !!G.sim.ai[1] && document.getElementById('coach').hidden; }));
     await ctx.close();
