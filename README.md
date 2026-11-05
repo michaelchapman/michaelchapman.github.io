@@ -5,9 +5,9 @@ and deployed to GitHub Pages by a GitHub Actions workflow.
 
 ## Structure
 
-For now the site is a home page and five standalone pages, served as-is with no theme layout:
+For now the site is a home page and six standalone pages, served as-is with no theme layout:
 
-- `index.html` — the home page at `/`, a shelf of boxed-game covers (inline SVG) linking to the five below
+- `index.html` — the home page at `/`, a shelf of boxed-game covers (inline SVG) linking to the six below
 - `timecat/index.html` — the TimeCat game, at `/timecat/` (open `/timecat/#test` to replay every room's stored solution)
 - `top-banana/index.html` — the Top Banana game, at `/top-banana/`
 - `kings-line/index.html` — The King's Line (monarch ancestry), at `/kings-line/`
@@ -16,6 +16,8 @@ For now the site is a home page and five standalone pages, served as-is with no 
 - `drone-season/index.html` — Drone Season, a real-time strategy game of drone war, at `/drone-season/`
   (built in milestones; its box is the fifth on the home page shelf). Its icons, manifest and
   `preview.jpg` sit beside it, and its source, build and tests are in `_tools/drone-season/`
+- `shoal/index.html` — Shoal, a daily 4×4 word puzzle where found words free tropical fish, at `/shoal/`.
+  Its icons, manifest and `preview.jpg` sit beside it, and its source, word tools, box art and tests are in `_tools/shoal/`
 
 Other files:
 

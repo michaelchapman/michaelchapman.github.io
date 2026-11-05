@@ -1,0 +1,56 @@
+<div class="app" id="app">
+  <header class="top">
+    <h1 class="mark">Shoal</h1>
+    <p class="dateline" id="dateline"></p>
+    <div class="tools">
+      <button class="round" id="btn-sound" aria-label="Turn sound off" title="Sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="snd-path" d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4 4 0 0 0-2-3.5v7a4 4 0 0 0 2-3.5z"></path></svg></button>
+      <button class="round" id="btn-help" aria-label="How to play" title="How to play">?</button>
+    </div>
+  </header>
+
+  <main class="play">
+    <section class="stage" aria-label="Game board">
+      <div class="readout" id="readout" aria-live="polite"></div>
+      <canvas id="board" tabindex="0" aria-label="Four by four letter board. Type a word and press Enter, or trace letters along the paths."></canvas>
+      <div class="actions" id="actions"></div>
+    </section>
+    <aside class="side" id="side"></aside>
+  </main>
+</div>
+
+<div class="layer" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="card sheet">
+    <h2 id="help-title">How to play</h2>
+    <ol>
+      <li>Spell words of four letters or more by dragging along the paths, or tap the letters in turn and tap the last one again. You can also type.</li>
+      <li>Finding a word also finds the shorter words inside it that share its stem, so BILLS finds BILL and UNBELIEVABLE finds BELIEVABLE.</li>
+      <li>Every path belongs to a word you still need. When no remaining word uses a path, it washes away.</li>
+      <li>When every word through a letter is found, the letter sinks and a tropical fish takes its place.</li>
+      <li>The star marks the longest word. Find every word as fast as you can. Wrong guesses cost nothing.</li>
+      <li>Then pop the shoal. Tap two or more touching fish of the same colour, diagonals included, and the rest drop down.</li>
+      <li>Clear every fish to unlock the Frenzy.</li>
+    </ol>
+    <p>The fish you get depend on how you solve the board.</p>
+    <div class="row"><button class="btn" id="help-close">Back to the board</button></div>
+  </div>
+</div>
+
+<div id="frenzy" hidden>
+  <canvas id="fz" aria-label="Frenzy mini game. Lead your shoal to the food."></canvas>
+  <div class="hud">
+    <div class="score" id="fz-score">0</div>
+    <div class="spell" id="fz-spell"></div>
+    <div class="time" id="fz-time">30</div>
+  </div>
+  <div class="fzbar"><i id="fz-bar"></i></div>
+  <div class="layer" id="fz-card" hidden>
+    <div class="card sheet">
+      <h2 id="fz-title">Frenzy</h2>
+      <p id="fz-text"></p>
+      <div class="row">
+        <button class="btn" id="fz-go">Start the Frenzy</button>
+        <button class="btn" id="fz-exit">Back to the board</button>
+      </div>
+    </div>
+  </div>
+</div>
