@@ -1,0 +1,19 @@
+{
+  "name": "build",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/rammetto-one": "^5.3.0",
+    "@fontsource/shrikhand": "^5.3.0",
+    "naughty-words": "^1.2.0",
+    "wordlist-english": "^1.2.1"
+  }
+}

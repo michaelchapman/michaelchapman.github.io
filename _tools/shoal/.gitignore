@@ -1,0 +1,13 @@
+node_modules/
+# word data rebuilt by the generator steps in the README
+build/cand.json
+build/freq.json
+build/tiers.json
+build/brit.json
+build/stems.json
+build/test.json
+build/test0.json
+build/gen.log
+build/art/preview.html
+build/art/icon-square.html
+build/targets.txt
