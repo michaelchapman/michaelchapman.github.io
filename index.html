@@ -51,7 +51,7 @@ body {
   /* the plank each box stands on */
   content: "";
   position: absolute;
-  left: -18px; right: -18px; bottom: -16px;
+  left: -16px; right: -16px; bottom: -16px; /* half the gap, so planks meet without passing the page margin */
   height: 18px;
   background: linear-gradient(var(--shelf-hi) 0 3px, var(--shelf) 3px 13px, var(--shelf-lo) 13px);
   box-shadow: 0 10px 18px rgba(0,0,0,.5);
@@ -117,10 +117,12 @@ body {
 @media (max-width: 860px) {
   .shelf { gap: 44px 28px; }
   .shelf li { flex-basis: calc((100% - 28px) / 2); }
+  .stage::after { left: -14px; right: -14px; }
 }
 @media (max-width: 380px) {
   .shelf { gap: 40px 20px; }
   .shelf li { flex-basis: calc((100% - 20px) / 2); }
+  .stage::after { left: -10px; right: -10px; }
   .cap span { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
