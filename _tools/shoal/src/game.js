@@ -73,13 +73,13 @@ function newFish(i, kind, born) {
 function loadPuzzle(idx) {
   pending.forEach(clearTimeout); pending = [];
   Object.assign(G, { idx, pz:decode(PUZZLES[idx]), found:[], bonus:[], log:[], palette:paletteFor(idx), freed:0, fresh:new Set(), path:[], typed:'', phase:'words', start:0, spent:0, starAt:null, gave:false,
-    tiles:[], width:{}, dying:{}, flash:null, popping:false, spawnEnd:0, fish:[], grid:null, layout:null, popScore:0, popBest:0, cleared:false, frenzyBest:0, armed:false, msg:null, confirm:false, stuck:null, hover:null });
+    tiles:[], width:{}, dying:{}, flash:null, popping:false, spawnEnd:0, fish:[], grid:null, layout:null, popScore:0, popBest:0, cleared:false, frenzyBest:0, popFrenzyBest:0, armed:false, msg:null, confirm:false, stuck:null, hover:null });
   for (let i=0;i<16;i++) G.tiles.push(freshTile(i));
   G.pz.edges.forEach(e => G.width[e] = 1);
   const s = saved.p[idx];
   if (s) {
     G.spent = s.t || 0; G.starAt = s.st ?? null; G.gave = !!s.gave;
-    G.popBest = s.pop || 0; G.cleared = !!s.clr; G.frenzyBest = s.fz || 0;
+    G.popBest = s.pop || 0; G.cleared = !!s.clr; G.frenzyBest = s.fz || 0; G.popFrenzyBest = s.fm || 0;
     for (const w of s.f || []) enterWord(w, true);
     if (s.done) enterFish(true);
   }
@@ -87,7 +87,7 @@ function loadPuzzle(idx) {
   sizeBoard(); renderAll();
 }
 function save() {
-  saved.p[G.idx] = { f:G.log, t:Math.round(elapsed()), st:G.starAt, gave:G.gave||undefined, done:G.phase!=='words'||undefined, pop:G.popBest||undefined, clr:G.cleared||undefined, fz:G.frenzyBest||undefined };
+  saved.p[G.idx] = { f:G.log, t:Math.round(elapsed()), st:G.starAt, gave:G.gave||undefined, done:G.phase!=='words'||undefined, pop:G.popBest||undefined, clr:G.cleared||undefined, fz:G.frenzyBest||undefined, fm:G.popFrenzyBest||undefined };
   persist();
 }
 function elapsed() { return G.spent + (G.start && G.phase==='words' ? (performance.now()-G.start)/1000 : 0); }
@@ -397,8 +397,9 @@ function totalScore() {
   const w = G.found.reduce((n,x) => n + WORD_PTS(x.length), 0);
   const star = G.found.includes(G.pz.star) ? 50 : 0;
   const speed = G.gave ? 0 : Math.max(0, Math.round(300 - elapsed()/2));
-  return w + star + speed + G.bonus.length*5 + (G.popBest||G.popScore) + (G.frenzyBest||0);
+  return w + star + speed + G.bonus.length*5 + (G.popBest||G.popScore) + frenzyTop();
 }
+const frenzyTop = () => Math.max(G.frenzyBest||0, G.popFrenzyBest||0);   // best of either Frenzy style
 
 /* ---------- drawing ---------- */
 function alga(c,x,y,s,rot) {
@@ -737,7 +738,7 @@ function renderSide() {
         <div><dt>Star word</dt><dd>${G.starAt != null ? fmt(G.starAt) : 'Missed'}</dd></div>
         <div><dt>Score</dt><dd id="score">${totalScore()}</dd></div>
       </dl>
-      ${G.frenzyBest ? `<p>Best Frenzy: ${G.frenzyBest}.</p>` : ''}${streak}
+      ${frenzyTop() ? `<p>Best Frenzy: ${frenzyTop()}.</p>` : ''}${streak}
       <div class="row">
         <button class="btn" id="a-copy">Copy result</button>
         <button class="btn" id="a-next">Another board</button>
@@ -763,7 +764,7 @@ function shareText() {
   const lines = [label, `${G.found.length}/${pz.words.length} words${G.gave ? '' : ' in ' + fmt(elapsed())}`];
   if (G.starAt != null) lines.push(`⭐ at ${fmt(G.starAt)}`);
   lines.push(...rows);
-  if (G.cleared) lines.push(G.frenzyBest ? `Shoal cleared, Frenzy ${G.frenzyBest}` : 'Shoal cleared');
+  if (G.cleared) lines.push(frenzyTop() ? `Shoal cleared, Frenzy ${frenzyTop()}` : 'Shoal cleared');
   return lines.join('\n');
 }
 document.addEventListener('click', async e => {
@@ -839,17 +840,26 @@ function syncSound() {
 $('btn-sound').onclick = () => { Sound.wake(); Sound.toggle(); syncSound(); };
 syncSound();
 
-/* ---------- the Frenzy ---------- */
+/* ---------- the Frenzy ----------
+   Two styles. Pop (the standard): a short burst of popping matching fish while new ones drop in from the top.
+   Swim (a setting, chosen on the start screen): lead the shoal to food and dodge the barracuda. */
 const Frenzy = (() => {
   const cv = $('fz'), c = cv.getContext('2d');
-  let W=0, H=0, U=0, bg=null, F=null, last=0;
-  const DUR = 30;
+  let W=0, H=0, U=0, bg=null, F=null, last=0, idle=null;
+  const DUR = 30, DUR_POP = 12;
+  const pg = { S:0, cell:0, ox:0, oy:0, img:null };          // the pop board's place on screen
+  const ULTRA = cssv('--ultra');
+  const mode = () => saved.fzm === 'swim' ? 'swim' : 'pop';
   function size() {
     const dpr = Math.min(window.devicePixelRatio||1,2.5);
     W = Math.round(cv.clientWidth*dpr); H = Math.round(cv.clientHeight*dpr); U = Math.min(W,H);
     cv.width = W; cv.height = H;
     bg = document.createElement('canvas'); bg.width = W; bg.height = H;
     paintWater(bg.getContext('2d'),W,H,Math.max(U/4,120*dpr),4242);
+    const top = 66*dpr, bottom = 58*dpr, S = Math.floor(Math.max(120, Math.min(W-32*dpr, H-top-bottom, 620*dpr)));
+    Object.assign(pg, { S, cell:S/4, ox:Math.round((W-S)/2), oy:Math.round(top+Math.max(0,(H-top-bottom-S)/2)) });
+    pg.img = document.createElement('canvas'); pg.img.width = pg.img.height = S;
+    paintWater(pg.img.getContext('2d'),S,S,pg.cell,(G.idx||0)*131+7);
   }
   addEventListener('resize', () => { if (!$('frenzy').hidden) size(); });
   function card(title, text, go) {
@@ -858,20 +868,137 @@ const Frenzy = (() => {
   }
   function open() {
     try { getSelection().removeAllRanges(); } catch (e) {}
-    $('frenzy').hidden = false; size(); F = null;
-    $('fz-score').textContent = '0'; $('fz-time').textContent = DUR; $('fz-bar').style.transform = 'scaleX(1)';
-    speller();
-    card('The Frenzy', `Your whole shoal is hungry. Drag to lead it to the food for ${DUR} seconds. Eat the letters of the star word in order for bonus time, and swerve away from the barracuda.`, 'Start the Frenzy');
+    $('frenzy').hidden = false; size(); intro();
   }
+  function intro() {
+    const pop = mode() === 'pop';
+    F = null;
+    $('fz-score').textContent = '0'; $('fz-time').textContent = pop ? DUR_POP : DUR; $('fz-bar').style.transform = 'scaleX(1)';
+    $('fz-mode').textContent = pop ? 'Switch to the Swim Frenzy' : 'Switch to the Pop Frenzy';
+    cv.setAttribute('aria-label', pop ? 'Frenzy mini game. Tap matching fish to pop them.' : 'Frenzy mini game. Lead your shoal to the food.');
+    if (pop) {
+      $('fz-spell').innerHTML = ''; idle = newPop();
+      card('The Frenzy', `Pop as many fish as you can in ${DUR_POP} seconds. Your shoal starts as you left it, and new fish drop in from the top as you pop. The clock starts on your first pop.`, 'Start the Frenzy');
+    } else {
+      speller();
+      card('The Swim Frenzy', `Your whole shoal is hungry. Drag to lead it to the food for ${DUR} seconds. Eat the letters of the star word in order for bonus time, and swerve away from the barracuda.`, 'Start the Frenzy');
+    }
+  }
+
+  /* ----- Pop Frenzy ----- */
+  const rnd4 = () => Math.floor(Math.random()*4);
+  const mkFish = (kind,y) => ({ kind, y, ty:y, vy:0, wob:Math.random()*6.28, flip:Math.random()<.5 ? 1 : -1, jolt:-1 });
+  function newPop() {     // columns run bottom to top, starting from the shoal the word game left behind
+    const cols = [[],[],[],[]];
+    for (let x=0;x<4;x++) for (let r=3;r>=0;r--) { const k = G.layout[r*4+x].kind; cols[x].push(mkFish(k < 0 ? rnd4() : k, r)); }
+    return { mode:'pop', cols, dying:[], bits:[], pops:[], left:DUR_POP, t:0, running:false, score:0, fish:0, taps:0, big:0, s:pg.cell*.36 };
+  }
+  function popGroup(S,x,h) {
+    const f0 = S.cols[x] && S.cols[x][h]; if (!f0) return [];
+    const seen = new Set([f0]), st = [[x,h]], out = [];
+    while (st.length) {
+      const [a,b] = st.pop(); out.push([a,b]);
+      for (const [d,e] of AROUND) { const f = S.cols[a+d] && S.cols[a+d][b+e]; if (f && f.kind === f0.kind && !seen.has(f)) { seen.add(f); st.push([a+d,b+e]); } }
+    }
+    return out;
+  }
+  const popHasMove = S => S.cols.some((col,x) => col.some((f,h) => popGroup(S,x,h).length >= 2));
+  function startPop() {
+    $('fz-card').hidden = true; Sound.wake();
+    $('fz-spell').innerHTML = '';
+    F = newPop(); idle = null;
+    if (!popHasMove(F)) F.cols[0][1].kind = F.cols[0][0].kind;
+  }
+  function tapPop(e) {
+    const r = cv.getBoundingClientRect(), px = (e.clientX-r.left)*W/r.width, py = (e.clientY-r.top)*H/r.height;
+    const x = Math.floor((px-pg.ox)/pg.cell), row = Math.floor((py-pg.oy)/pg.cell);
+    if (x<0||x>3||row<0||row>3) return;
+    const h = 3-row, g = popGroup(F,x,h);
+    if (g.length < 2) { const f = F.cols[x][h]; if (f) f.jolt = performance.now(); Sound.nope(); return; }
+    F.running = true;
+    const n = g.length, pts = n*n;       // bigger groups are worth more per fish
+    F.score += pts; F.fish += n; F.taps++; F.big = Math.max(F.big,n);
+    let sx = 0, sy = 0;
+    for (const [a,b] of g) {
+      const f = F.cols[a][b], fx = pg.ox+(a+.5)*pg.cell, fy = pg.oy+(Math.max(f.y,0)+.5)*pg.cell;
+      f.dead = true; F.dying.push({ kind:f.kind, x:fx, y:fy, flip:f.flip, age:0 });
+      bits(fx,fy,6,FISH[f.kind].parts(0).slice(-1)[0][0]); sx += fx; sy += fy;
+    }
+    const fresh = [];
+    F.cols.forEach((col,a) => {       // the rest drop, and new fish fall in from above the board
+      const keep = col.filter(f => !f.dead), top = Math.min(0, ...keep.map(f => f.y));
+      for (let j=0; keep.length < 4; j++) { const f = mkFish(rnd4(), top-1-j); f.vy = 5; keep.push(f); fresh.push([a,keep.length-1]); }
+      keep.forEach((f,i) => f.ty = 3-i);
+      F.cols[a] = keep;
+    });
+    if (!popHasMove(F)) {             // never leave a board with nothing to pop
+      const [a,b] = fresh[0];
+      for (const [d,e] of AROUND) { const o = F.cols[a+d] && F.cols[a+d][b+e]; if (o) { F.cols[a][b].kind = o.kind; break; } }
+    }
+    Sound.pop(Math.min(n,7)); floater(sx/n, sy/n, '+'+pts);
+  }
+  function updatePop(dt) {
+    F.s = pg.cell*.36;
+    if (F.running) {
+      const before = Math.ceil(F.left);
+      F.t += dt; F.left -= dt;
+      if (Math.ceil(F.left) < before && F.left > 0 && F.left <= 3) Sound.step(6);
+    }
+    for (const col of F.cols) for (const f of col) {
+      if (f.y < f.ty) { f.vy += 75*dt; f.y += f.vy*dt; if (f.y >= f.ty) { f.y = f.ty; f.vy = 0; } }
+    }
+    for (let i=F.dying.length-1;i>=0;i--) { const d = F.dying[i]; d.age += dt; if (d.age >= .17) F.dying.splice(i,1); }
+    for (let i=F.bits.length-1;i>=0;i--) { const p = F.bits[i]; p.age += dt; if (p.age >= p.life) { F.bits.splice(i,1); continue; } p.x += p.vx*dt; p.y += p.vy*dt; }
+    for (let i=F.pops.length-1;i>=0;i--) { const p = F.pops[i]; p.age += dt; if (p.age >= .9) F.pops.splice(i,1); }
+    $('fz-score').textContent = F.score;
+    $('fz-time').textContent = Math.max(0,Math.ceil(F.left));
+    $('fz-bar').style.transform = `scaleX(${clamp(F.left/DUR_POP,0,1)})`;
+    if (F.left <= 0) finishPop();
+  }
+  function finishPop() {
+    const prev = G.popFrenzyBest||0, total = F.score;
+    G.popFrenzyBest = Math.max(prev,total); save();
+    card(total > prev ? 'New best Frenzy' : 'Frenzy over', `You popped ${F.fish} fish in ${F.taps} ${F.taps === 1 ? 'pop' : 'pops'}. Your biggest group was ${F.big}. You scored ${total}.`, 'Pop again');
+    Sound.fanfare(); F.dying = []; F.bits = []; F.pops = []; idle = F; F = null; renderSide();
+  }
+  function drawPop(S, now) {
+    const { S:size, cell, ox, oy } = pg, s = cell*.36;
+    c.fillStyle = ULTRA; c.fillRect(0,0,W,H);
+    c.fillStyle = C.deep; c.fillRect(ox+cell*.05, oy+cell*.06, size, size);
+    c.drawImage(pg.img, ox, oy);
+    if (!S) return;
+    c.save(); c.beginPath(); c.rect(ox,oy,size,size); c.clip();
+    S.cols.forEach((col,x) => col.forEach(f => {
+      let ang = 0;
+      if (f.jolt >= 0) { const k = (now-f.jolt)/320; if (k < 1) ang = Math.sin(k*20)*.3*(1-k); else f.jolt = -1; }
+      const bob = calm || f.y < f.ty ? 0 : Math.sin(now/620+f.wob)*cell*.02;
+      drawFish(c, f.kind, ox+(x+.5)*cell, oy+(f.y+.5)*cell+bob, s*(f.kind===3?1.02:f.kind===2?.95:1), f.flip, calm ? 0 : Math.sin(now/170+f.wob*3), ang);
+    }));
+    c.restore();
+    for (const d of S.dying) { const k = d.age/.17; c.globalAlpha = 1-k; drawFish(c, d.kind, d.x, d.y, s*(1+k*.6), d.flip, 0, 0); }
+    for (const p of S.bits) { c.globalAlpha = 1-p.age/p.life; c.fillStyle = p.col; c.beginPath(); c.arc(p.x,p.y,p.r,0,6.3); c.fill(); }
+    c.globalAlpha = 1;
+    c.font = `${s*1.05}px 'Shrikhand',Georgia,serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (const p of S.pops) { c.globalAlpha = 1-p.age/.9; c.lineWidth = s*.22; c.strokeStyle = C.deep; c.lineJoin = 'round'; c.strokeText(p.text,p.x,p.y-p.age*s*2.6); c.fillStyle = C.foam; c.fillText(p.text,p.x,p.y-p.age*s*2.6); }
+    c.globalAlpha = 1;
+    if (S === F && !S.running) {
+      const dpr = W/cv.clientWidth;
+      c.fillStyle = C.foam; c.font = `700 ${17*dpr}px 'Atkinson Hyperlegible',sans-serif`;
+      c.fillText('Tap matching fish. The clock starts on your first pop', W/2, Math.min(H-22*dpr, oy+size+30*dpr), W-32*dpr);
+    }
+  }
+
+  /* ----- Swim Frenzy ----- */
   function speller() {
     $('fz-spell').innerHTML = G.pz.star.split('').map(l => `<span>${l}</span>`).join('');
   }
   function start() {
+    if (mode() === 'pop') return startPop();
     $('fz-card').hidden = true; Sound.wake();
     speller();
     const kinds = G.layout.filter(l => l.kind >= 0).map(l => l.kind);
     const s = clamp(U*.044,17*Math.min(devicePixelRatio||1,2.5),40*Math.min(devicePixelRatio||1,2.5));
-    F = { t:0, left:DUR, s, score:0, eaten:0, combo:0, comboT:0, lead:{ x:W/2, y:H/2 }, fish:[], food:[], bits:[], nextFood:0, nextShark:7, shark:null, ltr:null, li:0, keys:{}, over:false, pops:[] };
+    F = { mode:'swim', t:0, left:DUR, s, score:0, eaten:0, combo:0, comboT:0, lead:{ x:W/2, y:H/2 }, fish:[], food:[], bits:[], nextFood:0, nextShark:7, shark:null, ltr:null, li:0, keys:{}, over:false, pops:[] };
     kinds.forEach((kind,i) => { const a = i/kinds.length*6.28; F.fish.push({ kind, x:W/2+Math.cos(a)*s*3, y:H/2+Math.sin(a)*s*3, vx:0, vy:0, wob:Math.random()*6.28, face:1 }); });
     for (let i=0;i<10;i++) addFood();
     addLetter(); last = performance.now();
@@ -886,6 +1013,7 @@ const Frenzy = (() => {
   function bits(x,y,n,col) { for (let i=0;i<n;i++) { const a = Math.random()*6.28, v = F.s*(2+Math.random()*7); F.bits.push({ x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:F.s*(.08+Math.random()*.14),life:.5,age:0,col }); } }
   function floater(x,y,text) { F.pops.push({ x,y,text,age:0 }); }
   function update(dt) {
+    if (F.mode === 'pop') return updatePop(dt);
     const L = F.lead, s = F.s;
     F.t += dt; F.left -= dt;
     if (F.keys.ArrowLeft) L.x -= U*1.2*dt; if (F.keys.ArrowRight) L.x += U*1.2*dt;
@@ -967,6 +1095,7 @@ const Frenzy = (() => {
     Sound.fanfare(); F = null; renderSide();
   }
   function draw(now) {
+    if (F ? F.mode === 'pop' : mode() === 'pop') return drawPop(F || idle, now);
     c.drawImage(bg,0,0);
     if (!F) return;
     const s = F.s;
@@ -1018,20 +1147,23 @@ const Frenzy = (() => {
     c.restore();
   }
   const move = e => {
-    if (!F) return;
+    if (!F || F.mode !== 'swim') return;
     const r = cv.getBoundingClientRect();
     F.lead.x = (e.clientX-r.left)*W/r.width; F.lead.y = (e.clientY-r.top)*H/r.height;
   };
-  cv.addEventListener('pointerdown', e => { e.preventDefault(); move(e); });
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); if (F && F.mode === 'pop') tapPop(e); else move(e); });
   cv.addEventListener('pointermove', move);
-  document.addEventListener('keyup', e => { if (F) F.keys[e.key] = false; });
+  document.addEventListener('keyup', e => { if (F && F.keys) F.keys[e.key] = false; });
   $('fz-go').onclick = start;
-  $('fz-exit').onclick = () => { $('frenzy').hidden = true; F = null; $('fz-card').hidden = true; renderAll(); };
+  $('fz-mode').onclick = () => { if (mode() === 'pop') saved.fzm = 'swim'; else delete saved.fzm; persist(); intro(); };
+  $('fz-exit').onclick = () => { $('frenzy').hidden = true; F = null; idle = null; $('fz-card').hidden = true; renderAll(); };
   return {
     open,
     step(now,dt) { if (F && !$('fz-card').hidden) return; if (F) update(dt); draw(now); },
-    key(e) { if (F && e.key.startsWith('Arrow')) { e.preventDefault(); F.keys[e.key] = true; } },
+    key(e) { if (F && F.keys && e.key.startsWith('Arrow')) { e.preventDefault(); F.keys[e.key] = true; } },
     get state() { return F; },
+    get mode() { return mode(); },
+    get board() { return pg; },
   };
 })();
 
