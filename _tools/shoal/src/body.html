@@ -28,15 +28,15 @@
       <li>When every word through a letter is found, the letter sinks and a tropical fish takes its place.</li>
       <li>The star marks the longest word. Find every word as fast as you can. Wrong guesses cost nothing.</li>
       <li>Then pop the shoal. Tap two or more touching fish of the same colour, diagonals included, and the rest drop down.</li>
-      <li>Clear every fish to unlock the Frenzy.</li>
+      <li>Clear every fish to unlock the Frenzy: 12 seconds to pop as many fish as you can while new ones drop in from the top.</li>
     </ol>
-    <p>The fish you get depend on how you solve the board.</p>
+    <p>The fish you get depend on how you solve the board. The Frenzy’s start screen lets you switch to the Swim Frenzy, where you lead your shoal to food.</p>
     <div class="row"><button class="btn" id="help-close">Back to the board</button></div>
   </div>
 </div>
 
 <div id="frenzy" hidden>
-  <canvas id="fz" aria-label="Frenzy mini game. Lead your shoal to the food."></canvas>
+  <canvas id="fz" aria-label="Frenzy mini game. Tap matching fish to pop them."></canvas>
   <div class="hud">
     <div class="score" id="fz-score">0</div>
     <div class="spell" id="fz-spell"></div>
@@ -51,6 +51,7 @@
         <button class="btn" id="fz-go">Start the Frenzy</button>
         <button class="btn" id="fz-exit">Back to the board</button>
       </div>
+      <button class="link" id="fz-mode">Switch to the Swim Frenzy</button>
     </div>
   </div>
 </div>

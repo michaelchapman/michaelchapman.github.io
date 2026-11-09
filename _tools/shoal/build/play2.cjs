@@ -51,6 +51,30 @@ await page.waitForTimeout(1200);
 console.log(await rd(),await page.evaluate(()=>({left:__shoal.G.fish.length,cl:__shoal.G.cleared})));
 await page.screenshot({path:`${OUT}/f-clear.png`});
 await page.locator('#a-frenzy').tap({force:true}); await page.waitForTimeout(300);
+// Pop Frenzy is the standard
+console.log('frenzy style',await page.evaluate(()=>__shoal.Frenzy.mode),'|',await page.locator('#fz-text').innerText(),'|',await page.locator('#fz-mode').innerText());
+await page.screenshot({path:`${OUT}/p-intro.png`});
+await page.locator('#fz-go').tap(); await page.waitForTimeout(900);
+console.log('starts from the shoal',await page.evaluate(()=>{const F=__shoal.Frenzy.state,L=__shoal.G.layout;return F.cols.every((col,x)=>col.every((f,h)=>f.kind===L[(3-h)*4+x].kind))}),'clock waits',await page.evaluate(()=>__shoal.Frenzy.state.left));
+await page.screenshot({path:`${OUT}/p-start.png`});
+{const t0=Date.now();let taps=0,full=true,shot=false;
+ while(Date.now()-t0<25000){
+  const t=await page.evaluate(()=>{const F=__shoal.Frenzy.state;if(!F)return null;const b=__shoal.Frenzy.board,cv=document.getElementById('fz'),k=cv.clientWidth/cv.width;
+   const full=F.cols.length===4&&F.cols.every(c=>c.length===4);let best=null;
+   F.cols.forEach((col,x)=>col.forEach((f,h)=>{let n=0;for(const[d,e]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const o=F.cols[x+d]&&F.cols[x+d][h+e];if(o&&o.kind===f.kind)n++}if(n&&(!best||n>best.n))best={n,x,h}}));
+   return{full,left:F.left,x:best&&(b.ox+(best.x+.5)*b.cell)*k,y:best&&(b.oy+(3-best.h+.5)*b.cell)*k}});
+  if(!t)break; full=full&&t.full; if(t.x==null){console.log('NO MOVE');break}
+  await page.touchscreen.tap(t.x,t.y); taps++; await page.waitForTimeout(110);
+  if(!shot&&t.left<7){await page.screenshot({path:`${OUT}/p-mid.png`});shot=true}
+ }
+ console.log('pop frenzy: taps',taps,'grid stayed full',full,'seconds',((Date.now()-t0)/1000).toFixed(1));}
+await page.waitForTimeout(300);
+console.log('pop end:',await page.locator('#fz-title').innerText(),'|',await page.locator('#fz-text').innerText(),'|',await page.locator('#fz-go').innerText(),'| hud',await page.locator('#fz-score').innerText(),await page.locator('#fz-time').innerText());
+await page.screenshot({path:`${OUT}/p-end.png`});
+console.log('best saved',await page.evaluate(()=>({pop:__shoal.G.popFrenzyBest,swim:__shoal.G.frenzyBest})));
+// the earlier Frenzy is a setting on the start screen
+await page.locator('#fz-mode').tap(); await page.waitForTimeout(200);
+console.log('switched to',await page.evaluate(()=>__shoal.Frenzy.mode),'|',await page.locator('#fz-title').innerText(),'|',await page.locator('#fz-mode').innerText());
 await page.screenshot({path:`${OUT}/f-intro.png`});
 await page.locator('#fz-go').tap(); await page.waitForTimeout(300);
 // lead the shoal at the nearest target until time runs out
@@ -65,6 +89,8 @@ while(Date.now()-start<45000){
 await page.waitForTimeout(300);
 console.log('frenzy end:',await page.locator('#fz-title').innerText(),'|',await page.locator('#fz-text').innerText(),'|',await page.locator('#fz-go').innerText());
 await page.screenshot({path:`${OUT}/f-end.png`});
+await page.locator('#fz-mode').tap(); await page.waitForTimeout(150);
+console.log('switched back to',await page.evaluate(()=>__shoal.Frenzy.mode));
 await page.locator('#fz-exit').tap();await page.waitForTimeout(300);
 await page.locator('#a-copy').tap();await page.waitForTimeout(200);
 console.log('share:\n'+await page.evaluate(()=>navigator.clipboard.readText()));

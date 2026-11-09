@@ -10,6 +10,7 @@ await page.goto(file); await page.waitForTimeout(400);
 // reach the Frenzy for real: clear the board's fish state, then open it
 await page.evaluate(()=>{const G=__shoal.G;G.layout=[...Array(16).keys()].map(i=>({kind:i%4,ch:''}));__shoal.Frenzy.open()});
 await page.waitForTimeout(150);
+await page.locator('#fz-mode').tap(); await page.waitForTimeout(100);   // this test steers the Swim Frenzy
 await page.locator('#fz-go').tap(); await page.waitForTimeout(200);
 console.log('css',await page.evaluate(()=>{const c=getComputedStyle(document.getElementById('fz'));const h=getComputedStyle(document.querySelector('.hud'));return{canvas:c.webkitUserSelect||c.userSelect,hud:h.webkitUserSelect||h.userSelect,callout:getComputedStyle(document.body).webkitTouchCallout}}));
 console.log('touchstart blocked',await page.evaluate(()=>{const c=document.getElementById('fz');const t=new Touch({identifier:1,target:c,clientX:100,clientY:100});const e=new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[t],targetTouches:[t],changedTouches:[t]});c.dispatchEvent(e);return e.defaultPrevented}));
