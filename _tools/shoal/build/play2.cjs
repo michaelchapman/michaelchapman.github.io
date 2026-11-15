@@ -15,7 +15,7 @@ const xy=t=>[box.x+box.width*((t%4)+.5)/4,box.y+box.height*((t>>2)+.5)/4];
 // messages: bad word, short word, bonus word, duplicates
 await page.evaluate(()=>{});
 const typeWord=async w=>{await page.keyboard.type(w,{delay:3});await page.keyboard.press('Enter');await page.waitForTimeout(60);return rd()};
-const info=await page.evaluate(()=>({b:__shoal.G.pz.bonus,w:__shoal.G.pz.words}));
+const info=await page.evaluate(()=>({b:[],w:__shoal.G.pz.words}));
 console.log('short:',await typeWord(info.w[0].slice(0,3)));
 console.log('path miss:',(await (async()=>{await page.keyboard.type('zqj',{delay:3});await page.waitForTimeout(50);const r=await rd();await page.keyboard.press('Escape');return r})()));
 if(info.b[0]){console.log('bonus:',info.b[0],await typeWord(info.b[0]));console.log('bonus again:',await typeWord(info.b[0]));}
@@ -24,7 +24,7 @@ console.log('word:',await typeWord(info.w[0]));console.log('again:',await typeWo
 await page.waitForTimeout(1700);
 // reload keeps progress
 await page.reload(); await page.waitForTimeout(400);
-console.log('after reload', await page.evaluate(()=>({found:__shoal.G.found,bonus:__shoal.G.bonus.length,gone:Object.keys(__shoal.G.width).length})));
+console.log('after reload', await page.evaluate(()=>({found:__shoal.G.found,gone:Object.keys(__shoal.G.width).length})));
 
 // find a clearable order for this board, then play it from scratch
 await page.evaluate(()=>{localStorage.clear()}); await page.reload(); await page.waitForTimeout(400);

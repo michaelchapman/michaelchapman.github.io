@@ -4,7 +4,6 @@
 import json,collections
 from lemminflect import getAllLemmas
 pairs=json.load(open('cand.json'))
-freq={w:z for w,t,z in json.load(open('freq.json'))}
 def lem(W):
     s=set()
     for v in getAllLemmas(W).values(): s|=set(v)
@@ -14,7 +13,7 @@ matt>matts matt>matting matt>matted leas>leases leas>leasing wast>wasted wast>wa
 grad>grading sens>sensed sens>senses shad>shaded slid>sliding writ>writing writ>writes shin>shining shin>shined less>unless cove>uncover
 sage>sagely mere>merely wont>wonted lech>leched moil>moiled bate>bated hale>haled lave>laved wive>wived vice>viced rare>rared rare>rares
 rime>rimed tare>tared dude>duded grit>grits sett>setts sous>sousing curs>cursing lour>loured lour>lours lour>louring ding>dinging fink>finking
-cloth>clothes hear>hearth sing>singly must>musty ration>rational face>interface'''.split())
+cloth>clothes hear>hearth sing>singly must>musty ration>rational face>interface ions>unions dies>undies'''.split())
 SUFFIX_OK='''
 bale>baler bike>biker bite>biter blame>blamer care>carer cause>causer change>changer close>closer dance>dancer decide>decider dine>diner drive>driver
 enlarge>enlarger erase>eraser fake>faker file>filer frame>framer free>freer gaze>gazer give>giver grade>grader hate>hater hide>hider hike>hiker
@@ -48,6 +47,24 @@ appear>disappear credit>discredit like>dislike liked>disliked paid>prepaid view>
 front>upfront proper>improper capable>incapable finite>infinite able>enable large>enlarge larger>enlarger rich>enrich title>entitle titled>entitled titles>entitles
 fold>enfold folding>enfolding case>encase trap>entrap trapping>entrapping wake>awake waken>awaken wakening>awakening form>deform grade>degrade grading>degrading
 labour>belabour hold>behold body>embody face>interface
+acted>enacted acted>reacted action>reaction active>reactive acts>reacts adopt>adoption adult>adulthood armour>armoured assure>reassure
+basic>basically bead>beady birth>rebirth board>aboard board>overboard bound>rebound broad>broaden browse>browser built>rebuilt bush>bushy call>caller
+camera>cameraman camp>camper care>careful charge>charger clean>cleaner coding>encoding column>columnist consume>consumer corn>corny count>discount
+create>recreate cruise>cruiser cynic>cynical direct>indirect dirt>dirty dive>diver dread>dreadful dual>duality eject>ejection engine>engineer
+enjoy>enjoyable entire>entirety equal>equality erupt>eruption except>exception fill>refill final>finalist flow>overflow fool>foolish forcing>enforcing
+formal>informal front>forefront front>frontal fruit>fruitful golf>golfer govern>governor grain>grainy graphic>graphical guts>gutsy hair>haired hand>handy
+hard>harden haul>overhaul health>healthy health>unhealthy herd>herder hope>hopeful hope>hopefully hurt>hurtful inspect>inspector invent>invention
+invent>inventor lead>leaded leak>leaky legal>illegal life>lifer light>lighter load>loader load>overload lobe>lobed logic>logical logic>logically
+love>lover love>lovey loved>beloved love>beloved luck>luckily make>maker mile>miler mind>minder mind>mindful remind>reminder music>musical nerd>nerdy
+order>disorder origin>original parent>parental patient>impatient peak>peaky pearl>pearly person>personal places>replaces plane>planer plant>implant
+play>player play>players plumb>plumber plural>plurality print>printer profess>professor profit>nonprofit push>pushy rage>enrage rage>enraged raged>enraged
+react>reaction real>realism real>reality reject>rejection revolve>revolver ring>ringer robber>robbery route>router rove>rover royal>royalty rust>rusty
+salt>salty sand>sandy sane>insane secure>insecure shine>shiner short>shorten shut>shutter sink>sinker slay>slayer soft>soften sold>resold solve>solver
+staff>staffer start>restart steam>steamy stick>sticker stow>bestow stow>bestowed stowed>bestowed stream>upstream stupid>stupidity suit>suitable
+sure>ensure sure>ensured sweat>sweater take>retake talent>talented tear>teary tell>teller think>rethink think>thinker tick>ticker tour>tourism
+tour>tourist toxic>toxicity true>truer trust>antitrust trust>entrust trust>entrusted trusted>entrusted trust>trusty union>reunion verb>verbal
+verb>verbally vocal>vocalist west>westward wind>windy wing>winger wonder>wonderful wood>woody write>rewrite youth>youthful down>downward down>downer
+door>outdoor foot>footy theism>atheism down>downy mean>meany meal>mealy view>overview
 '''.split()
 OK=set(SUFFIX_OK)|set(PREFIX_OK)
 acc=collections.defaultdict(set); rej=0

@@ -1,4 +1,10 @@
+// Board generator. A board's word list is EVERY accepted dictionary word that can be traced along its links, and
+// each of those words can be traced exactly one way. Boards are built from common words, then checked against the
+// whole dictionary: a board is refused if an obscure word, a name-like word, a rude word, an American spelling or a
+// familiar-looking word from outside the dictionary could be formed on it, so the game never rejects a real word.
 import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const COUNT = +(process.argv[2]||20), SEED0 = +(process.argv[3]||1), OUT = process.argv[4]||'puzzles.json';
 const COLLAPSE = process.env.COLLAPSE!=='0';
 let rngS = SEED0*2654435761>>>0;
@@ -9,17 +15,30 @@ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=ri(i+1);[a[i],a[j]]=[a[j
 const raw=JSON.parse(fs.readFileSync('freq.json'));
 const STEM=JSON.parse(fs.readFileSync('stems.json'));
 const primaries=ws=>{const s=new Set(ws),cov=new Set();for(const w of ws)for(const x of STEM[w]||[])if(s.has(x))cov.add(x);return ws.length-cov.size};
-const common=new Map(), extended=new Set();
-for(const [w,t,z] of raw){ if(t<=40&&z>=3.0) common.set(w,z); else extended.add(w); }
+const HARD_MAX=+(process.env.HARD||1);   // how many less familiar words a board may hold
+const names=new Set([...require('@stdlib/datasets-female-first-names-en/data/names.json'),...require('@stdlib/datasets-male-first-names-en/data/names.json')].map(s=>s.toLowerCase()));
+const common=new Map(), zipf=new Map();
 const mk=()=>({});
-const trie=mk(), xtrie=mk();
-const add=(T,w)=>{let n=T;for(const c of w)n=n[c]||(n[c]=mk());n.$=w};
-for(const w of common.keys()) add(trie,w);
-for(const w of extended) add(xtrie,w);
-const uses=new Map();const useP=w=>(uses.get(w)||0)*.18;
+const trie=mk(), utrie=mk();       // trie: words boards are built from. utrie: everything a board is checked against
+const add=(T,w,k)=>{let n=T;for(const c of w)n=n[c]||(n[c]=mk());n.$=w;if(k!==undefined)n['#']=k};
+const FINE=0, HARD=1, AVOID=2;
+for(const [w,t,z,flag] of raw){
+  if(flag==='ghost'){ if(z>=1.8) add(utrie,w,AVOID); continue; }   // rarer ghosts are not words anyone would try
+  if(flag){ add(utrie,w,AVOID); continue; }
+  zipf.set(w,z);
+  const namey=names.has(w)&&t>=50;
+  const k = t>=60||namey||z<2.3 ? AVOID : z<2.6 ? HARD : FINE;
+  add(utrie,w,k);
+  if(t<=40&&z>=3.0){ common.set(w,z); add(trie,w); }
+}
+const uses=new Map();const useP=w=>Math.min(uses.get(w)||0,8)*.18;   // nudges boards towards words not yet used much
 const brit=new Set(JSON.parse(fs.readFileSync('brit.json')));
 const val=w=>Math.min(common.get(w)||3,4.4)+(brit.has(w)?1.4:0)-useP(w);
-const stars=[...common].filter(([w,z])=>w.length>=7&&w.length<=9&&z>=3.3&&!/s$/.test(w)&&new Set(w).size>=5).map(x=>x[0]);
+// PART=0/2 or 1/2 gives parallel runs separate star words, so their boards can be merged without clashes.
+const [PART,PARTS]=(process.env.PART||'0/1').split('/').map(Number);
+const stars=[...common].filter(([w,z])=>w.length>=7&&w.length<=9&&z>=3.3&&!/s$/.test(w)&&new Set(w).size>=5).map(x=>x[0]).sort().filter((w,i)=>i%PARTS===PART);
+const usedStars=new Set();   // SKIP=a.json,b.json carries on from earlier runs without reusing their star words
+for(const f of (process.env.SKIP||'').split(',').filter(Boolean))for(const p of JSON.parse(fs.readFileSync(f)))usedStars.add(p.star);
 
 // geometry
 const N=[...Array(16)].map(()=>[]), eid={}; const EDGES=[];
@@ -52,6 +71,19 @@ function candidates(board,E,needEmpty,maxNew,maxLen=8){
   for(const s of shuffle([...Array(16).keys()])){const ch=board[s];const opts=ch?(trie[ch]?[ch]:[]):Object.keys(trie).filter(x=>x!=='$');for(const c of opts)dfs(s,trie[c],[s],new Set(),ch?0:1,0)}
   return out}
 
+// Everything formable on a (possibly part-filled) board. Returns null if the board breaks a rule.
+function audit(board,E,star){
+  const cnt=new Map();let bad=false,hard=0;
+  const walk=(c,n,seen)=>{ if(bad)return;
+    if(n.$){ if(n['#']===AVOID){bad=true;return} const k=(cnt.get(n.$)||0)+1; if(k>1){bad=true;return} cnt.set(n.$,k); if(n['#']===HARD&&++hard>HARD_MAX){bad=true;return} if(n.$!==star&&n.$.length>=star.length){bad=true;return} }
+    for(const m of N[c]){if(seen&(1<<m))continue;if(!E.has(ek(c,m)))continue;const nx=n[board[m]];if(nx)walk(m,nx,seen|(1<<m))}};
+  for(let s=0;s<16&&!bad;s++){const n=utrie[board[s]];if(n)walk(s,n,1<<s)}
+  return bad?null:[...cnt.keys()]}
+// The best-scoring candidate that keeps the board within the rules, or null.
+function choose(cs,board,E,star,look=30){
+  cs.sort((a,b)=>b.s-a.s);
+  for(const c of cs.slice(0,look)){const b2=[...board],E2=new Set(E);commit(c.w,c.path,b2,E2);const ws=audit(b2,E2,star);if(ws)return {c,ws}}
+  return null}
 function closure(board,E,T){const found=new Set();const walk=(c,n,seen)=>{if(n.$&&n.$.length>=4)found.add(n.$);for(const m of N[c]){if(seen&(1<<m))continue;if(!E.has(ek(c,m)))continue;const nx=n[board[m]];if(nx)walk(m,nx,seen|(1<<m))}};
   for(let s=0;s<16;s++){const n=T[board[s]];if(n)walk(s,n,1<<s)}return [...found]}
 function traces(word,board,E){const res=[];const go=(p)=>{if(p.length===word.length){res.push([...p]);return}const c=p[p.length-1];for(const m of N[c]){if(p.includes(m)||!E.has(ek(c,m))||board[m]!==word[p.length])continue;p.push(m);go(p);p.pop()}};
@@ -71,20 +103,21 @@ const puzzles=[];const seenBoards=new Set();let tries=0,rej={};const R=k=>rej[k]
 const t0=Date.now();
 while(puzzles.length<COUNT){ tries++;
   const board=Array(16).fill(null),E=new Set();
-  const star=pick(stars);const p=place(star,board,E);if(!p){R('place');continue}commit(star,p,board,E);
-  let ok=true;
+  const star=pick(stars);if(usedStars.has(star))continue;const p=place(star,board,E);if(!p){R('place');continue}commit(star,p,board,E);
+  if(!audit(board,E,star)){R('star0');continue}
+  let ok=true, words=[star];
   while(board.some(c=>!c)){
     const cs=candidates(board,E,1,3);
-    if(!cs.length){ok=false;break}
     cs.forEach(c=>c.s=val(c.w)+c.empties*1.2-c.fresh*.9+rnd()*1.2-(c.w.length>=star.length?9:0));
-    cs.sort((a,b)=>b.s-a.s);const c=cs[0];commit(c.w,c.path,board,E)}
+    const got=choose(cs,board,E,star);
+    if(!got){ok=false;break}
+    commit(got.c.w,got.c.path,board,E);words=got.ws}
   if(!ok){R('fill');continue}
-  let words=closure(board,E,trie);
-  for(let i=0;i<12&&primaries(words)<15;i++){const cs=candidates(board,E,0,1).filter(c=>!words.includes(c.w));if(!cs.length)break;cs.forEach(c=>c.s=val(c.w)+rnd()-(c.w.length>=star.length?9:0));cs.sort((a,b)=>b.s-a.s);const c=cs[0];commit(c.w,c.path,board,E);words=closure(board,E,trie)}
-  if(primaries(words)<13||words.length>30){R('count');continue}
+  for(let i=0;i<24&&primaries(words)<18;i++){const cs=candidates(board,E,0,1).filter(c=>!words.includes(c.w));cs.forEach(c=>c.s=val(c.w)+rnd()-(c.w.length>=star.length?9:0));const got=choose(cs,board,E,star,80);if(!got)break;commit(got.c.w,got.c.path,board,E);words=got.ws}
+  if(primaries(words)<14||words.length>30){R('count');continue}
   const {L,stars:ns}=score(words,board,E);if(ns!==1||L<6){R('star');continue}
   if(E.size>30){R('edges');continue}
-  const avgZ=words.reduce((n,w)=>n+common.get(w),0)/words.length;if(avgZ<3.7){R('rare');continue}
+  const avgZ=words.reduce((n,w)=>n+zipf.get(w),0)/words.length;if(avgZ<3.7){R('rare');continue}
   const key=[...board].join('');if(seenBoards.has(key))continue;
   const tileWords=Array.from({length:16},()=>new Set());
   for(const w of words)for(const tr of traces(w,board,E))for(const t of tr)tileWords[t].add(w);
@@ -98,14 +131,15 @@ while(puzzles.length<COUNT){ tries++;
   for(let s=0;s<sims;s++){const order=[...words].sort((a,b)=>(a.length+rnd()*3)-(b.length+rnd()*3));const col=layoutFromOrder(order,tileWords,inSet);col.forEach(c=>cols4.add(c));if(clearable(toCols(col)))hits++}
   const rate=hits/sims;
   if(rate<.3||rate>.92){R('rate');continue}
-  seenBoards.add(key);for(const w of words)uses.set(w,(uses.get(w)||0)+1);uses.set(star,(uses.get(star)||0)+40);
-  const x=closure(board,E,xtrie).filter(w=>!common.has(w));
+  seenBoards.add(key);usedStars.add(star);for(const w of words)uses.set(w,(uses.get(w)||0)+1);uses.set(star,(uses.get(star)||0)+40);
+  if(words.some(w=>traces(w,board,E).length!==1)){R('ways');continue}
   let mask=[0,0];for(const k of E){const i=eid[k];if(i<21)mask[0]|=1<<i;else mask[1]|=1<<(i-21)}
-  puzzles.push({b:board.join(''),m:mask.map(n=>n.toString(36)).join('.'),w:words.sort((a,b)=>a.length-b.length||a.localeCompare(b)),x,star:words.find(w=>w.length===L),rate,e:E.size,colours:cols4.size});
+  puzzles.push({b:board.join(''),m:mask.map(n=>n.toString(36)).join('.'),w:words.sort((a,b)=>a.length-b.length||a.localeCompare(b)),star:words.find(w=>w.length===L),rate,e:E.size,colours:cols4.size});
+  if(puzzles.length%25===0)fs.writeFileSync(OUT,JSON.stringify(puzzles));   // checkpoint
   if(puzzles.length%50===0)console.error(puzzles.length,'tries',tries,((Date.now()-t0)/1000).toFixed(0)+'s');
 }
 fs.writeFileSync(OUT,JSON.stringify(puzzles));
 const rs=puzzles.map(p=>p.rate).sort((a,b)=>a-b);
 console.log('tries',tries,'rej',rej,'time',((Date.now()-t0)/1000).toFixed(1));
 console.log('rate p10/50/90',rs[rs.length*.1|0],rs[rs.length*.5|0],rs[rs.length*.9|0],'avg words',puzzles.reduce((n,p)=>n+p.w.length,0)/puzzles.length,'avg edges',puzzles.reduce((n,p)=>n+p.e,0)/puzzles.length, 'colours',puzzles.reduce((n,p)=>n+p.colours,0)/puzzles.length);
-for(const p of puzzles.slice(0,5)){console.log(p.b.match(/.{4}/g).join(' '),p.e,'rate',p.rate.toFixed(2),'star',p.star,'\n  ',p.w.join(' '),'\n  x:',p.x.join(' '))}
+for(const p of puzzles.slice(0,5)){console.log(p.b.match(/.{4}/g).join(' '),p.e,'rate',p.rate.toFixed(2),'star',p.star,'\n  ',p.w.join(' '))}
