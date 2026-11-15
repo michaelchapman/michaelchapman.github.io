@@ -11,3 +11,5 @@ build/gen.log
 build/art/preview.html
 build/art/icon-square.html
 build/targets.txt
+build/p?.json
+build/g?.log

@@ -5,7 +5,7 @@ const STEMS = {};
 for (const e of window.__SHOAL_STEMS__.split(' ')) { const [w,list] = e.split(':'); STEMS[w] = list.split(','); }
 delete window.__SHOAL_PUZZLES__; delete window.__SHOAL_STEMS__;
 const EPOCH = Date.UTC(2026, 10, 5);          // No. 1
-const STORE = 'shoal.v2';
+const STORE = 'shoal.v3';                     // changes whenever the boards do, so old progress is never replayed onto new boards
 const $ = id => document.getElementById(id);
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const C = { seaA:cssv('--sea-a'), seaB:cssv('--sea-b'), deep:cssv('--deep'), foam:cssv('--foam'), sand:cssv('--sand'), ink:cssv('--ink'), sun:cssv('--sun'), coral:cssv('--coral') };
@@ -17,8 +17,14 @@ const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','
 /* ---------- storage: progress only, the game works without it ---------- */
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { saved = {}; }
-saved.p = saved.p || {};
 const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
+if (!saved.p) {   // first visit since the boards changed: keep the streak, counts and settings, drop per-board progress
+  saved.p = {};
+  try {
+    const old = JSON.parse(localStorage.getItem('shoal.v2'));
+    if (old) { for (const k of ['streak','last','n','c','mute','seen','fzm']) if (old[k] !== undefined) saved[k] = old[k]; persist(); localStorage.removeItem('shoal.v2'); }
+  } catch (e) {}
+}
 
 /* ---------- board geometry and puzzle decoding ---------- */
 const NB = [...Array(16)].map(() => []), EDGE = [], EID = {};
@@ -27,11 +33,11 @@ for (let a=0;a<16;a++) for (let b=a+1;b<16;b++) {
   if (Math.abs(a%4-b%4) <= 1 && Math.abs((a>>2)-(b>>2)) <= 1) { NB[a].push(b); NB[b].push(a); EID[ek(a,b)] = EDGE.length; EDGE.push([a,b]); }
 }
 function decode(line) {
-  const [b,m,w,x] = line.split('|');
+  const [b,m,w] = line.split('|');
   const [m0,m1] = m.split('.').map(s => parseInt(s,36));
   const edges = new Set();
   EDGE.forEach((e,i) => { if ((i<21 ? m0>>i : m1>>(i-21)) & 1) edges.add(i); });
-  const words = w.split(' '), bonus = x ? x.split(' ') : [];
+  const words = w.split(' ');   // every dictionary word that can be traced on this board, each traceable one way
   const linked = (p,q) => edges.has(EID[ek(p,q)]);
   const info = {};
   for (const word of words) {
@@ -44,7 +50,7 @@ function decode(line) {
     info[word] = { tiles, used };
   }
   const star = words.reduce((a,c) => c.length > a.length ? c : a, '');
-  return { letters:b, edges, words, bonus, info, star, linked };
+  return { letters:b, edges, words, info, star, linked };
 }
 // The secret: fish are freed in a fixed colour rotation, so a finished board always has four of each colour.
 // The rotation's starting order changes from board to board.
@@ -72,7 +78,7 @@ function newFish(i, kind, born) {
 }
 function loadPuzzle(idx) {
   pending.forEach(clearTimeout); pending = [];
-  Object.assign(G, { idx, pz:decode(PUZZLES[idx]), found:[], bonus:[], log:[], palette:paletteFor(idx), freed:0, fresh:new Set(), path:[], typed:'', phase:'words', start:0, spent:0, starAt:null, gave:false,
+  Object.assign(G, { idx, pz:decode(PUZZLES[idx]), found:[], log:[], palette:paletteFor(idx), freed:0, fresh:new Set(), path:[], typed:'', phase:'words', start:0, spent:0, starAt:null, gave:false,
     tiles:[], width:{}, dying:{}, flash:null, popping:false, spawnEnd:0, fish:[], grid:null, layout:null, popScore:0, popBest:0, cleared:false, frenzyBest:0, popFrenzyBest:0, armed:false, msg:null, confirm:false, stuck:null, hover:null });
   for (let i=0;i<16;i++) G.tiles.push(freshTile(i));
   G.pz.edges.forEach(e => G.width[e] = 1);
@@ -98,17 +104,15 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { fre
 /* ---------- finding words ---------- */
 function stemsOf(word) {
   const pz = G.pz;
-  return (STEMS[word] || []).filter(w => pz.words.includes(w) || pz.bonus.includes(w));
+  return (STEMS[word] || []).filter(w => pz.words.includes(w));
 }
 // Finding a word also finds the shorter words inside it that share its stem.
 function enterWord(word, quiet) {
   const pz = G.pz, names = [word, ...stemsOf(word)];
   const targets = names.filter(w => pz.words.includes(w) && !G.found.includes(w));
-  const bonus = names.filter(w => pz.bonus.includes(w) && !G.bonus.includes(w));
   G.log.push(word);
-  G.bonus.push(...bonus);
   if (targets.length) applyWords(targets, quiet);
-  return { targets, bonus };
+  return targets;
 }
 function applyWords(words, quiet) {
   const was = liveSets(new Set(G.found));
@@ -137,24 +141,21 @@ function trySubmit() {
   const path = G.path, word = path.map(t => G.pz.letters[t]).join('');
   if (!word) return;
   if (word.length < 4) return refuse('Four letters or more');
-  const isTarget = G.pz.words.includes(word), isBonus = G.pz.bonus.includes(word);
-  if (!isTarget && !isBonus) return refuse('Not in this puzzle');
-  if (G.found.includes(word) || G.bonus.includes(word)) return refuse('Already found');
+  if (!G.pz.words.includes(word)) return refuse('Not in the dictionary');
+  if (G.found.includes(word)) return refuse('Already found');
   touchClock();
   const t0 = performance.now();
   G.spawnEnd = 0;
-  const { targets, bonus } = enterWord(word, false);
-  G.fresh = new Set([...targets, ...bonus]);
-  const extras = [...targets, ...bonus].filter(w => w !== word);
-  if (targets.length) {
-    path.forEach((t,i) => G.tiles[t].hop = t0 + i*55);
-    G.flash = { path:[...path], t:t0 };
-  }
+  const targets = enterWord(word, false);
+  G.fresh = new Set(targets);
+  const extras = targets.filter(w => w !== word);
+  path.forEach((t,i) => G.tiles[t].hop = t0 + i*55);
+  G.flash = { path:[...path], t:t0 };
   const gotStar = targets.includes(G.pz.star);
   if (gotStar) G.starAt = elapsed();
   G.path = []; G.typed = ''; G.confirm = false;
-  if (targets.length) Sound.word(word.length); else Sound.bubble();
-  const praise = !isTarget ? 'Bonus word' : gotStar ? 'The star word!' : ({4:'Nice',5:'Good one',6:'Lovely'}[word.length] || 'Superb');
+  Sound.word(word.length);
+  const praise = gotStar ? 'The star word!' : ({4:'Nice',5:'Good one',6:'Lovely'}[word.length] || 'Superb');
   say(extras.length ? `${praise}, plus ${joinWords(extras)}` : praise, 'good', extras.length ? 2600 : 1500);
   save(); renderAll();
   if (G.found.length === G.pz.words.length) { freezeClock(); pending.push(setTimeout(() => enterFish(false), G.spawnEnd + 900)); }
@@ -397,7 +398,7 @@ function totalScore() {
   const w = G.found.reduce((n,x) => n + WORD_PTS(x.length), 0);
   const star = G.found.includes(G.pz.star) ? 50 : 0;
   const speed = G.gave ? 0 : Math.max(0, Math.round(300 - elapsed()/2));
-  return w + star + speed + G.bonus.length*5 + (G.popBest||G.popScore) + frenzyTop();
+  return w + star + speed + (G.popBest||G.popScore) + frenzyTop();
 }
 const frenzyTop = () => Math.max(G.frenzyBest||0, G.popFrenzyBest||0);   // best of either Frenzy style
 
@@ -747,8 +748,7 @@ function renderSide() {
     </div>`;
   }
   const empty = !shown.length && !missed.length ? `<p class="empty">Words you find land here. The longest gets a star.</p>` : '';
-  const bonus = G.bonus.length ? `<div class="words"><h2>Bonus words</h2><ul class="chips bonus">${[...G.bonus].reverse().map(w => `<li>${w}</li>`).join('')}</ul></div>` : '';
-  el.innerHTML = `${top}<div class="words"><h2>${G.phase==='fish' && missed.length ? 'Words' : 'Found'}</h2>${empty}<ul class="chips">${shown.join('')}${missed.join('')}</ul></div>${bonus}`;
+  el.innerHTML = `${top}<div class="words"><h2>${G.phase==='fish' && missed.length ? 'Words' : 'Found'}</h2>${empty}<ul class="chips">${shown.join('')}${missed.join('')}</ul></div>`;
 }
 function renderHeader() {
   const dayN = dayNumber() + 1;

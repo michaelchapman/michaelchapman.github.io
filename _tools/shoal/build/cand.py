@@ -1,8 +1,7 @@
 import json,re,collections
 from lemminflect import getAllLemmas
-raw=json.load(open('freq.json'))
-tier={w:t for w,t,z in raw}; freq={w:z for w,t,z in raw}
-common={w for w,t,z in raw if t<=40 and z>=3.0}
+raw=[r for r in json.load(open('freq.json')) if r[3]=='']   # accepted words only
+tier={w:t for w,t,z,f in raw}
 vocab=set(tier)
 PRE=['un','re','dis','mis','pre','non','over','under','out','up','in','im','il','ir','de','anti','fore','sub','super','inter','semi','counter','co','en','em','be','a']
 SUF=['s','es','ed','d','ing','er','ers','r','rs','est','st','ly','y','ness','ment','ments','ful','fully','less','lessly','able','ably','ible','ish','ship','ships','ism','ist','ists','al','ally','ion','ions','or','ors','en','ens','ened','ening','ity','ies','ier','iest','ily','ily','ous','ive','ives','ise','ised','ises','ising','ize','hood','like','ward','wards','th','ty','man','men']

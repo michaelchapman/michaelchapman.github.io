@@ -1,7 +1,7 @@
 {
-  "name": "build",
+  "name": "shoal",
   "version": "1.0.0",
-  "description": "",
+  "description": "Build tools for Shoal",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,7 +13,11 @@
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/rammetto-one": "^5.3.0",
     "@fontsource/shrikhand": "^5.3.0",
+    "@stdlib/datasets-female-first-names-en": "^0.2.2",
+    "@stdlib/datasets-male-first-names-en": "^0.2.2",
     "naughty-words": "^1.2.0",
+    "word-list": "^4.1.0",
     "wordlist-english": "^1.2.1"
-  }
+  },
+  "private": true
 }

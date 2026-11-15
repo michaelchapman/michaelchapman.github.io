@@ -5,13 +5,13 @@ import path from 'path';
 const src = '../src', out = '../../../shoal/index.html';
 const seedShuffle = (a) => { let s = 20261105; const r = () => (s = (s*48271)%2147483647)/2147483647; for (let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]} return a; };
 const ps = seedShuffle(JSON.parse(fs.readFileSync('puzzles.json')));
-const lines = ps.map(p => [p.b,p.m,p.w.join(' '),p.x.join(' ')].join('|'));
+const lines = ps.map(p => [p.b,p.m,p.w.join(' ')].join('|'));
 // stems.json is the full table from stems.py (not committed); stems.board.json keeps only the pairs that occur on a board.
 let stemLine;
 if (fs.existsSync('stems.json')) {
   const STEM = JSON.parse(fs.readFileSync('stems.json'));
   const table = new Map();
-  for (const p of ps) { const on = new Set([...p.w,...p.x]); for (const W of on) for (const w of STEM[W]||[]) if (on.has(w)) { if (!table.has(W)) table.set(W,new Set()); table.get(W).add(w); } }
+  for (const p of ps) { const on = new Set(p.w); for (const W of on) for (const w of STEM[W]||[]) if (on.has(w)) { if (!table.has(W)) table.set(W,new Set()); table.get(W).add(w); } }
   stemLine = [...table].map(([W,s]) => W+':'+[...s].sort().join(',')).sort().join(' ');
   fs.writeFileSync('stems.board.json', JSON.stringify(stemLine));
 } else stemLine = JSON.parse(fs.readFileSync('stems.board.json'));
